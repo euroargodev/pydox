@@ -1,5 +1,5 @@
 # pydox
-Oxygen calibration software for DMQC
+A Python library for Argo Oxygen Calibration and Adjustment
 
 ***
 This software is developed by:

@@ -1,0 +1,67 @@
+name: pydox-dev
+channels:
+  - conda-forge
+dependencies:
+  - python = 3.11
+
+# CORE:
+  - h5netcdf = 1.6.3
+  - netCDF4 = 1.7.2
+  - scipy = 1.16.0
+  - xarray = 2025.7.1
+#  - argopy = 1.4.0  # installed from pip the last dev version
+  - pwlf = 2.5.1
+  - gsw = 3.6.19
+  - pyyaml = 6.0.3
+  - jinja2 = 3.1.6
+
+# EXT.PERF:
+  - dask = 2025.5.1
+  - distributed = 2025.5.1
+
+# EXT.PLOT:
+  - IPython = 9.4.0
+  - cartopy = 0.24.0
+  - ipykernel = 6.29.5
+  - ipywidgets = 8.1.7
+  - matplotlib = 3.10.3
+  - pyproj = 3.7.1
+  - seaborn = 0.13.2
+
+# EXT.DEV:
+  - black = 25.1.0
+  - bottleneck = 1.5.0
+  - cfgrib = 0.9.15.0
+  - cftime = 1.6.4
+  - codespell = 2.4.1
+  - flake8 = 7.3.0
+  - pip = 25.1.1
+  - pytest = 8.4.1
+  - pytest-cov = 6.2.1
+  - pytest-env = 1.1.5
+  - pytest-localftpserver
+  - setuptools = 80.9.0
+
+# DOCUMENTATION SPHINX/RTD:
+  - sphinx < 9
+  - nbsphinx = 0.9.8
+  - sphinx-issues = 5.0.1
+  - sphinx-llms-txt = 0.7.1
+  - sphinx_rtd_theme = 3.1.0
+  - sphinx-book-theme = 1.1.3
+  - pydata-sphinx-theme = 0.16.1
+
+# PIP:
+  - pip:
+      - git+https://github.com/euroargodev/argopy
+      - pytest-reportlog == 0.4.0
+      - numpydoc==1.10.0
+      - readthedocs-sphinx-ext==2.2.5
+      - sphinx-autosummary-accessors==2025.3.1
+      - pydocstyle==6.3.0
+      - sphinx-tabs==3.4.7
+      - sphinxext-rediraffe==0.3.0
+      - sphinxext-opengraph==0.13.0
+      - git+https://github.com/sphinx-contrib/googleanalytics
+      - sphinx-copybutton==0.5.2
+      - sphinx-design==0.7.0

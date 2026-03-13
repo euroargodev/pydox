@@ -1,9 +1,9 @@
-| <img src="docs/_static/pydox_logo_long.png" alt="pydox logo" width="300"/><br>``pydox`` is a python Python library dedicated to Argo Oxygen data Calibration and Adjustment |
+| <img src="docs/_static/pydox_logo_long.png" alt="pydox logo" width="300"/><br>``pydox`` is a python Python library dedicated to Argo Oxygen Calibration and Adjustment |
 |-|
 
 Pydox is designed to compute oxygen calibration for Argo floats during Delayed-Mode Quality Control (DMQC). It helps users:
 
-- Calculate gain, drift, and other calibration parameters with several methodology (in-air, climatolgy and reference CTD measurements). 
+- Calculate gain, drift, and other calibration parameters with several methodology (in-air, climatology and reference CTD measurements). 
 - Determine if adjustments are needed (via plots and metrics). 
 - Apply calibrations to raw float data. 
 - Save adjusted data as DAC-ready Argo NetCDF files (BD files).

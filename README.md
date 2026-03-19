@@ -53,10 +53,6 @@ pydox/
 │   └── plot.py          # Specific plot functions (backed by visualisation.plots)
 │
 ├── reporting/            # Reporting tools (figures and documents)
-│   ├── templates/        # Jinja templates
-│   │   ├── lops.html     #
-│   │   ├── cmems.html    #
-│   │   └── admt.html     #
 │   ├── facade.py         # Class "Report" facade
 │   └── spec.py           # Specifications ("Report" logic)
 │
@@ -84,6 +80,9 @@ pydox/
 │
 ├── static/               # Static data file required internally
 │   ├── pydox.mplstyle    # Pydox matplotlib style sheet
+│   ├── assets/           # 
+│   │   └── templates/    # Remplates for reporting
+│   │       └── lops.html #
 │   └── pydoxrc           # Default (and full) configuration file
 │
 └── tests/               # Unit and integration tests

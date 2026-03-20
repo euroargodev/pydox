@@ -6,12 +6,12 @@
 # - Nulls in YAML can be expressed with null or ~. This will be loaded as None in Python.
 # - Paths use posix convention (i.e. always use '/', even on Windows OS).
 #
-version: 0.0 # This file format version
+version: '0.1' # Pydox configuration file format version (must be in any configuration file, and an explicit string)
 specification: 1.2.2 # YAML specification https://yaml.org/spec/1.2.2/
 
 # ============================================= Operator Designation
 operator:
-  name: ${USER}
+  name: ${USER} (from distrib)
   email:
   orcid:
   affiliation:

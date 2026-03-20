@@ -88,6 +88,7 @@ pydox/
 └── tests/               # Unit and integration tests
 ```
 
+**Pydox** includes portions of Matplotlib, [...]. Their licenses are  included in the LICENSES directory.
 
 ***
 This software is developed by:

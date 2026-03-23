@@ -1,17 +1,54 @@
 """
+## Definitions
 
-We assume that a configuration object is of type: dict[str, Any]
+The Pydox configuration set of parameters is defined in two, complementary, ways:
 
-Relevant environment variables:
-PYDOXRC
-XDG_CONFIG_HOME
-PYDOXCONFIGDIR
+- The "default configuration" that is set from **configuration files** loaded at import time,
+- The "on-demand configuration" that is set by users **in scripts**, using Pydox dedicated API methods.
+
+## About configuration parameters
+- They are organized into groups and possibly subgroups.
+- There is no limit to subgroups nesting depth.
+- Groups, subgroups and parameters are meant to be accessed (get/set methods) with a _string-dotted_ syntax, eg:
+    - ``'argo'`` is a _group_,
+    - ``'argo.qcflags'`` is a _subgroup_,
+    - ``'argo.qcflags.temp'`` is a _parameter_ name.
+- Can be **read/get**, using the _string-dotted_ syntax, with ``do.get_params()``
+- Can be **set**, using the _string-dotted_ syntax, with ``do.set_params()``
+
+## About the full set of configuration parameters
+- It is assumed to be an object of type: dict[str, Any]. But this could change in the future.
+- The "default configuration" is constructed when Pydox is imported with ``do.config.load_configs()`` by a sequential loading sequence of possibly several files looked for in builtin locations (but possibly customized with environment variables). This sequence of files can be returned by ``do.config_files()``.
+
+- The ordered list of all possible "default configuration" files is:
+    - From the Pydox distribution, ie where Pydox is installed, eg:
+        - ``${HOME}/bin/yes/envs/pydox-dev/lib/python3.11/site-packages/pydox/static/pydoxrc``
+    - From the user configuration folder, eg:
+        - ``${PYDOXCONFIGDIR}/pydoxrc`` or
+        - ``${XDG_CONFIG_HOME}/pydox/pydoxrc`` or
+        - ``${HOME}/.config/pydox/pydoxrc`` or
+        - ``${HOME}/.pydox/pydoxrc``
+    - From the executing environment, ie from the environment variable:
+        - ``${PYDOXRC}`` or
+        - ``${PYDOXRC}/pydoxrc``
+    - From current executing path, ie from the environment variable:
+        - ``${PWD}/pydoxrc``
+
+- The object with the full set of configuration parameters is accessible as: ``do.params``.
+
+- The object ``do.params`` is NOT meant to be modified directly (huge risk of un-expected side effects): internals and users should use the ``do.set_params()`` method instead.
+
+## Environment variables
+Here is the list of relevant environment variables that can be used to customize where to look for default configuration files (see documentation):
+- ``PYDOXCONFIGDIR``
+- ``XDG_CONFIG_HOME``
+- ``PYDOXRC``
+
 """
 
 import importlib
 from pathlib import Path
-import yaml
-import re
+
 import os
 import sys
 from functools import reduce
@@ -23,42 +60,28 @@ import shutil
 import atexit
 import logging
 
+from pydox.config.yaml import load_config_from_file
+
 
 log = logging.getLogger("pydox.config")
 
-path2static = importlib.util.find_spec("pydox.static").submodule_search_locations[0]
+_path2static = importlib.util.find_spec("pydox.static").submodule_search_locations[0]
 
-path_matcher = re.compile(r"\$\{([^}^{]+)\}")
+_valid_config_version = "0.1"
 
-valid_config_version = "0.1"
+# List of parameters (group, subgroup, key) that are read-only,
+# (i.e. cannot be modified with ``do.set_params``):
+_read_only_dotted_params = ["version"]  # use lower-dotted string format
 
-_read_only_dotted_params = ["version"]  # user lower-dotted string format
-
-_not_overloaded_dotted_params = ["version"]  # user lower-dotted string format
-
-
-def path_constructor(loader, node):
-    """Extract the matched value, expand env variable, and replace the match"""
-    value = node.value
-    match = path_matcher.match(value)
-    env_var = match.group()[2:-1]
-    return os.environ.get(env_var) + value[match.end() :]
-
-
-yaml.add_implicit_resolver("!path", path_matcher, None, yaml.SafeLoader)
-yaml.add_constructor("!path", path_constructor, yaml.SafeLoader)
-
-
-def load_config_from_file(fname: str | Path) -> dict[str, Any]:
-    """Load a pydoxrc configuration file"""
-    with open(Path(fname), "r") as f:
-        cfg = yaml.load(f, Loader=yaml.SafeLoader)
-    return cfg
+# List of parameters (group, subgroup, key) that are NOT over-writen when loading the sequence of config. files,
+# (i.e. default package distribution values are read-only):
+_not_overloaded_dotted_params = ["version"]  # use lower-dotted string format
 
 
 def _get_xdg_config_dir() -> str:
-    """Return the XDG configuration directory, according to the XDG base directory spec:
+    """Return the XDG configuration directory
 
+    According to the XDG base directory spec:
     https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
 
     Adapted from Matplotlib:
@@ -128,16 +151,30 @@ def get_configdir() -> str:
 
 
 def config_files() -> list[Path]:
-    """Get the location of all config files
+    """Get the list of all available configuration files
 
-    All possible pydoxrc files:
-    - From distribution (where pydox is installed), eg: '/Users/gmaze/git/github/euroargodev/pydox/pydox/static/pydoxrc'
-    - From user configuration, eg: '/Users/gmaze/.pydox/pydoxrc', '/Users/gmaze/.config/pydox/pydoxrc'
-    - From current executing path, eg: '/Users/gmaze/git/github/euroargodev/pydox/local_work/pydoxrc'
+    List of all possible files:
+    - From the distribution, ie where pydox is installed, eg:
+        - ``${HOME}/bin/yes/envs/pydox-dev/lib/python3.11/site-packages/pydox/static/pydoxrc``
+    - From the user configuration folder, eg:
+        - ``${PYDOXCONFIGDIR}/pydoxrc`` or
+        - ``${XDG_CONFIG_HOME}/pydox/pydoxrc`` or
+        - ``${HOME}/.config/pydox/pydoxrc`` or
+        - ``${HOME}/.pydox/pydoxrc``
+    - From the executing environment, ie from the environment variable:
+        - ``${PYDOXRC}`` or
+        - ``${PYDOXRC}/pydoxrc``
+    - From current executing path, ie from the environment variable:
+        - ``${PWD}/pydoxrc``
+
+    Returns
+    -------
+    list[Path]
+        A list of absolute paths toward existing configuration files.
     """
 
     def gen_candidates() -> Generator[Path, None, None]:
-        yield Path(path2static).joinpath("pydoxrc")
+        yield Path(_path2static).joinpath("pydoxrc")
         yield Path(get_configdir()).joinpath("pydoxrc")
         try:
             pydoxrc = os.environ["PYDOXRC"]
@@ -189,7 +226,7 @@ def overload_config(x, y) -> dict[str, Any]:
 
     Overloading is done one parameter at a time, whatever the nesting depth using the dotted.string pattern.
 
-    This will ensure that even partial (sub)group custom settings can be done (eg: use a custom config to modify 'argo.qcflags.pres' only, without necessarily needing to define the entire subgroup 'argo.qcflags'.
+    This will ensure that even partial (sub)group custom settings can be done (eg: use a custom config to modify ``argo.qcflags.pres`` only, without necessarily needing to redefine the entire subgroup ``argo.qcflags``.
 
     Parameters
     ----------
@@ -200,7 +237,8 @@ def overload_config(x, y) -> dict[str, Any]:
 
     Returns
     -------
-
+    dict[str, Any]
+        A deep copy of x, with updated values from y
     """
     z = deepcopy(x)
     for key in flatten_config_keys(y):
@@ -218,20 +256,29 @@ def load_default_config() -> dict[str, Any]:
     -------
     dict[str, Any]
     """
-    return load_config_from_file(Path(path2static).joinpath("pydoxrc"))
+    return load_config_from_file(Path(_path2static).joinpath("pydoxrc"))
 
 
 def load_configs():
-    """Cumulative load of configuration files"""
+    """Cumulative load of the configuration files sequence
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+    dict[str, Any]
+        Default Pydox configuration object
+    """
     file_list = config_files()
     C = load_config_from_file(file_list[0])
     for f in file_list[1:]:
         c = load_config_from_file(f)
-        if get_by_path(c, "version") == valid_config_version:
+        if get_by_path(c, "version") == _valid_config_version:
             C = overload_config(C, c)
         else:
             raise ValueError(
-                f"Invalid configuration file format version {get_by_path(c, 'version')}, must be {valid_config_version}"
+                f"Invalid configuration file format version {get_by_path(c, 'version')}, must be {_valid_config_version}"
             )
     return C
 
@@ -244,7 +291,7 @@ def get_by_path(config: Dict | List, key: str) -> Any:
     config: Dict | List
         Nested object, typically a configuration set of nested dictionaries
     key: str
-        A string-dotted key pointing to an item from config (eg: 'argo.qcflags')
+        A string-dotted key pointing to an item from config (eg: ``argo.qcflags``)
 
     Returns
     -------
@@ -262,7 +309,7 @@ def set_by_path(config: Dict | List, key: str, value: Any) -> Dict | List:
     config: Dict | List
         Nested object, typically a configuration set of nested dictionaries
     key: str
-        A string-dotted key pointing to an item from config to be set (eg: 'operator.name')
+        A string-dotted key pointing to an item from config to be set (eg: ``operator.name``)
     value: Any
         New value for key in config
 
@@ -282,47 +329,57 @@ def set_by_path(config: Dict | List, key: str, value: Any) -> Dict | List:
     return config
 
 
-def get_params(param: str) -> Any | Dict:
+def get_params(param: str, config: Any = None) -> Any | Dict:
     """Retrieve the value of a configuration parameter or (sub)group of parameters
 
     Parameters
     ----------
     param: str
         The parameter name or (sub)group of parameters.
-        Use a 'dotted' notation if necessary, eg:
+        Use a string-dotted notation if necessary, eg:
 
-        - 'argo.qcflags.doxy' will return this single parameter value,
-        - 'argo.qcflags' will return a subgroup of parameters, as a :class:`dict`,
-        - 'argo' will return full group of parameters, as a :class:`dict`.
+        - ``argo.qcflags.doxy`` will return this single parameter value,
+        - ``argo.qcflags`` will return a subgroup of parameters, as a :class:`dict`,
+        - ``argo`` will return full group of parameters, as a :class:`dict`.
+    config: None | dict[str, Any]
+        The configuration object to get parameters from.
+        By default, this operates on the global configuration object :class:`pydox.params`.
 
     Returns
     -------
     Any | Dict
         The parameter value or group of parameters
     """
-    C = load_configs()
-    return get_by_path(C, param)
+    config = rcParams if config is None else config
+    return get_by_path(config, param)
 
 
-def set_params(param: str, value: Any | Dict) -> dict[str, Any]:
-    """Set value of a configuration parameter or (sub)group of parameters
+def set_params(param: str, value: Any | Dict, config: Any = None) -> Any | Dict:
+    """Set the value of a configuration parameter or (sub)group of parameters
 
     Parameters
     ----------
     param: str
         The parameter name or (sub)group of parameters.
-        Use a 'dotted' notation if necessary, eg:
+        Use a string-dotted notation if necessary, eg:
 
-        - 'argo.qcflags.doxy' set a single parameter value,
-        - 'argo.qcflags' set a subgroup parameter, expect a :class:`dict`,
-        - 'argo' set a group parameter, expect a :class:`dict`,
+        - ``argo.qcflags.doxy`` set a single parameter value,
+        - ``argo.qcflags`` set a subgroup parameter, expect value as a :class:`dict`,
+        - ``argo`` set a group parameter, expect value as a :class:`dict`,
     value: Any, Dict
         The value to assigne to ``param``.
+    config: None | dict[str, Any]
+        The configuration object to set parameters to.
+        By default, this operates on the global configuration object :class:`pydox.params`.
 
     Returns
     -------
-    dict[str, Any]:
-        Full configuration, to allow for chaining
+    Any | Dict
+        The parameter value or group of parameters that has just been set
     """
-    C = load_configs()
-    return set_by_path(C, param, value)
+    config = rcParams if config is None else config
+    set_by_path(config, param, value)
+    return value
+
+
+rcParams = load_configs()

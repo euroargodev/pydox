@@ -11,7 +11,7 @@ specification: 1.2.2 # YAML specification https://yaml.org/spec/1.2.2/
 
 # ============================================= Operator Designation
 operator:
-  name: ${USER} (from distrib)
+  name: ${USER} ('factory' value)
   email:
   orcid:
   affiliation:

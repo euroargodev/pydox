@@ -21,7 +21,7 @@ The Pydox configuration set of parameters is defined in two, complementary, ways
 - The "default configuration" is constructed when Pydox is imported with ``do.config.load_configs()`` by a sequential loading sequence of possibly several files looked for in builtin locations (but possibly customized with environment variables). This sequence of files can be returned by ``do.config_files()``.
 
 - The ordered list of all possible "default configuration" files is:
-    - From the Pydox distribution, ie where Pydox is installed, eg:
+    - From the Pydox distribution (_factory_ configuration), ie where Pydox is installed, eg:
         - ``${HOME}/bin/yes/envs/pydox-dev/lib/python3.11/site-packages/pydox/static/pydoxrc``
     - From the user configuration folder, eg:
         - ``${PYDOXCONFIGDIR}/pydoxrc`` or
@@ -45,7 +45,7 @@ Here is the list of relevant environment variables that can be used to customize
 - ``PYDOXRC``
 
 
-‼️This is the only module where the global configuration is to be referred to as ``rcParams``
+‼️This is the only module where the global configuration object is to be referred to as ``rcParams``
 """
 
 import importlib
@@ -250,8 +250,8 @@ def overload_config(x, y) -> dict[str, Any]:
     return z
 
 
-def load_static_config() -> dict[str, Any]:
-    """Load configuration from the internal static file
+def load_factory_config() -> dict[str, Any]:
+    """Load 'factory' configuration, ie from the internal static file
 
     This file is always here, otherwise pydox installation is totally broke !
 
@@ -341,22 +341,30 @@ def get_params(param: str, config: Any = None) -> Any | Dict:
 
         - ``argo.qcflags.doxy`` will return this single parameter value,
         - ``argo.qcflags`` will return a subgroup of parameters, as a :class:`dict`,
-        - ``argo`` will return full group of parameters, as a :class:`dict`.
+        - ``argo`` will return a group of parameters, as a :class:`dict`.
     config: None | dict[str, Any]
         The configuration object to get parameters from.
-        By default, this operates on the global configuration object :class:`pydox.params`.
+        By default, use the global configuration object :class:`pydox.params`.
 
     Returns
     -------
     Any | Dict
         The parameter value or group of parameters
+
+    See Also
+    --------
+    :function:`set_params`, :function:`reset_params`
     """
+    # Which configuration to work with:
     config = rcParams if config is None else config
+
     return get_by_path(config, param)
 
 
 def set_params(param: str, value: Any | Dict, config: Any = None) -> Any | Dict:
     """Set the value of a configuration parameter or (sub)group of parameters
+
+    Parameter or (sub)groups of parameters are modified _in place_.
 
     Parameters
     ----------
@@ -365,42 +373,92 @@ def set_params(param: str, value: Any | Dict, config: Any = None) -> Any | Dict:
         Use a string-dotted notation if necessary, eg:
 
         - ``argo.qcflags.doxy`` set a single parameter value,
-        - ``argo.qcflags`` set a subgroup parameter, expect value as a :class:`dict`,
-        - ``argo`` set a group parameter, expect value as a :class:`dict`,
+        - ``argo.qcflags`` set a subgroup of parameters, expect value as a :class:`dict`,
+        - ``argo`` set a group of parameters, expect value as a :class:`dict`,
     value: Any, Dict
         The value to assigne to ``param``.
     config: None | dict[str, Any]
         The configuration object to set parameters to.
-        By default, this operates on the global configuration object :class:`pydox.params`.
+        By default, use the global configuration object :class:`pydox.params`.
 
     Returns
     -------
     Any | Dict
         The parameter value or group of parameters that has just been set
+
+    See Also
+    --------
+    :function:`get_params`, :function:`reset_params`
     """
+    # Which configuration to work with:
     config = rcParams if config is None else config
+
     set_by_path(config, param, value)
     return value
 
 
-def reset_params(param: str = None, config: Any = None, factory: bool = False):
-    """Reset a configuration parameter to default or factory value"""
-    if not factory:
-        reference_config = deepcopy(load_configs())
-    else:
-        reference_config = deepcopy(load_static_config())
+def reset_params(param: str = None, config: Any = None, factory: bool = False, **kwargs) -> None:
+    """Reset a configuration parameter to default values
 
+    _Default_ values are those from the sequential loading of all available configuration files.
+
+    Parameter or (sub)groups of parameters are modified _in place_.
+
+    Parameters
+    ----------
+    param: str
+        The parameter name or (sub)group of parameters.
+        Use a string-dotted notation if necessary, eg:
+
+        - ``argo.qcflags.doxy`` reset a single parameter value,
+        - ``argo.qcflags`` reset a subgroup of parameters,
+        - ``argo`` reset a group of parameters.
+    config: None | dict[str, Any]
+        The configuration object to reset parameters from.
+        By default, use the global configuration object :class:`pydox.params`.
+    factory: bool, default=False
+        Set this argument to True in order to reset with _factory_ values instead of _default_ values. Factory values ignore user specific configuration files and is solely based on the Pydox internal static file.
+
+    Other Parameters
+    ----------------
+    reference: dict[str, Any]
+        The configuration object to use as a reference if different from the _default_ or _factory_ objects. This argument is primarily for internal use only.
+
+    Returns
+    -------
+    None
+
+    See Also
+    --------
+    :function:`get_params`, :function:`set_params`
+    """
+
+    # Which configuration to work with:
     config = rcParams if config is None else config
 
-    if param is not None:
-        params = validate_stringlist(param)  # Convert to a list of strings
-    else:
+    # Get a list of parameters to reset:
+    if param is None:
+        # Work with all parameters:
         params = flatten_config_keys(config)
+    else:
+        # Make sure we have a list:
+        params = validate_stringlist(param)
 
-    # Loop through all parameters to reset:
+    # Define the configuration to be considered as a reference:
+    # (from which reset values are to be read)
+    if 'reference' not in kwargs:
+        if factory:
+            reference_config = load_factory_config()
+        else:
+            reference_config = load_configs()
+    else:
+        reference_config = kwargs['reference']
+
+    # Loop through all parameters and reset them (set values from reference configuration):
     for p in params:
         if p not in _read_only_dotted_params:
             reference_value = get_params(p, config=reference_config)
             set_params(p, reference_value, config=config)
 
+# Load the default configuration:
 rcParams = load_configs()

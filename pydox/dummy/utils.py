@@ -15,6 +15,10 @@ class Calibration:
         """Set configuration parameter(s) for this instance only"""
         return do.set_params(grp, value, self._cfg)
 
+    def reset_params(self, grp: str):
+        """Reset configuration parameter(s) to value(s) at instanciation"""
+        return do.reset_params(grp, config=self._cfg)
+
     def fit(self):
         self.set_params('argo.qcflags.psal', 12)
         print("Set internal parameter 'argo.qcflags.psal' to '12'")

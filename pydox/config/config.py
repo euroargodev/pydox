@@ -44,10 +44,13 @@ Here is the list of relevant environment variables that can be used to customize
 - ``XDG_CONFIG_HOME``
 - ``PYDOXRC``
 
+
+‼️This is the only module where the global configuration is to be referred to as ``rcParams``
 """
 
 import importlib
 from pathlib import Path
+from matplotlib.rcsetup import validate_stringlist
 
 import os
 import sys
@@ -247,8 +250,8 @@ def overload_config(x, y) -> dict[str, Any]:
     return z
 
 
-def load_default_config() -> dict[str, Any]:
-    """Load default configuration file from internal static file
+def load_static_config() -> dict[str, Any]:
+    """Load configuration from the internal static file
 
     This file is always here, otherwise pydox installation is totally broke !
 
@@ -256,14 +259,12 @@ def load_default_config() -> dict[str, Any]:
     -------
     dict[str, Any]
     """
-    return load_config_from_file(Path(_path2static).joinpath("pydoxrc"))
+    file_list = config_files()
+    return load_config_from_file(file_list[0]) # It's always the first one
 
 
-def load_configs():
+def load_configs()-> dict[str, Any]:
     """Cumulative load of the configuration files sequence
-
-    Parameters
-    ----------
 
     Returns
     -------
@@ -381,5 +382,25 @@ def set_params(param: str, value: Any | Dict, config: Any = None) -> Any | Dict:
     set_by_path(config, param, value)
     return value
 
+
+def reset_params(param: str = None, config: Any = None, factory: bool = False):
+    """Reset a configuration parameter to default or factory value"""
+    if not factory:
+        reference_config = deepcopy(load_configs())
+    else:
+        reference_config = deepcopy(load_static_config())
+
+    config = rcParams if config is None else config
+
+    if param is not None:
+        params = validate_stringlist(param)  # Convert to a list of strings
+    else:
+        params = flatten_config_keys(config)
+
+    # Loop through all parameters to reset:
+    for p in params:
+        if p not in _read_only_dotted_params:
+            reference_value = get_params(p, config=reference_config)
+            set_params(p, reference_value, config=config)
 
 rcParams = load_configs()

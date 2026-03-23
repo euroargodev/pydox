@@ -1,4 +1,6 @@
 """
+Some documentation in here, before moving it to 'docs' later.
+
 ## Definitions
 
 The Pydox configuration set of parameters is defined in two, complementary, ways:
@@ -44,9 +46,10 @@ Here is the list of relevant environment variables that can be used to customize
 - ``XDG_CONFIG_HOME``
 - ``PYDOXRC``
 
-
-‼️This is the only module where the global configuration object is to be referred to as ``rcParams``
 """
+
+
+# ‼️ This is the only module where the global configuration object is to be referred to as ``rcParams``
 
 import importlib
 from pathlib import Path
@@ -154,10 +157,10 @@ def get_configdir() -> str:
 
 
 def config_files() -> list[Path]:
-    """Get the list of all available configuration files
+    """Get the list of all available configuration files to build a _default_ configuration
 
     List of all possible files:
-    - From the distribution, ie where pydox is installed, eg:
+    - From factory, ie where pydox is installed, eg:
         - ``${HOME}/bin/yes/envs/pydox-dev/lib/python3.11/site-packages/pydox/static/pydoxrc``
     - From the user configuration folder, eg:
         - ``${PYDOXCONFIGDIR}/pydoxrc`` or
@@ -167,13 +170,18 @@ def config_files() -> list[Path]:
     - From the executing environment, ie from the environment variable:
         - ``${PYDOXRC}`` or
         - ``${PYDOXRC}/pydoxrc``
-    - From current executing path, ie from the environment variable:
+    - From the current executing path, ie from the environment variable:
         - ``${PWD}/pydoxrc``
 
     Returns
     -------
     list[Path]
-        A list of absolute paths toward existing configuration files.
+        A list of absolute paths toward default configuration files.
+        The first file is always the _factory_ configuration file.
+
+    See Also
+    --------
+    :function:`load_configs`
     """
 
     def gen_candidates() -> Generator[Path, None, None]:
@@ -251,25 +259,33 @@ def overload_config(x, y) -> dict[str, Any]:
 
 
 def load_factory_config() -> dict[str, Any]:
-    """Load 'factory' configuration, ie from the internal static file
+    """Load the _factory_ configuration, ie from the internal static file
 
-    This file is always here, otherwise pydox installation is totally broke !
+    This file is always available, otherwise the Pydox installation is totally broke !
 
     Returns
     -------
     dict[str, Any]
+
+    See Also
+    --------
+    :function:`reset_params`
     """
     file_list = config_files()
-    return load_config_from_file(file_list[0]) # It's always the first one
+    return load_config_from_file(file_list[0]) # _factory_ config is always the first one
 
 
 def load_configs()-> dict[str, Any]:
-    """Cumulative load of the configuration files sequence
+    """Load the _default_ configuration from the sequence of all possible configuration files
 
     Returns
     -------
     dict[str, Any]
         Default Pydox configuration object
+
+    See Also
+    --------
+    :function:`config_files`
     """
     file_list = config_files()
     C = load_config_from_file(file_list[0])
@@ -460,5 +476,5 @@ def reset_params(param: str = None, config: Any = None, factory: bool = False, *
             reference_value = get_params(p, config=reference_config)
             set_params(p, reference_value, config=config)
 
-# Load the default configuration:
+# Load the default configuration to be used globally as `do.params`:
 rcParams = load_configs()

@@ -1,55 +1,4 @@
-"""
-Some documentation in here, before moving it to 'docs' later.
-
-## Definitions
-
-The Pydox configuration set of parameters is defined in two, complementary, ways:
-
-- The "default configuration" that is set from **configuration files** loaded at import time,
-- The "on-demand configuration" that is set by users **in scripts**, using Pydox dedicated API methods.
-
-## About configuration parameters
-- They are organized into groups and possibly subgroups.
-- There is no limit to subgroups nesting depth.
-- Groups, subgroups and parameters are meant to be accessed (get/set methods) with a _string-dotted_ syntax, eg:
-    - ``'argo'`` is a _group_,
-    - ``'argo.qcflags'`` is a _subgroup_,
-    - ``'argo.qcflags.temp'`` is a _parameter_ name.
-- Can be **read/get**, using the _string-dotted_ syntax, with ``do.get_params()``
-- Can be **set**, using the _string-dotted_ syntax, with ``do.set_params()``
-
-## About the full set of configuration parameters
-- It is assumed to be an object of type: dict[str, Any]. But this could change in the future.
-- The "default configuration" is constructed when Pydox is imported with ``do.config.load_configs()`` by a sequential loading sequence of possibly several files looked for in builtin locations (but possibly customized with environment variables). This sequence of files can be returned by ``do.config_files()``.
-
-- The ordered list of all possible "default configuration" files is:
-    - From the Pydox distribution (_factory_ configuration), ie where Pydox is installed, eg:
-        - ``${HOME}/bin/yes/envs/pydox-dev/lib/python3.11/site-packages/pydox/static/pydoxrc``
-    - From the user configuration folder, eg:
-        - ``${PYDOXCONFIGDIR}/pydoxrc`` or
-        - ``${XDG_CONFIG_HOME}/pydox/pydoxrc`` or
-        - ``${HOME}/.config/pydox/pydoxrc`` or
-        - ``${HOME}/.pydox/pydoxrc``
-    - From the executing environment, ie from the environment variable:
-        - ``${PYDOXRC}`` or
-        - ``${PYDOXRC}/pydoxrc``
-    - From current executing path, ie from the environment variable:
-        - ``${PWD}/pydoxrc``
-
-- The object with the full set of configuration parameters is accessible as: ``do.params``.
-
-- The object ``do.params`` is NOT meant to be modified directly (huge risk of un-expected side effects): internals and users should use the ``do.set_params()`` method instead.
-
-## Environment variables
-Here is the list of relevant environment variables that can be used to customize where to look for default configuration files (see documentation):
-- ``PYDOXCONFIGDIR``
-- ``XDG_CONFIG_HOME``
-- ``PYDOXRC``
-
-"""
-
-
-# ‼️ This is the only module where the global configuration object is to be referred to as ``rcParams``
+# ‼️ This is the only module where the global configuration object is to be referred to as ``rcParams`` and not ``do.params``
 
 import importlib
 from pathlib import Path
@@ -65,6 +14,7 @@ import tempfile
 import shutil
 import atexit
 import logging
+import contextlib
 
 from pydox.config.yaml import load_config_from_file
 
@@ -376,41 +326,87 @@ def get_params(param: str, config: Any = None) -> Any | Dict:
 
     return get_by_path(config, param)
 
-
-def set_params(param: str, value: Any | Dict, config: Any = None) -> Any | Dict:
+def set_params(param_or_grp: str, value: Any | Dict = None, **kwargs) -> None:
     """Set the value of a configuration parameter or (sub)group of parameters
 
     Parameter or (sub)groups of parameters are modified _in place_.
 
     Parameters
     ----------
-    param: str
-        The parameter name or (sub)group of parameters.
+    param_or_grp: str
+        The parameter name or (sub)group of parameters to assign value to.
         Use a string-dotted notation if necessary, eg:
 
         - ``argo.qcflags.doxy`` set a single parameter value,
-        - ``argo.qcflags`` set a subgroup of parameters, expect value as a :class:`dict`,
-        - ``argo`` set a group of parameters, expect value as a :class:`dict`,
-    value: Any, Dict
-        The value to assigne to ``param``.
+        - ``argo.qcflags`` set a subgroup of parameters, expect value as a :class:`dict` or with keyword arguments.
+        - ``argo`` set a group of parameters, expect value as a :class:`dict` or with keyword arguments.
+    value: Any, Dict, default=None
+        The value to be assigned to ``param_or_grp``.
+        If set to None, assume to be setting a group of parameters using keyword arguments (see examples below).
+    **kwargs:
+        Use keyword arguments to set parameters for a group (see examples below).
+
+    Other Parameters
+    ----------------
     config: None | dict[str, Any]
         The configuration object to set parameters to.
         By default, use the global configuration object :class:`pydox.params`.
 
-    Returns
-    -------
-    Any | Dict
-        The parameter value or group of parameters that has just been set
-
     See Also
     --------
     :function:`get_params`, :function:`reset_params`
-    """
-    # Which configuration to work with:
-    config = rcParams if config is None else config
 
-    set_by_path(config, param, value)
-    return value
+    Examples
+    --------
+    ..code-block: python
+        :caption: Set one parameter value
+
+        do.set_params('argo.qcflags.psal', [1, 2, 8])
+        # or
+        do.set_params('argo.qcflags', psal=[1, 2, 8])
+        # or
+        do.set_params('argo.qcflags', {'psal': [1, 2, 8]})
+        # or
+        do.set_params('argo', {'qcflags': {'psal': [1, 2, 8]}})
+
+    ..code-block: python
+        :caption: Set a group of parameter values
+
+        do.set_params('argo.qcflags', psal=[1, 2, 8], temp=[1, 2, 8])
+        # or
+        do.set_params('argo.qcflags', {'psal': [1, 2, 8], 'temp': [1, 2, 8]})
+        # or
+        do.set_params('argo', qcflags = {'psal': [1, 2, 8], 'temp': [1, 2, 8]})
+        # or
+        do.set_params('argo', {'qcflags': {'psal': [1, 2, 8], 'temp': [1, 2, 8]}})
+    """
+
+    # Which configuration to work with:
+    config = kwargs.get('config', rcParams)
+    if 'config' in kwargs:
+        kwargs.pop('config')
+
+    def _flatten(current_key: str, value: Any) -> None:
+        """Recursively flatten nested dictionaries into dotted_params."""
+        if isinstance(value, dict):
+            for k, v in value.items():
+                _flatten(f"{param_or_grp}.{k}" if not current_key else f"{current_key}.{k}", v)
+        else:
+            if f"{param_or_grp}.{current_key}" in flat_keys:
+                dotted_params[f"{param_or_grp}.{current_key}"] = value
+
+    dotted_params = {}
+    if value is None:
+        flat_keys = flatten_config_keys(config)
+
+        for key, value in kwargs.items():
+            _flatten(key, value)
+
+    else:
+        dotted_params.update({param_or_grp: value})
+
+    for key, value in dotted_params.items():
+        set_by_path(config, key, value)
 
 
 def reset_params(param: str = None, config: Any = None, factory: bool = False, **kwargs) -> None:

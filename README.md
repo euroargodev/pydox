@@ -56,8 +56,8 @@ pydox/
 │   ├── facade.py         # Class "Report" facade
 │   └── spec.py           # Specifications ("Report" logic)
 │
-├── config/               # Configuration management
-│   ├── utils.py          # Utilities to safeguard and handle settings
+├── config/               # Configuration manager
+│   ├── yaml.py           # Functions specific to handling YAML configuration files
 │   └── config.py         # Facade to manage all pydox settings
 │
 ├── visualisation/        # Low-level Data viz tools
@@ -83,7 +83,7 @@ pydox/
 │   ├── assets/           # 
 │   │   └── templates/    # Remplates for reporting
 │   │       └── lops.html #
-│   └── pydoxrc           # Default (and full) configuration file
+│   └── pydoxrc           # Factory configuration file
 │
 └── tests/               # Unit and integration tests
 ```

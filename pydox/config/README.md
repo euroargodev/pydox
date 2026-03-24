@@ -1,13 +1,3 @@
-
-This PR implement a configuration manager with the following features:
-- [x] support loading configuration **files**, aka ``pydoxrc`` files,
-- [x] support loading config from a **sequence** of config files,
-- [x] support config (yaml) file with possibly **environment** variables,
-- [x] support **caching** or some **global** value support,
-- [x] support parameter **reset** to default,
-- [x] support **group** setters,
-- [ ] tbc...
-
 Some documentation in here, before moving it to 'docs' later.
 ***
 

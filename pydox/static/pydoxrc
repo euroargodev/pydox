@@ -7,7 +7,6 @@
 # - Paths use posix convention (i.e. always use '/', even on Windows OS).
 #
 version: '0.1' # Pydox configuration file format version (must be in any configuration file, and an explicit string)
-specification: 1.2.2 # YAML specification https://yaml.org/spec/1.2.2/
 
 # ============================================= Operator Designation
 operator:
@@ -178,6 +177,7 @@ pressure_coefficients:
     pcoef3: 0.04
 
 # ============================================= Misc
+specification: 1.2.2 # YAML specification https://yaml.org/spec/1.2.2/
 
 # Given the default configuration, here is an example of files output by pydox
 # for NCEP in-air with/without carryover and 1,2 segments calibration suite:

@@ -15,8 +15,8 @@ import atexit
 import logging
 from IPython.display import HTML
 
-from pydox.config.utils import runner, config_repr_txt, config_repr_html
-from pydox.config.yaml import load_config_from_file
+from pydox._config.utils import runner, config_repr_txt, config_repr_html
+from pydox._config.yaml import load_config_from_file
 
 
 log = logging.getLogger("pydox.config")

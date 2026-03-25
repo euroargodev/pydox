@@ -44,6 +44,8 @@ dependencies:
   - pytest-env = 1.1.5
   - pytest-localftpserver
   - setuptools = 80.9.0
+  - twine = 6.2.0
+  - python-build = 1.4.0
 
 # DOCUMENTATION SPHINX/RTD:
   - sphinx < 9

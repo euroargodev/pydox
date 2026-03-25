@@ -3,7 +3,6 @@
 import importlib
 from pathlib import Path
 from matplotlib.rcsetup import validate_stringlist
-
 import os
 import sys
 from functools import reduce
@@ -14,8 +13,9 @@ import tempfile
 import shutil
 import atexit
 import logging
-import contextlib
+from IPython.display import HTML
 
+from pydox.config.utils import runner, config_repr_txt, config_repr_html
 from pydox.config.yaml import load_config_from_file
 
 
@@ -364,10 +364,6 @@ def set_params(param_or_grp: str, value: Any | Dict = None, **kwargs) -> None:
         do.set_params('argo.qcflags.psal', [1, 2, 8])
         # or
         do.set_params('argo.qcflags', psal=[1, 2, 8])
-        # or
-        do.set_params('argo.qcflags', {'psal': [1, 2, 8]})
-        # or
-        do.set_params('argo', {'qcflags': {'psal': [1, 2, 8]}})
 
     ..code-block: python
         :caption: Set a group of parameter values
@@ -386,21 +382,33 @@ def set_params(param_or_grp: str, value: Any | Dict = None, **kwargs) -> None:
     if 'config' in kwargs:
         kwargs.pop('config')
 
-    def _flatten(current_key: str, value: Any) -> None:
+    def _flatten(root: str, current_key: str, value: Any) -> None:
         """Recursively flatten nested dictionaries into dotted_params."""
         if isinstance(value, dict):
             for k, v in value.items():
-                _flatten(f"{param_or_grp}.{k}" if not current_key else f"{current_key}.{k}", v)
+                _flatten(f"{root}.{k}" if not current_key else f"{current_key}.{k}", v)
         else:
-            if f"{param_or_grp}.{current_key}" in flat_keys:
-                dotted_params[f"{param_or_grp}.{current_key}"] = value
+            if f"{root}.{current_key}" in flat_keys:
+                dotted_params[f"{root}.{current_key}"] = value
 
     dotted_params = {}
     if value is None:
         flat_keys = flatten_config_keys(config)
 
-        for key, value in kwargs.items():
-            _flatten(key, value)
+        if isinstance(param_or_grp, dict):
+
+            grp_dict = deepcopy(param_or_grp)
+            for param_or_grp, value in grp_dict.items():
+                if isinstance(value, dict):
+                    for k, v in value.items():
+                        _flatten(param_or_grp, k, v)
+                else:
+                    dotted_params[param_or_grp] = value
+
+        else:
+
+            for key, value in kwargs.items():
+                _flatten(param_or_grp, key, value)
 
     else:
         dotted_params.update({param_or_grp: value})
@@ -443,6 +451,11 @@ def reset_params(param: str = None, config: Any = None, factory: bool = False, *
     See Also
     --------
     :function:`get_params`, :function:`set_params`
+
+    Warnings
+    --------
+    If for some reason the current configuration has lost some parameters compared to the _default_ configuration, this
+    reset method cannot restore them, it only applies to parameters currently in the configuration.
     """
 
     # Which configuration to work with:
@@ -471,6 +484,30 @@ def reset_params(param: str = None, config: Any = None, factory: bool = False, *
         if p not in _read_only_dotted_params:
             reference_value = get_params(p, config=reference_config)
             set_params(p, reference_value, config=config)
+
+
+def config_print(config: Dict[str, Any] = None) -> str | HTML:
+    """Render a configuration object as text or HTML
+
+    Parameters
+    ----------
+    config : Dict[str, Any], default = None
+        A configuration object to print.
+        By default, use the global configuration object :class:`pydox.params`.
+
+    Returns
+    -------
+    str | HTML
+        A pretty-printed string representation of the configuration.
+    """
+    # Which configuration to work with:
+    config = rcParams if config is None else config
+
+    if runner() in ['notebook']:
+        return HTML(config_repr_html(config))
+    else:
+        print(config_repr_txt(config))
+
 
 # Load the default configuration to be used globally as `do.params`:
 rcParams = load_configs()

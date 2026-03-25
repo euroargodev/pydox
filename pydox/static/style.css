@@ -1,0 +1,111 @@
+body {
+  /* jupyterlab settings */
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  background-color: #fff;
+}
+
+.do-warp {
+  max-width: 100%;
+}
+
+.do-header {
+  padding: 6px 0 6px 3px;
+  border-bottom: solid 1px #777;
+  color: #555;;
+}
+
+.do-header > div,
+.do-header > ul {
+  display: inline;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+
+/* static/collapsible_dict_styles.css */
+.collapsible-dict-container {
+    /* font-family: Arial, sans-serif; */
+    /* border: 1px solid #e0e0e0; */
+    /* border-radius: 4px; */
+    padding: 10px;
+    margin:  0;
+    max-width: 100%;
+}
+
+.collapsible-dict-item {
+    margin-bottom: 5px;
+    margin-left: 15px;
+}
+
+/* Hide the checkbox */
+.collapsible-dict-input {
+    display: none;
+}
+
+/* Style the label as a clickable key */
+.collapsible-dict-label {
+    font-weight: light;
+    color: #333;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+
+.collapsible-dict-label::before {
+    /* content: "▶ "; */
+    content: "▸ ";
+    /* font-weight: bold; */
+    margin-right: 5px;
+}
+
+/* Change the label icon when checked */
+.collapsible-dict-input:checked + .collapsible-dict-label::before {
+    /* content: "▼ "; */
+    content: "▾ ";
+}
+
+/* Hide the value by default */
+.collapsible-dict-value {
+    color: #555;
+    margin-left: 20px;
+    display: none;
+}
+
+/* Show the value when the checkbox is checked */
+.collapsible-dict-input:checked ~ .collapsible-dict-value {
+    display: block;
+}
+
+/* Style for key-value pairs on the same line */
+.collapsible-dict-key-value {
+    display: flex;
+    align-items: baseline;
+}
+
+.collapsible-dict-key {
+    font-weight: light;
+    color: #333;
+    margin-right: 5px;
+}
+
+.collapsible-dict-simple-value {
+    color: #555;
+}
+
+.collapsible-dict-value-num {
+    color: #a31515;
+}
+
+.collapsible-dict-value-bool {
+    color: #74531f;
+}
+
+.collapsible-dict-value-str {
+    color: #2b91af;
+}
+
+.collapsible-dict-value-list {
+    color: #0000ff;
+}

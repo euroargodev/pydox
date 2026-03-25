@@ -54,16 +54,18 @@ So users can customize the Pydox configuration using one or more files that will
 
 When a user import the Pydox library, from a python script or the CLI, a runtime configuration set of parameters is built sequentially by automatically loading configuration files, a.k.a. ``pydoxrc`` files, in the following locations and sequence:
 
-- In the user configuration directory:
-    - On Linux,
-        - ``$XDG_CONFIG_HOME/pydox/pydoxrc`` (if ``$XDG_CONFIG_HOME`` is defined)
-        - or ``$HOME/.config/pydox/pydoxrc`` (if ``$XDG_CONFIG_HOME`` is not defined)
-    - On other platforms,
-        - ``$HOME/.pydox/pydoxrc`` if ``$HOME`` is defined
-- In the current folder:
-    - ``./pydoxrc``
-- In a user-defined os environment variable:
-    - ``$PYDOXRC/pydoxrc`` if ``$PYDOXRC`` is defined and a directory,
+1. In the user configuration directory:
+   - ``${PYDOXCONFIGDIR}/pydoxrc``, if ``$PYDOXCONFIGDIR`` is defined
+   - else if ``$PYDOXCONFIGDIR`` is NOT defined, it depends on the platform:
+     - On Linux,
+         - ``$XDG_CONFIG_HOME/pydox/pydoxrc``, if ``$XDG_CONFIG_HOME`` is defined
+         - or ``$HOME/.config/pydox/pydoxrc``, if ``$XDG_CONFIG_HOME`` is not defined
+     - On other platforms,
+         - ``$HOME/.pydox/pydoxrc``, if ``$HOME`` is defined
+2. In the current directory:
+    - ``$PWD/pydoxrc``
+3. In the user environment variable:
+    - ``$PYDOXRC/pydoxrc``, if ``$PYDOXRC`` is defined and a directory,
     - directly ``$PYDOXRC`` if it is not a directory.
 
 This hierarchy allows users to customize different group of configuration parameters at the level they choose. 
@@ -72,14 +74,12 @@ For instance:
 - for a given DMQC session, the _current folder_ and/or _os environment_ levels can be used to set reporting templates or paths toward dataset depending on the executing platform.
 
 About the user configuration directory:
-- the default value (defined above) can be overwritten using the ``PYDOXCONFIGDIR`` environment variable,
 - it must be writable,
-- is a temporary writable folder if none of the above is possible (so that Pydox will always have a writable configuration folder at runtime).
+- is a temporary writable folder if none of the above directories is possible (so that Pydox will always have a writable configuration folder at runtime).
 
 Note that the list of configuration files loaded at runtime can be seen with:
 ```python
 import pydox as do
-
 do.config_files()
 ```
 
@@ -88,30 +88,43 @@ do.config_files()
 
 Once Pydox is imported, and the _default_ configuration is loaded from files (see above), users can read and further customize parameters using the following APIs:
 
-### Parameter setter:
+### Parameter setter
 
-All parameters, groups and subgroups values can be set using the following syntax.
+Parameters are organized in group and subgroup, so that all parameters of a configuration can be uniquely referenced using a **string-dotted** syntax where groups and subgroups of parameters are joined with a dot to create a unique string. For instance:
+- the Argo data source to be used by Pydox is in the ``argo`` group and is referenced as ``argo.src``.
+- the list of QC flags to select pressure and temperature measurements are also in the ``argo`` group but in the ``qcflags`` subgroup, hence referenced as ``argo.qcflags.pres`` and ``argo.qcflags.temp``.
 
-The **string-dotted** syntax:
+All parameters, groups and subgroups values can be set using the **string-dotted** syntax.
+
+To set one parameter:
 ```python
 do.set_params('argo.src', 'https://data-argo.ifremer.fr')
+do.set_params('argo.qcflags.pres', [1,2,8])
 do.set_params('argo.use', 2)
 ```
+where the first argument of ``set_params`` is a string pointing to the parameter to set, and the second argument is the value to assign. 
 
-The **dictionary** syntax:
+In order to set more than one parameter from a given group or subgroup in one call to ``set_params``, we can use the **keyword arguments** syntax:
+```python
+do.set_params('argo', src='https://data-argo.ifremer.fr', use=2, qcflags={'pres': [1,2,8]})
+```
+This syntax can also be used to set subgroups:
+```python
+do.set_params('argo.qcflags', pres=[1,2,8], psal=[1,2,8])
+```
+
+Another approach is to provide only a **dictionary** to ``set_params``:
 ```python
 do.set_params({'argo.src': 'https://data-argo.ifremer.fr'})
 do.set_params({'argo.use': 2})
+do.set_params({'argo.qcflags': {'pres': [1,2,8]}})
 ```
-or adding one nesting level, which allows to set more than one parameter at a time:
+or by adding one more nesting level to set more than one parameter at a time:
 ```python
-do.set_params({'argo': {'src': 'https://data-argo.ifremer.fr', 'use': 2}})
+do.set_params({'argo': {'src': 'https://data-argo.ifremer.fr', 'use': 2, 'qcflags': {'pres': [1,2,8]}}})
 ```
+where ``set_params`` now takes a dictionary as a single argument where keys based on the string-dotted syntax seen above.
 
-The **keyword arguments** syntax, which allows to set more than one parameter at a time:
-```python
-do.set_params('argo', src='https://data-argo.ifremer.fr', use=2)
-```
 
 ### Parameter getter
 
@@ -132,6 +145,18 @@ do.reset_params('argo')  # A group of parameters
 do.reset_params('argo.qcflags')  # A subgroup of parameter
 do.reset_params() # All parameters !
 ```
+
+### Print
+
+In order to check at the full configuration, one can use the ``print`` function:
+
+```python
+import pydox as do
+do.config_print()
+```
+
+This will return a pretty print of the full configuration, in HTML in jupyter notebook cells, otherwise as a pure string.
+
 
 ## Internals, for Pydox team
 

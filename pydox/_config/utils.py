@@ -5,6 +5,7 @@ from pathlib import Path
 
 
 def uid(obj: Any):
+    """Return a unique string for a given object on each call"""
     s = str(id(obj))
     return "".join(random.sample(s, len(s)))
 
@@ -80,10 +81,11 @@ def config_repr_txt(config: Dict[str, Any], indent: int = 2) -> str:
                 lines.append(dict_to_string(value, level + 1))
             else:
                 lines.append(f"{indent_str}{key}: {format_value_txt(value)}")
-        return lines
+        return "\n".join(lines)
 
     lines = ["<pydox.configuration>"]
-    [lines.append(l) for l in dict_to_string(config)]
+    desc = dict_to_string(config)
+    [lines.append(l) for l in desc.split("\n")]
     return "\n".join(lines)
 
 
@@ -149,3 +151,4 @@ def config_repr_html(
     </div>
     """
     return html
+

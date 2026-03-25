@@ -30,7 +30,7 @@ _valid_config_version = "0.1"
 _read_only_dotted_params = ["version"]  # use lower-dotted string format
 
 # List of parameters (group, subgroup, key) that are NOT over-writen when loading the sequence of config. files,
-# (i.e. default package distribution values are read-only):
+# (i.e. factory values are read-only):
 _not_overloaded_dotted_params = ["version"]  # use lower-dotted string format
 
 
@@ -511,7 +511,7 @@ def reset_params(
             set_params(p, reference_value, config=config)
 
 
-def config_print(config: Dict[str, Any] = None) -> str | HTML:
+def config_print(config: Dict[str, Any] = None, **kwargs) -> str | HTML:
     """Render a configuration object as text or HTML
 
     Parameters
@@ -531,7 +531,12 @@ def config_print(config: Dict[str, Any] = None) -> str | HTML:
     if runner() in ["notebook"]:
         return HTML(config_repr_html(config))
     else:
-        print(config_repr_txt(config))
+        return print(config_repr_txt(config), **kwargs)
+
+
+def is_config(obj: Any)->bool:
+    """Check if an object is a valid configuration"""
+    return 'version' in obj
 
 
 # Load the default configuration to be used globally as `do.params`:

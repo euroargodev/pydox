@@ -222,10 +222,12 @@ def load_factory_config() -> dict[str, Any]:
     :function:`reset_params`
     """
     file_list = config_files()
-    return load_config_from_file(file_list[0]) # _factory_ config is always the first one
+    return load_config_from_file(
+        file_list[0]
+    )  # _factory_ config is always the first one
 
 
-def load_configs()-> dict[str, Any]:
+def load_configs() -> dict[str, Any]:
     """Load the _default_ configuration from the sequence of all possible configuration files
 
     Returns
@@ -326,6 +328,7 @@ def get_params(param: str, config: Any = None) -> Any | Dict:
 
     return get_by_path(config, param)
 
+
 def set_params(param_or_grp: str, value: Any | Dict = None, **kwargs) -> None:
     """Set the value of a configuration parameter or (sub)group of parameters
 
@@ -334,7 +337,7 @@ def set_params(param_or_grp: str, value: Any | Dict = None, **kwargs) -> None:
     Parameters
     ----------
     param_or_grp: str
-        The parameter name or (sub)group of parameters to assign value to.
+        The parameter name or (sub)group of parameters to assign value(s) to.
         Use a string-dotted notation if necessary, eg:
 
         - ``argo.qcflags.doxy`` set a single parameter value,
@@ -344,7 +347,7 @@ def set_params(param_or_grp: str, value: Any | Dict = None, **kwargs) -> None:
         The value to be assigned to ``param_or_grp``.
         If set to None, assume to be setting a group of parameters using keyword arguments (see examples below).
     **kwargs:
-        Use keyword arguments to set parameters for a group (see examples below).
+        Use keyword arguments to set parameters for a (sub)group (see examples below).
 
     Other Parameters
     ----------------
@@ -361,63 +364,85 @@ def set_params(param_or_grp: str, value: Any | Dict = None, **kwargs) -> None:
     ..code-block: python
         :caption: Set one parameter value
 
+        # Directly:
         do.set_params('argo.qcflags.psal', [1, 2, 8])
-        # or
+        # or at the subgroup level:
         do.set_params('argo.qcflags', psal=[1, 2, 8])
+        # or at the group level:
+        do.set_params('argo', qcflags={'psal': [1, 2, 8]})
 
     ..code-block: python
-        :caption: Set a group of parameter values
+        :caption: Set a (sub)group of parameter values
 
+        # At the subgroup level:
+        # with keywords:
         do.set_params('argo.qcflags', psal=[1, 2, 8], temp=[1, 2, 8])
-        # or
+        # or a dictionary:
         do.set_params('argo.qcflags', {'psal': [1, 2, 8], 'temp': [1, 2, 8]})
-        # or
-        do.set_params('argo', qcflags = {'psal': [1, 2, 8], 'temp': [1, 2, 8]})
-        # or
+
+        # At the group level:
+        # with keywords:
+        do.set_params('argo', qcflags={'psal': [1, 2, 8], 'temp': [1, 2, 8]})
+        # or a nested dictionary:
         do.set_params('argo', {'qcflags': {'psal': [1, 2, 8], 'temp': [1, 2, 8]}})
     """
 
     # Which configuration to work with:
-    config = kwargs.get('config', rcParams)
-    if 'config' in kwargs:
-        kwargs.pop('config')
+    config = kwargs.get("config", rcParams)
+    if "config" in kwargs:
+        kwargs.pop("config")
+
+    # Get the full list of all possible string-dotted parameter pointers:
+    flat_keys = flatten_config_keys(config)
 
     def _flatten(root: str, current_key: str, value: Any) -> None:
         """Recursively flatten nested dictionaries into dotted_params."""
         if isinstance(value, dict):
             for k, v in value.items():
-                _flatten(f"{root}.{k}" if not current_key else f"{current_key}.{k}", v)
+                _flatten(
+                    root, f"{root}.{k}" if not current_key else f"{current_key}.{k}", v
+                )
         else:
             if f"{root}.{current_key}" in flat_keys:
                 dotted_params[f"{root}.{current_key}"] = value
 
+    # Create a dictionary with string-dotted parameter pointers as keys, and new values as values
     dotted_params = {}
     if value is None:
-        flat_keys = flatten_config_keys(config)
 
         if isinstance(param_or_grp, dict):
-
-            grp_dict = deepcopy(param_or_grp)
-            for param_or_grp, value in grp_dict.items():
-                if isinstance(value, dict):
-                    for k, v in value.items():
-                        _flatten(param_or_grp, k, v)
-                else:
-                    dotted_params[param_or_grp] = value
+            # DOES NOT Handle use case like set_params({string-dotted: value})
+            # do.set_params({'argo.qcflags.psal': [1, 2, 8]})
+            raise ValueError("set_params does not support dictionaries")
 
         else:
-
+            # Handle use case like set_params(string-dotted, key=val, key=val, key=val):
+            # do.set_params('argo.qcflags', psal=[1, 2, 8])
+            # do.set_params('argo', qcflags={'psal': [1, 2, 8], 'temp': [1, 2, 8]})
+            # do.set_params('argo.qcflags', psal=[1, 2, 8], temp=[1, 2, 8])
             for key, value in kwargs.items():
                 _flatten(param_or_grp, key, value)
 
     else:
-        dotted_params.update({param_or_grp: value})
+        if isinstance(value, dict):
+            # Handle use case like set_params(string-dotted, dict):
+            # do.set_params('argo', {'qcflags': {'psal': [1, 2, 8], 'temp': [1, 2, 8]}})
+            for k, v in value.items():
+                _flatten(param_or_grp, k, v)
 
+        else:
+            # Handle use case like set_params(string-dotted, value):
+            # do.set_params('argo.qcflags.psal', [1, 2, 8])
+            dotted_params.update({param_or_grp: value})
+
+    # Apply new values:
     for key, value in dotted_params.items():
         set_by_path(config, key, value)
 
 
-def reset_params(param: str = None, config: Any = None, factory: bool = False, **kwargs) -> None:
+def reset_params(
+    param: str = None, config: Any = None, factory: bool = False, **kwargs
+) -> None:
     """Reset a configuration parameter to default values
 
     _Default_ values are those from the sequential loading of all available configuration files.
@@ -471,13 +496,13 @@ def reset_params(param: str = None, config: Any = None, factory: bool = False, *
 
     # Define the configuration to be considered as a reference:
     # (from which reset values are to be read)
-    if 'reference' not in kwargs:
+    if "reference" not in kwargs:
         if factory:
             reference_config = load_factory_config()
         else:
             reference_config = load_configs()
     else:
-        reference_config = kwargs['reference']
+        reference_config = kwargs["reference"]
 
     # Loop through all parameters and reset them (set values from reference configuration):
     for p in params:
@@ -503,7 +528,7 @@ def config_print(config: Dict[str, Any] = None) -> str | HTML:
     # Which configuration to work with:
     config = rcParams if config is None else config
 
-    if runner() in ['notebook']:
+    if runner() in ["notebook"]:
         return HTML(config_repr_html(config))
     else:
         print(config_repr_txt(config))

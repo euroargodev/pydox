@@ -48,13 +48,15 @@ Hence, in a Pydox configuration file:
 
 ## Default configuration, from files
 
-A Runtime Configuration (``rc``) set of parameters are first loaded from the Pydox installation root file (typically located at ``<INSTALLPATH>/pydox/static/pydoxrc``). This file is mandatory and always loaded, it holds the default and complete configuration of the library (although some parameters have empty values, like paths toward some dataset). We refer to it as the _factory_ configuration, users can't change this file.
+A Runtime Configuration (``rc``) set of parameters are first loaded from the Pydox installation root file (typically located at ``<INSTALLPATH>/pydox/static/pydoxrc``). This file is mandatory and always loaded, it holds the most complete configuration of the library (although some parameters have empty values, like paths toward some dataset). We refer to it as the _factory_ configuration, users can't change this file.
 
-So users can customize the Pydox configuration using one or more files that will overwrite factory values wherever necessary. We refer to it as the _default_ configuration.
+For users to customize the Pydox configuration, they can use one or more files that will overwrite factory values wherever necessary. We refer to the full merge of the _factory_ with user files as the _default_ configuration.
 
-When a user import the Pydox library, from a python script or the CLI, a runtime configuration set of parameters is built sequentially by automatically loading configuration files, a.k.a. ``pydoxrc`` files, in the following locations and sequence:
+Hence, when a user import the Pydox library, from a python script or the CLI, the _default_ configuration set of parameters is built sequentially by automatically loading all available configuration files, a.k.a. ``pydoxrc`` files, in the following locations and sequence:
 
-1. In the user configuration directory:
+1. From the Pydox distribution (_factory_ configuration), ie where Pydox was installed. This depends on the installation process, a typical location will be:
+   - ``${HOME}/bin/conda/envs/pydox-dev/lib/python3.11/site-packages/pydox/static/pydoxrc``
+2. In the user configuration directory:
    - ``${PYDOXCONFIGDIR}/pydoxrc``, if ``$PYDOXCONFIGDIR`` is defined
    - else if ``$PYDOXCONFIGDIR`` is NOT defined, it depends on the platform:
      - On Linux,
@@ -62,11 +64,15 @@ When a user import the Pydox library, from a python script or the CLI, a runtime
          - or ``$HOME/.config/pydox/pydoxrc``, if ``$XDG_CONFIG_HOME`` is not defined
      - On other platforms,
          - ``$HOME/.pydox/pydoxrc``, if ``$HOME`` is defined
-2. In the current directory:
+3. In the current directory:
     - ``$PWD/pydoxrc``
-3. In the user environment variable:
+4. In the user environment variable:
     - ``$PYDOXRC/pydoxrc``, if ``$PYDOXRC`` is defined and a directory,
     - directly ``$PYDOXRC`` if it is not a directory.
+
+**One file parameter value will take precedence over values loaded in previous files.**
+
+**Parameters in group and subgroups can be set individually, i.e. a parameter in a (sub)group can be set without necessarily setting the entire (sub)group.** For instance, ``argo.qcflags.psal`` alone can be set in a file, no need to set the entire subgroup ``argo.qcflags``. 
 
 This hierarchy allows users to customize different group of configuration parameters at the level they choose. 
 For instance:
@@ -102,38 +108,39 @@ do.set_params('argo.src', 'https://data-argo.ifremer.fr')
 do.set_params('argo.qcflags.pres', [1,2,8])
 do.set_params('argo.use', 2)
 ```
-where the first argument of ``set_params`` is a string pointing to the parameter to set, and the second argument is the value to assign. 
+where the first argument of ``set_params`` is a string-dotted pointer toward the one parameter to set, and the second argument is the value to assign to that parameter.
 
-In order to set more than one parameter from a given group or subgroup in one call to ``set_params``, we can use the **keyword arguments** syntax:
+In order to set more than one parameter from a given group or subgroup in one call to ``set_params``, we can use **keyword arguments** like this:
 ```python
 do.set_params('argo', src='https://data-argo.ifremer.fr', use=2, qcflags={'pres': [1,2,8]})
 ```
-This syntax can also be used to set subgroups:
+This syntax can also be used to set parameters of a subgroup:
 ```python
 do.set_params('argo.qcflags', pres=[1,2,8], psal=[1,2,8])
 ```
 
-Another approach is to provide only a **dictionary** to ``set_params``:
-```python
-do.set_params({'argo.src': 'https://data-argo.ifremer.fr'})
-do.set_params({'argo.use': 2})
-do.set_params({'argo.qcflags': {'pres': [1,2,8]}})
-```
-or by adding one more nesting level to set more than one parameter at a time:
-```python
-do.set_params({'argo': {'src': 'https://data-argo.ifremer.fr', 'use': 2, 'qcflags': {'pres': [1,2,8]}}})
-```
-where ``set_params`` now takes a dictionary as a single argument where keys based on the string-dotted syntax seen above.
-
+‼️Pydox does not currently support assignment of parameters located in different groups. There must be one call to ``set_params`` for each group.
 
 ### Parameter getter
 
-All parameters, groups and subgroups values can be get with the **string-dotted** syntax:
+All parameters, groups and subgroups values can be got with the **string-dotted** syntax:
 ```python
 do.get_params('argo.src')  # One parameter
 do.get_params('argo')  # A group of parameters
 do.get_params('argo.qcflags')  # A subgroup of parameters
 ```
+
+The returned values are those of a given parameter, and for (sub)group they are dictionaries.
+
+‼️The intended syntax to read some parameter value, is always with ``get_params`` and not from (sub)group dictionaries:  
+For instance: ``do.get_params('argo.qcflags.psal')`` is recommended over ``do.get_params('argo.qcflags')['psal']``, that later syntax could have unexpected side effects in the future.   
+This is because using the subgroup output to read a parameter assumes it will always be a dictionary like output, which won't be necessarily the case in the future.  
+In Pydox internals, it is easy to use lambda functions to retrieve nested parameters like ``qcflags`` above, for instance:
+```python
+qc = lambda x: do.get_params(f"argo.qcflags.{x.lower()}")
+qc('psal')
+```
+will ensure to always use ``get_params``.
 
 ### Parameter reset
 

@@ -1,0 +1,47 @@
+[project]
+name = "pydox"
+authors = [{ name = "Guillaume Maze", email = "gmaze@ifremer.fr"}, {name = "Catherine Kermabon", email = "ckermabon@ifremer.fr"}]
+#maintainers = [{ name = "", email = ""}]
+description = "Argo Oxygen data Calibration and Adjustment"
+keywords = [ "argofloat", "argo-data", "oxygen", "quality-control", "delayed-mode", "calibration", "adjustment", "ArgoBGC"]
+license = "EUPL-1.2"
+readme = "README.md"
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Operating System :: OS Independent",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+dynamic = ["version"]
+requires-python = ">=3.11"
+dependencies = ["pyyaml>=6.0", "matplotlib>=3.10", "IPython>=9.4"]
+license-files = [
+    "LICENSE",
+    "LICENSES/*",
+]
+
+[project.optional-dependencies]
+parallel = ["dask[complete]"]
+viz = ["cartopy>=0.24", "nc-time-axis"]
+
+
+[project.urls]
+Documentation = "https://github.com/euroargodev/pydox"
+homepage = "https://github.com/euroargodev/pydox"
+issue-tracker = "https://github.com/euroargodev/pydox/issues"
+source-code = "https://github.com/euroargodev/pydox"
+
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools>=77.0.3", "setuptools-scm>=8", "wheel"]
+
+[tool.setuptools]
+packages = ["pydox"]
+
+[tool.setuptools_scm]
+fallback_version = "9999"

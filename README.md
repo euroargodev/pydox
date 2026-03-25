@@ -27,6 +27,29 @@ In short:
 
 The complete user API will be documented progressively, first in docstrings, second in the online documentation.
 
+#### Current structure
+```bash
+pydox/
+│
+├── dummy/               # Dummy class for dev. purposes
+│   └── utils.py         # 
+│
+├── _config/             # Configuration manager (private)
+│   ├── yaml.py          # Functions specific to handling YAML configuration files
+│   ├── utils.py         # Some specific utilities
+│   └── config.py        # Functions to manage all pydox settings
+│
+├── static/              # Static data file required internally
+│   ├── style.css        # A CSS stylesheet to be used in HTML rendering of pydox object
+│   └── pydoxrc          # Factory configuration file
+│
+└── tests/                # Unit and integration tests
+    ├── test_config.py    # Tests for pydox._config
+    ├── conftest.py       # Pytest configuration
+    └── pytest.ini        # Pytest parameters
+```
+
+#### Target structure
 ```bash
 pydox/
 │
@@ -56,8 +79,9 @@ pydox/
 │   ├── facade.py         # Class "Report" facade
 │   └── spec.py           # Specifications ("Report" logic)
 │
-├── config/               # Configuration manager
+├── _config/              # Configuration manager
 │   ├── yaml.py           # Functions specific to handling YAML configuration files
+│   ├── utils.py          # Some specific utilities
 │   └── config.py         # Facade to manage all pydox settings
 │
 ├── visualisation/        # Low-level Data viz tools
@@ -85,7 +109,10 @@ pydox/
 │   │       └── lops.html #
 │   └── pydoxrc           # Factory configuration file
 │
-└── tests/               # Unit and integration tests
+└── tests/                # Unit and integration tests
+    ├── test_config.py    # Tests for pydox._config
+    ├── conftest.py       # Pytest configuration
+    └── pytest.ini        # Pytest parameters
 ```
 
 **Pydox** includes portions of Matplotlib, [...]. Their licenses are  included in the LICENSES directory.

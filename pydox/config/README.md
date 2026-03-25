@@ -27,18 +27,18 @@ argo:
   wmo: null
 ```
 where:
-- ``argo`` is at the _root_ level and is a group,
+- ``argo`` is at the _root_ level of the configuration, and is considered to hold a group of parameters,
 - ``src`` is a parameter key, from which 'https://data-argo.ifremer.fr' is a value,
 - ``qcflags`` is a subgroup with several parameters.
 
-Values can be strings, floats, integers, boolean and null. Groups and possibly subgroups are created using 2 blank spaces.
+Values can be strings, floats, integers, boolean and null. Subgroups are created using 2 blank spaces nesting from a group.
 
 Hence, in a Pydox configuration file:
 - parameters are organized into groups and possibly subgroups.
 - there is no limit to subgroups nesting depth.
 - In the Pydox APIs, groups, subgroups and parameters:
   - are meant to be accessed (get/set methods) with a _string-dotted_ syntax, eg:
-      - ``'argo'`` points to the _group_ of parameters and subgroups,
+      - ``'argo'`` points to a _group_ of parameters,
       - ``'argo.qcflags'`` points to a _subgroup_ of parameters,
       - ``'argo.qcflags.temp'`` is a _parameter_ key. 
   - can be **read/get**, using the _string-dotted_ syntax, with ``do.get_params()`` 
@@ -97,7 +97,7 @@ Once Pydox is imported, and the _default_ configuration is loaded from files (se
 ### Parameter setter
 
 Parameters are organized in group and subgroup, so that all parameters of a configuration can be uniquely referenced using a **string-dotted** syntax where groups and subgroups of parameters are joined with a dot to create a unique string. For instance:
-- the Argo data source to be used by Pydox is in the ``argo`` group and is referenced as ``argo.src``.
+- the Argo data source ``src`` to be used by Pydox is in the ``argo`` group and is referenced as ``argo.src``.
 - the list of QC flags to select pressure and temperature measurements are also in the ``argo`` group but in the ``qcflags`` subgroup, hence referenced as ``argo.qcflags.pres`` and ``argo.qcflags.temp``.
 
 All parameters, groups and subgroups values can be set using the **string-dotted** syntax.
@@ -130,11 +130,11 @@ do.get_params('argo')  # A group of parameters
 do.get_params('argo.qcflags')  # A subgroup of parameters
 ```
 
-The returned values are those of a given parameter, and for (sub)group they are dictionaries.
+The returned values are those of a given parameter, and for (sub)group are key/value pairs like a dictionary.
 
 ‼️The intended syntax to read some parameter value, is always with ``get_params`` and not from (sub)group dictionaries:  
 For instance: ``do.get_params('argo.qcflags.psal')`` is recommended over ``do.get_params('argo.qcflags')['psal']``, that later syntax could have unexpected side effects in the future.   
-This is because using the subgroup output to read a parameter assumes it will always be a dictionary like output, which won't be necessarily the case in the future.  
+This is because using the subgroup output to read a parameter assumes it will always be a key/value dictionary like output, which won't necessarily be the case in the future.  
 In Pydox internals, it is easy to use lambda functions to retrieve nested parameters like ``qcflags`` above, for instance:
 ```python
 qc = lambda x: do.get_params(f"argo.qcflags.{x.lower()}")

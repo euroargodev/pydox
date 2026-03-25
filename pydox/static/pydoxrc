@@ -1,0 +1,207 @@
+# =============================================
+#    PYDOX Default Configuration Parameters
+#
+# - Environment variables can be used with ${ENV}, they will be 'filled' when pydox load the configuration.
+# - Although '-' can be used, we prefer the more reliable '_' in strings (eg: 'in_air' rather than 'in-air').
+# - Nulls in YAML can be expressed with null or ~. This will be loaded as None in Python.
+# - Paths use posix convention (i.e. always use '/', even on Windows OS).
+#
+version: '0.1' # Pydox configuration file format version (must be in any configuration file, and an explicit string)
+
+# ============================================= Operator Designation
+operator:
+  name: ${USER} ('factory' value)
+  email:
+  orcid:
+  affiliation:
+
+# ============================================= Root path for output
+# Root path to save all pydox output: calibration/adjustment data, figures and reports
+# Any file saved by pydox will be under "<output.root>/<WMO>"
+# where <WMO> will be filled automatically by pydox
+output:
+  root: ${HOME}/ARGO/DMQC/OXYGEN/PYDOX
+
+# ============================================= Argo Float data
+argo:
+  src: https://data-argo.ifremer.fr
+  use: 3  # 1: raw, 2: adjusted, 3: adjusted if available else raw
+  qcflags: # Which QC to use data for
+    pres: [1, 2, 8]
+    temp: [1, 2, 8]
+    psal: [1, 2, 8]
+    doxy: [1, 2, 8, 3]
+  in_water_salinity:
+    # Min and max pressure to extract the salinity for inwater data (because for inwater data, the pump is off).
+    # So, we decided to take the salinity from the profile (with the pump on).
+    min_pressure: 0.  # dbar
+    max_pressure: 10. # dbar
+
+# ============================================= Calibration Methods Parameters
+calibration_methods:
+  default: in_air
+
+  in_air:
+    carryover: False
+    dataset: ncep
+    data:
+      ncep:
+        name: NCEP 2, real-time ?
+        src: ${HOME}/ARGO_NEW/NEW_LOCODOX/NCEP_DATA/
+      era5:
+        null
+
+  climatology:
+     min_pressure: 0.  # dbar
+     max_pressure: 25. # dbar
+     dataset: woa
+     data:
+        woa:
+          name: WOA18
+          src: ${HOME}/ARGO_NEW/LOCODOX/DATA/LOCODOX_EXTERNAL_DATA/WOA/WOA2018_DECAV_monthly_5500_1deg.nc
+        isas:
+          name: ISAS19
+          comment: To be implemented !
+          src: null
+
+  reference_profile:
+     pressure_effect:
+       enabled: True
+       threshold: 1000.  # Pressure threshold for pressure effect estimation (dbar)
+     dataset: lops
+     data:
+       lops:
+         name: LOPS-ctd (2025)
+         comment: | 
+           LOPS-curated collection of oxygen reference profiles from ship-ctd.
+           This version includes the last OVIDE 2024 data.
+         txt: ${HOME}/ARGO_NEW/NEW_LOCODOX/locodox_python/BDD_TR/bdd_REF_ARGO.txt
+         mat: ${HOME}/ARGO_NEW/NEW_LOCODOX/locodox_python/BDD_TR/bddo2ref_all_2025.mat
+
+# ============================================= Calibration Shared Parameters
+# These parameters are used by all methods
+calibration_parameters:
+  piecewise: # Setting nb_segments to more than 1 or auto to True will trigger use of a piecewise fit
+    auto: False
+    nb_segments: 1  # 1 means no piecewise fit, overwritten if auto=True
+    breakpoint: null  # list of integers for cycle numbers to break, only used if auto=False
+  initial_guess:
+    gain: 1.
+    drift: 0.
+  fit_drift: False
+  cycles: [first, last] # Cycle numbers to use to estimate coefficients
+  data:
+    save:
+      format: json
+      prefix: calib_
+      path: data
+      # <output.root>/<WMO>/<calibration_parameters.data.save.path>/<calibration_parameters.data.save.prefix>{file_name}.<calibration_parameters.data.save.format>
+  plots:
+    save:
+      format: png
+      prefix: calib_
+      path: docs/img
+      # <output.root>/<WMO>/<calibration_parameters.plots.save.path>/{figure_name}.<calibration_parameters.plots.save.format>
+
+# =============================================  CalibrationSet parameters
+calibration_set:
+  description:
+    name: null
+    long_name: null
+    comment: null
+  ordered: False
+  accumulate_gain: False
+  data:
+    save:
+      format: json
+      prefix: calibset_
+      path: data
+      # <output.root>/<WMO>/<calibration_set.data.save.path>/<calibration_set.data.save.prefix>{file_name}.<calibration_set.data.save.format>
+  plots:
+    save:
+      format: png
+      prefix: calibset_
+      path: docs/img
+    # <output.root>/<WMO>/<calibration_set.plots.save.path>/<calibration_set.plots.save.prefix>{figure_name}.<calibration_set.plots.save.format>
+
+# ============================================= Adjustment Parameters
+adjustment:
+  relative_error: 2.0  # Relative error for BD files (%)
+  cycles: [first, last] # Cycle numbers to apply adjustment to
+  convention: Argo-3.1 CF-1.6
+  save:
+    path: netcdf
+    # <output.root>/<WMO>/<adjustment.save.path>/profiles/BD<WMO>_<CYC>.nc
+
+# ============================================= Plotting
+plots:
+  save:
+    format: png
+    path: docs/img
+    # <output.root>/<WMO>/<plots.save.path>/{figure_name}.<plots.save.format>
+  bathymetry:
+    depths_contours:
+      min: -7000.
+      max: 500.
+      step: 500.
+  extend_lon_lat: 1  # Extend longitude/latitude for position plots
+
+# ============================================= Reporting
+reports:
+  template:
+    - lops
+  save:
+    format: pdf
+    prefix: null # loaded as None, no prefix
+    path: docs
+    # <output.root>/<WMO>/<reports.save.path>/<reports.save.prefix>{report_name}.<reports.save.format>
+
+# ============================================= Bathymetry
+bathymetry:
+  default: gebco
+  etopo:
+    long_name: ETOPO v2
+    src: ${HOME}/ARGO_NEW/LOCODOX/DATA/LOCODOX_EXTERNAL_DATA/TOPOGRAPHY/ETOPO2v2c_f4.nc
+  gebco:
+    long_name: GEBCO 2020, a continuous terrain model for oceans and land at 15 arc-second intervals
+    src: https://coastwatch.pfeg.noaa.gov/erddap/griddap/GEBCO_2020.html
+
+# ============================================= Units
+# Pressure Coefficients (sensor-specific)
+pressure_coefficients:
+  aanderaa:
+    pcoef2: 0.00022
+    pcoef3: 0.0419
+  rinko:
+    pcoef2: 0.
+    pcoef3: 0.04
+
+# ============================================= Misc
+specification: 1.2.2 # YAML specification https://yaml.org/spec/1.2.2/
+
+# Given the default configuration, here is an example of files output by pydox
+# for NCEP in-air with/without carryover and 1,2 segments calibration suite:
+
+# <output.root>/<WMO>/data/calib_coefs_inair_carryover0_segment1_ncep.json
+# <output.root>/<WMO>/data/calib_coefs_inair_carryover0_segment2_ncep.json
+# <output.root>/<WMO>/data/calib_coefs_inair_carryover1_segment1_ncep.json
+# <output.root>/<WMO>/data/calib_coefs_inair_carryover1_segment2_ncep.json
+# <output.root>/<WMO>/data/calib_config_inair_ncep.yml
+
+# <output.root>/<WMO>/docs/img/float_cycle_positions.png
+# <output.root>/<WMO>/docs/img/float_doxy_cycle.png
+# <output.root>/<WMO>/docs/img/float_doxy_cycle_qc.png
+# <output.root>/<WMO>/docs/img/calib_inair_carryover0_segment1_ncep_fig1.png
+# <output.root>/<WMO>/docs/img/calib_inair_carryover0_segment2_ncep_fig1.png
+# <output.root>/<WMO>/docs/img/calib_inair_carryover1_segment1_ncep_fig1.png
+# <output.root>/<WMO>/docs/img/calib_inair_carryover1_segment2_ncep_fig1.png
+# <output.root>/<WMO>/docs/img/calibset_inair_ncep_figure_ppox1.png
+# <output.root>/<WMO>/docs/img/calibset_inair_ncep_figure_gain2.png
+
+# <output.root>/<WMO>/docs/preliminary_report.pdf
+# <output.root>/<WMO>/docs/final_adjusment_report.pdf
+
+# <output.root>/<WMO>/data/netcdf/inair_carryover1_segment1/profiles/BD6903091_001.nc
+# <output.root>/<WMO>/data/netcdf/inair_carryover1_segment1/profiles/BD6903091_002.nc
+# ...
+# <output.root>/<WMO>/data/netcdf/inair_carryover1_segment1/profiles/BD6903091_132.nc

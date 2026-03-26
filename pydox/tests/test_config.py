@@ -432,17 +432,16 @@ def test_config_print_text(base_config, monkeypatch, capfd):
         assert out.startswith("<pydox.configuration>")
 
 
-def test_config_print_html(base_config, monkeypatch):
+@pytest.mark.parametrize("collapsed", [True, False], indirect=False, ids=[f"collapsed={v}" for v in [True, False]])
+@pytest.mark.parametrize("with_keys", [True, False], indirect=False, ids=[f"with_keys={v}" for v in [True, False]])
+@pytest.mark.parametrize("tidy", [True, False], indirect=False, ids=[f"tidy={v}" for v in [True, False]])
+def test_config_print_html(collapsed, with_keys, tidy, base_config, monkeypatch):
 
     with monkeypatch.context() as m:
-
-        def mock_runner():
-            return "notebook"
-
         m.setattr(
-            do._config.config, "runner", mock_runner
-        )  # So that config_print will call the mock
-        assert isinstance(config_print(base_config), HTML)
+            do._config.config, "runner", lambda : "notebook"
+        )
+        assert isinstance(config_print(base_config, collapsed=collapsed, with_keys=with_keys, tidy=tidy), HTML)
 
 
 def test_importable_with_no_home(tmp_path):

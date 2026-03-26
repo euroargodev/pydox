@@ -11,9 +11,10 @@ body {
 }
 
 .do-header {
-  padding: 6px 0 6px 3px;
-  border-bottom: solid 1px #777;
-  color: #555;;
+    padding: 6px 0 6px 3px;
+    border-bottom: solid 1px #777;
+    color: #555;
+    font-weight: bold;
 }
 
 .do-header > div,
@@ -24,19 +25,32 @@ body {
 }
 
 
-/* static/collapsible_dict_styles.css */
+/* collapsible dict styles */
 .collapsible-dict-container {
-    /* font-family: Arial, sans-serif; */
-    /* border: 1px solid #e0e0e0; */
-    /* border-radius: 4px; */
     padding: 10px;
     margin:  0;
     max-width: 100%;
+    /*border-left: solid 1px #777;*/
 }
 
 .collapsible-dict-item {
-    margin-bottom: 5px;
-    margin-left: 15px;
+    /*background-color: #f0f0f0;*/
+    /*border-left: solid 1px #777;*/
+}
+.collapsible-dict-item.lm-0 {
+    margin-left: 5px;
+}
+.collapsible-dict-item.lm-1 {
+    margin-left: 5px;
+}
+.collapsible-dict-item.lm-2 {
+    margin-left: 5px;
+}
+.collapsible-dict-item.lm-3 {
+    margin-left: 5px;
+}
+.collapsible-dict-item.lm-4 {
+    margin-left: 5px;
 }
 
 /* Hide the checkbox */
@@ -46,7 +60,7 @@ body {
 
 /* Style the label as a clickable key */
 .collapsible-dict-label {
-    font-weight: light;
+    font-weight: normal;
     color: #333;
     cursor: pointer;
     display: flex;
@@ -54,22 +68,19 @@ body {
 }
 
 .collapsible-dict-label::before {
-    /* content: "▶ "; */
-    content: "▸ ";
-    /* font-weight: bold; */
+    content: "[+]";
     margin-right: 5px;
 }
 
 /* Change the label icon when checked */
 .collapsible-dict-input:checked + .collapsible-dict-label::before {
-    /* content: "▼ "; */
-    content: "▾ ";
+    content: "[-]";
 }
 
 /* Hide the value by default */
 .collapsible-dict-value {
     color: #555;
-    margin-left: 20px;
+    margin-left: 15px;
     display: none;
 }
 
@@ -84,10 +95,28 @@ body {
     align-items: baseline;
 }
 
+/* Hover effect for collapsible dictionary items */
+.collapsible-dict-key-value:hover {
+    background-color: #f0f0f0; /* Light gray background on hover */
+}
+
 .collapsible-dict-key {
-    font-weight: light;
+    font-weight: normal;
     color: #333;
     margin-right: 5px;
+}
+
+.collapsible-dict-key::before {
+    content: "◦ ";
+}
+
+.collapsible-dict-key.read-only-key {
+    /*font-style: italic;*/
+    color: gray;
+}
+.collapsible-dict-key.regular-key {
+    /*font-style: normal;*/
+    color: black;
 }
 
 .collapsible-dict-simple-value {
@@ -108,4 +137,15 @@ body {
 
 .collapsible-dict-value-list {
     color: #0000ff;
+}
+
+.collapsible-dict-value-any {
+    font-style: italic;
+}
+
+.tooltiptext {
+    font-family: monospace;
+    font-weight: lighter;
+    color: #00000078;
+    margin-left: 15px;
 }

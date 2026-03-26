@@ -32,6 +32,17 @@ The [coverage](https://coverage.readthedocs.io/) report can be checked with:
 coverage report --sort=cover --show-missing
 ```
 
+### Local installation
+
+Once the repo has been cloned locally, instead of using ``sys.path.append()`` to import Pydox, it is recommended to install the local distribution with pip.
+
+From the repo root:
+```bash
+pip install -e .
+```
+
+This will install Pydox in the active Conda environment and make it _importable_ from any script.
+
 ### The library structure
 
 All submodules are tentatively listed below in the "Structure by design" section, according to user-level exposition: ``calibration`` is the primary object to work with, while ``tests`` is surely for devs. only.

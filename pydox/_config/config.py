@@ -15,24 +15,14 @@ import atexit
 import logging
 from IPython.display import HTML
 
+from pydox._config import _valid_config_version, _read_only_dotted_params, _not_overloaded_dotted_params
 from pydox._config.utils import runner, config_repr_txt, config_repr_html
 from pydox._config.yaml import load_config_from_file
 
 
 log = logging.getLogger("pydox.config")
 
-_path2static = importlib.util.find_spec("pydox.static").submodule_search_locations[0]
-
-_valid_config_version = "0.1"
-
-# List of parameters (group, subgroup, key) that are read-only,
-# (i.e. cannot be modified with ``do.set_params``):
-_read_only_dotted_params = ["version"]  # use lower-dotted string format
-
-# List of parameters (group, subgroup, key) that are NOT over-writen when loading the sequence of config. files,
-# (i.e. factory values are read-only):
-_not_overloaded_dotted_params = ["version"]  # use lower-dotted string format
-
+_path2static = Path(importlib.util.find_spec("pydox.static").submodule_search_locations[0])
 
 def _get_xdg_config_dir() -> str:
     """Return the XDG configuration directory
@@ -135,7 +125,7 @@ def config_files() -> list[Path]:
     """
 
     def gen_candidates() -> Generator[Path, None, None]:
-        yield Path(_path2static).joinpath("pydoxrc")
+        yield _path2static.joinpath("pydoxrc")
         yield Path(get_configdir()).joinpath("pydoxrc")
         try:
             pydoxrc = os.environ["PYDOXRC"]
@@ -249,6 +239,9 @@ def load_configs() -> dict[str, Any]:
             raise ValueError(
                 f"Invalid configuration file format version {get_by_path(c, 'version')}, must be {_valid_config_version}"
             )
+    # Sort dict key alphabetically:
+    C = dict(sorted(C.items()))
+
     return C
 
 
@@ -529,7 +522,7 @@ def config_print(config: Dict[str, Any] = None, **kwargs) -> str | HTML:
     config = rcParams if config is None else config
 
     if runner() in ["notebook"]:
-        return HTML(config_repr_html(config))
+        return HTML(config_repr_html(config, **kwargs))
     else:
         return print(config_repr_txt(config), **kwargs)
 

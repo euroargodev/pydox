@@ -2,6 +2,12 @@ import random
 from typing import Any, Dict
 import json
 from pathlib import Path
+import importlib
+import re
+
+from pydox._config import _valid_config_version, _read_only_dotted_params, _not_overloaded_dotted_params
+
+_path2static = Path(importlib.util.find_spec("pydox.static").submodule_search_locations[0])
 
 
 def uid(obj: Any):
@@ -56,7 +62,7 @@ def format_value_html(value: Any) -> str:
     elif isinstance(value, list):
         return f'<span class="collapsible-dict-value-list">{json.dumps(value)}</span>'
 
-    return f'<span class="collapsible-dict-value-any">"{value}"</span>'
+    return f'<span class="collapsible-dict-value-any">{value}</span>'
 
 
 def config_repr_txt(config: Dict[str, Any], indent: int = 2) -> str:
@@ -95,64 +101,142 @@ def config_repr_txt(config: Dict[str, Any], indent: int = 2) -> str:
 
 def config_repr_html(
     config: Dict[str, Any],
-    css_path: str = "static/style.css",
+    collapsed: bool = True,
+    with_keys: bool = False,
+    css_path: str = _path2static.joinpath("style.css"),
+    tidy: bool = True,
 ) -> str:
     """Render an HTML string representation of a configuration object, a collapsible nested dictionary
 
-    Keys and values are displayed on the same line for non-dict values.
     Uses only HTML and CSS (no JavaScript).
 
     Parameters
     ----------
     config : Dict[str, Any], default = None
         A configuration object to render.
-    css: str | Path
-        Path toward the css stylesheet to apply
+    collapsed: bool, default = True
+        Initial state for group of parameters, should they be collapsed or not
+    with_keys: bool, default = False
+        Display string-dotted syntax for each parameter.
+
+    Other Parameters
+    ----------------
+    css: str | Path, optional
+        Custom CSS stylesheet to user
+    tidy: bool, default=True
+        Should we _compress_ the CSS and HTML code or not.
 
     Returns
     -------
     str
-        A html string representation of the configuration. To be rendered with IPython.display.HTML
+        HTML string representation of the configuration. To be rendered with IPython.display.HTML
     """
 
-    def dict_to_html(d, level=0):
+    def clean_css(css)-> str:
+        # Remove new lines and blank spaces:
+        css = css.replace("\n", "").replace(" ", "");
+        # Remove block comments (/* ... */):
+        cleaned = []
+        i = 0
+        while i < len(css):
+            if css[i:i + 2] == '/*':
+                # Skip until the end of the comment
+                i = css.find('*/', i) + 2
+                if i == 1:  # No closing delimiter found
+                    i = len(css)
+            else:
+                cleaned.append(css[i])
+                i += 1
+        return ''.join(cleaned)
+
+    def clean_html(html_string):
+        """
+        Remove blank lines and unnecessary whitespace between HTML tags.
+
+        Args:
+            html_string (str): The HTML string to clean.
+
+        Returns:
+            str: The cleaned HTML string with no blank lines or excessive whitespace.
+        """
+        # Remove blank lines
+        html_string = re.sub(r'\n\s*\n', '\n', html_string)
+
+        # Remove leading/trailing whitespace from each line
+        html_string = '\n'.join(line.strip() for line in html_string.split('\n'))
+
+        # Remove whitespace between tags (but preserve whitespace inside tags)
+        html_string = re.sub(r'>\s+<', '><', html_string)
+
+        # Remove any remaining empty lines
+        html_string = '\n'.join(line for line in html_string.split('\n') if line.strip())
+
+        return html_string
+
+    def dict_to_html(d: dict[str, Any], level=0, upper_key="") -> str:
         items_html = []
         for key, value in d.items():
+            abs_key = f"{key}" if upper_key == "" else f"{upper_key}.{key}"
+            if key in _read_only_dotted_params:
+                key_status = "read-only-key"
+            else:
+                key_status = "regular-key"
+
             if isinstance(value, dict):
                 # Generate a unique ID for the checkbox and label
                 checkbox_id = f"{uid(d)}-checkbox-{key}-{level}"
+
+                # Then the HTML:
                 value_html = f"""
-                <input type="checkbox" id="{checkbox_id}" class="collapsible-dict-input">
+                <input type="checkbox" id="{checkbox_id}" class="collapsible-dict-input" {checked}>
                 <label for="{checkbox_id}" class="collapsible-dict-label">{key}</label>
                 <div class="collapsible-dict-value">
-                    {dict_to_html(value, level + 1)}
+                    {dict_to_html(value, level + 1, upper_key=abs_key)}
                 </div>
                 """
             else:
-                value_html = f"""
-                <div class="collapsible-dict-key-value">
-                    <div class="collapsible-dict-key">{key}:</div>
-                    <div class="collapsible-dict-simple-value">{format_value_html(value)}</div>
-                </div>
-                """
+                if with_keys:
+                    value_html = f"""
+                    <div class="collapsible-dict-key-value">
+                        <div class="collapsible-dict-key {key_status}"><span class="tooltiptext">{abs_key}:</span></div>                    
+                        <div class="collapsible-dict-simple-value">{format_value_html(value)}</div>
+                    </div>
+                    """
+                else:
+                    value_html = f"""
+                    <div class="collapsible-dict-key-value">
+                        <div class="collapsible-dict-key {key_status}">{key}:</div>                    
+                        <div class="collapsible-dict-simple-value">{format_value_html(value)}</div>
+                    </div>
+                    """
+            # <div class="collapsible-dict-item" style="margin-left: {5 * level}px;">
             items_html.append(
                 f"""
-            <div class="collapsible-dict-item" style="margin-left: {5 * level}px;">
+            <div class="collapsible-dict-item lm-{level}">
                 {value_html}
             </div>
             """
             )
         return "\n".join(items_html)
 
+    css_style = Path(css_path).resolve().read_text(encoding="utf-8")
+    if tidy:
+        css_style = clean_css(css_style)
+
+    checked = "" if collapsed else "checked" # Initial state: All collapsed or expanded
     html = f"""
-    <link rel="stylesheet" href="{Path(css_path).resolve()}">
-    <div class='do-warp'>
-      <div class='do-header'>pydox.Configuration</div>
-        <div class="collapsible-dict-container">
-            {dict_to_html(config)}
+    <div>
+        <style>{css_style}</style>
+        <div class='do-warp'>
+          <div class='do-header'>pydox Configuration</div>
+            <div class="collapsible-dict-container">
+                {dict_to_html(config)}
+            </div>
+          </div>
         </div>
-      </div>
     </div>
     """
-    return html
+    if tidy:
+        return clean_html(html)
 
+    return html

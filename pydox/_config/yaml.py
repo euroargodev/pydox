@@ -56,4 +56,8 @@ def load_config_from_file(fname: str | Path) -> dict[str, Any]:
     """
     with open(Path(fname), "r") as f:
         cfg = yaml.load(f, Loader=yaml.SafeLoader)
+
+    # Sort dict key alphabetically:
+    cfg = dict(sorted(cfg.items()))
+
     return cfg

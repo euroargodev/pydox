@@ -16,7 +16,7 @@ def uid(obj: Any):
     return "".join(random.sample(s, len(s)))
 
 
-def get_shell():
+def get_shell(): # pragma: no cover
     return get_ipython().__class__.__name__
 
 
@@ -55,10 +55,10 @@ def format_value_html(value: Any) -> str:
     """Format values appropriately for HTML output."""
     if isinstance(value, str):
         return f'<span class="collapsible-dict-value-str">"{value}"</span>'
-    elif isinstance(value, (int, float)):
-        return f'<span class="collapsible-dict-value-num">{value}</span>'
     elif isinstance(value, bool):
         return f'<span class="collapsible-dict-value-bool">{str(value).lower()}</span>'
+    elif isinstance(value, (int, float)):
+        return f'<span class="collapsible-dict-value-num">{value}</span>'
     elif isinstance(value, list):
         return f'<span class="collapsible-dict-value-list">{json.dumps(value)}</span>'
 

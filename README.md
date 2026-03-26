@@ -12,9 +12,40 @@
 
 📚 The user API design proposal (i.e. how **pydox** shall be used by DMQC operators) is available here: https://archimer-intranet.ifremer.fr/doc/01015/112667
 
-### Library structure
 
-All submodules are tentatively listed below according to user-level exposition: ``calibration`` is the primary object to work with, while ``tests`` is surely for devs. only.
+## Development of the library
+
+### Unit tests
+
+We use [pytest](https://docs.pytest.org/en/stable/index.html) to implement unit testings.
+
+All test files must be placed under ``pydox/tests`` and named after the module covered ``test_<mod>.py``.
+
+The tests suite can be executed from the repo root with:
+```bash
+pytest -ra -v -s -c pydox/tests/pytest.ini --durations=10 --cov=./ --cov-config=.coveragerc --cov-report xml:pydox/tests/cov.xml --cov-report term-missing --log-file=pydox/tests/pydox-tests.log
+```
+Logs and coverage result files will be placed under ``pydox/tests``.
+
+The [coverage](https://coverage.readthedocs.io/) report can be checked with:
+```bash
+coverage report --sort=cover --show-missing
+```
+
+### Local installation
+
+Once the repo has been cloned locally, instead of using ``sys.path.append()`` to import Pydox, it is recommended to install the local distribution with pip.
+
+From the repo root:
+```bash
+pip install -e .
+```
+
+This will install Pydox in the active Conda environment and make it _importable_ from any script.
+
+### The library structure
+
+All submodules are tentatively listed below in the "Structure by design" section, according to user-level exposition: ``calibration`` is the primary object to work with, while ``tests`` is surely for devs. only.
 
 In short:
 - The class ``Calibration`` purpose is to explore the parameter space of a given method (eg: in-air). Input data can be shared throughout this sub-parameter space if needed, to improve performances.
@@ -27,6 +58,32 @@ In short:
 
 The complete user API will be documented progressively, first in docstrings, second in the online documentation.
 
+#### Current structure
+
+Let's try to keep up to date the current pydox structure:
+
+```bash
+pydox/
+│
+├── dummy/               # Dummy submodule for dev. purposes
+│   └── utils.py         # dummy class and function for dev.
+│
+├── _config/             # Configuration manager (private)
+│   ├── yaml.py          # Functions specific to handling YAML configuration files
+│   ├── utils.py         # Some other config specific utilities
+│   └── config.py        # Primary functions to manage pydox settings
+│
+├── static/              # Static data file required internally
+│   ├── style.css        # A CSS stylesheet to be used in HTML rendering of pydox object
+│   └── pydoxrc          # Factory configuration file
+│
+└── tests/                # Unit and integration tests
+    ├── test_config.py    # Tests for pydox._config
+    ├── conftest.py       # Pytest configuration
+    └── pytest.ini        # Pytest parameters
+```
+
+#### Structure by design
 ```bash
 pydox/
 │
@@ -56,8 +113,9 @@ pydox/
 │   ├── facade.py         # Class "Report" facade
 │   └── spec.py           # Specifications ("Report" logic)
 │
-├── config/               # Configuration manager
+├── _config/              # Configuration manager
 │   ├── yaml.py           # Functions specific to handling YAML configuration files
+│   ├── utils.py          # Some specific utilities
 │   └── config.py         # Facade to manage all pydox settings
 │
 ├── visualisation/        # Low-level Data viz tools
@@ -85,7 +143,10 @@ pydox/
 │   │       └── lops.html #
 │   └── pydoxrc           # Factory configuration file
 │
-└── tests/               # Unit and integration tests
+└── tests/                # Unit and integration tests
+    ├── test_config.py    # Tests for pydox._config
+    ├── conftest.py       # Pytest configuration
+    └── pytest.ini        # Pytest parameters
 ```
 
 **Pydox** includes portions of Matplotlib, [...]. Their licenses are  included in the LICENSES directory.

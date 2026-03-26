@@ -16,7 +16,7 @@ def uid(obj: Any):
     return "".join(random.sample(s, len(s)))
 
 
-def get_shell():
+def get_shell(): # pragma: no cover
     return get_ipython().__class__.__name__
 
 

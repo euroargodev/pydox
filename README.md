@@ -19,7 +19,7 @@
 
 We use [pytest](https://docs.pytest.org/en/stable/index.html) to implement unit testings.
 
-All test files must be placed under ``pydox/tests``.
+All test files must be placed under ``pydox/tests`` and named after the module covered ``test_<mod>.py``.
 
 The tests suite can be executed from the repo root with:
 ```bash

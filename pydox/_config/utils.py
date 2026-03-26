@@ -10,6 +10,10 @@ def uid(obj: Any):
     return "".join(random.sample(s, len(s)))
 
 
+def get_shell():
+    return get_ipython().__class__.__name__
+
+
 def runner() -> str:
     """Return string name of the executing runner
 
@@ -18,7 +22,7 @@ def runner() -> str:
     'notebook', 'terminal', 'standard'
     """
     try:
-        shell = get_ipython().__class__.__name__
+        shell = get_shell()
         if shell == "ZMQInteractiveShell":
             return "notebook"  # Jupyter notebook or qtconsole
         elif shell == "TerminalInteractiveShell":
@@ -45,14 +49,14 @@ def format_value_html(value: Any) -> str:
     """Format values appropriately for HTML output."""
     if isinstance(value, str):
         return f'<span class="collapsible-dict-value-str">"{value}"</span>'
-    elif isinstance(value, (int, float)):
-        return f'<span class="collapsible-dict-value-num">{value}</span>'
     elif isinstance(value, bool):
         return f'<span class="collapsible-dict-value-bool">{str(value).lower()}</span>'
+    elif isinstance(value, (int, float)):
+        return f'<span class="collapsible-dict-value-num">{value}</span>'
     elif isinstance(value, list):
         return f'<span class="collapsible-dict-value-list">{json.dumps(value)}</span>'
-    else:
-        return str(value)
+
+    return f'<span class="collapsible-dict-value-any">"{value}"</span>'
 
 
 def config_repr_txt(config: Dict[str, Any], indent: int = 2) -> str:

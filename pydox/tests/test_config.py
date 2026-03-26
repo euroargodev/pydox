@@ -7,6 +7,7 @@ from matplotlib.testing import subprocess_run_for_testing
 from typing import Dict, Any
 from IPython.display import HTML
 import stat
+import re
 
 import pydox as do
 from pydox._config.config import (
@@ -29,6 +30,8 @@ from pydox._config.config import (
 from pydox._config.utils import (
     uid,
     runner,
+    format_value_txt,
+    format_value_html,
 )
 
 
@@ -46,20 +49,20 @@ def test_get_configdir(tmp_path):
 
     # Get a non-writable folder to trigger the creation of a temp folder:
     try:
-        prev = os.environ['PYDOXCONFIGDIR']
-        os.environ.pop('PYDOXCONFIGDIR')
+        prev = os.environ["PYDOXCONFIGDIR"]
+        os.environ.pop("PYDOXCONFIGDIR")
     except:
-        prev = '9999'
+        prev = "9999"
 
     os.chmod(tmp_path, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
-    os.environ['PYDOXCONFIGDIR'] = str(tmp_path)
+    os.environ["PYDOXCONFIGDIR"] = str(tmp_path)
     cd = get_configdir()
     assert isinstance(cd, str)
     assert os.access(str(cd), os.W_OK)  # Must be writable
 
     # Restore PYDOXCONFIGDIR
-    if prev != '9999':
-        os.environ['PYDOXCONFIGDIR'] = str(prev)
+    if prev != "9999":
+        os.environ["PYDOXCONFIGDIR"] = str(prev)
 
 
 def test_config_files():
@@ -70,27 +73,24 @@ def test_config_files():
 
     # Test ensuring no PYDOXRC env is set:
     try:
-        PYDOXRC = os.environ['PYDOXRC']
-        os.environ.pop('PYDOXRC')
+        PYDOXRC = os.environ["PYDOXRC"]
+        os.environ.pop("PYDOXRC")
     except:
-        PYDOXRC = '9999'
+        PYDOXRC = "9999"
 
     proc = subprocess_run_for_testing(
         [sys.executable, "-c", "import pydox; print(pydox.config_files())"],
-        env={
-            **os.environ
-        },
+        env={**os.environ},
         capture_output=True,
         text=True,
         check=True,
     )
     cf = proc.stdout.strip()
-    assert 'PosixPath' in cf
+    assert "PosixPath" in cf
 
     # Restore PYDOXRC env
-    if PYDOXRC != '9999':
-        os.environ['PYDOXRC'] = PYDOXRC
-
+    if PYDOXRC != "9999":
+        os.environ["PYDOXRC"] = PYDOXRC
 
 
 def test_flatten_config_keys():
@@ -195,8 +195,8 @@ def test_get_by_path(base_config):
     This test assumes that a configuration is a real nested dictionary.
     This could change in the future, and test should be updated.
     """
-    assert get_by_path(base_config, "name") == base_config['name']
-    assert get_by_path(base_config, "argo.src") == base_config['argo']['src']
+    assert get_by_path(base_config, "name") == base_config["name"]
+    assert get_by_path(base_config, "argo.src") == base_config["argo"]["src"]
 
 
 def test_set_by_path(base_config):
@@ -216,9 +216,11 @@ def test_get_params(base_config):
     This could change in the future, and test should be updated.
     """
     assert get_params("version", config=base_config) == "0.1"
-    assert get_params("argo.src", config=base_config) == base_config['argo']['src']
-    assert len(get_params("argo", config=base_config)) == len(base_config['argo'])
-    assert len(get_params("argo.qcflags", config=base_config)) == len(base_config['argo']['qcflags'])
+    assert get_params("argo.src", config=base_config) == base_config["argo"]["src"]
+    assert len(get_params("argo", config=base_config)) == len(base_config["argo"])
+    assert len(get_params("argo.qcflags", config=base_config)) == len(
+        base_config["argo"]["qcflags"]
+    )
 
 
 class TestSetParamsSingle:
@@ -228,7 +230,9 @@ class TestSetParamsSingle:
     This could change in the future, and test should be updated.
     """
 
-    def assert_new_config(self, config, base_config):
+    def assert_this_config(self, config, base_config):
+        """Internal to assert a configuration"""
+
         # Verify the parameters were set correctly
         assert get_params("argo.qcflags.psal", config=config) == [100]
 
@@ -239,6 +243,13 @@ class TestSetParamsSingle:
             == base_config["argo"]["qcflags"]["temp"]
         )
 
+    def test_error(self, base_config):
+        """Test setting parameters with only a dictionary"""
+        config = base_config.copy()
+
+        with pytest.raises(ValueError):
+            set_params({"argo.src": "https://..."}, config=config)
+
     def test_with_keyword_args(self, base_config):
         """Test setting parameters using keyword arguments."""
         config = base_config.copy()
@@ -246,7 +257,7 @@ class TestSetParamsSingle:
         # Set parameters using keyword arguments
         set_params("argo.qcflags", psal=[100], config=config)
 
-        self.assert_new_config(config, base_config)
+        self.assert_this_config(config, base_config)
 
     def test_with_dict(self, base_config):
         """Test setting parameters using a dictionary."""
@@ -255,7 +266,7 @@ class TestSetParamsSingle:
         # Set parameters using a dictionary
         set_params("argo.qcflags", {"psal": [100]}, config=config)
 
-        self.assert_new_config(config, base_config)
+        self.assert_this_config(config, base_config)
 
     def test_with_keyword_args_and_dict(self, base_config):
         """Test setting parameters using a nested dictionary structure."""
@@ -264,7 +275,7 @@ class TestSetParamsSingle:
         # Set parameters using a nested dictionary
         set_params("argo", qcflags={"psal": [100]}, config=config)
 
-        self.assert_new_config(config, base_config)
+        self.assert_this_config(config, base_config)
 
     def test_with_nested_dict(self, base_config):
         """Test setting parameters using a fully nested dictionary."""
@@ -273,7 +284,7 @@ class TestSetParamsSingle:
         # Set parameters using a fully nested dictionary
         set_params("argo", {"qcflags": {"psal": [100]}}, config=config)
 
-        self.assert_new_config(config, base_config)
+        self.assert_this_config(config, base_config)
 
 
 class TestSetParamsMultiple:
@@ -283,7 +294,7 @@ class TestSetParamsMultiple:
     This could change in the future, and test should be updated.
     """
 
-    def assert_new_config(self, config, base_config):
+    def assert_this_config(self, config, base_config):
         # Verify the parameters were set correctly
         assert get_params("argo.qcflags.psal", config=config) == [100]
         assert get_params("argo.qcflags.temp", config=config) == [200]
@@ -302,7 +313,7 @@ class TestSetParamsMultiple:
         # Set parameters using keyword arguments
         set_params("argo.qcflags", psal=[100], temp=[200], config=config)
 
-        self.assert_new_config(config, base_config)
+        self.assert_this_config(config, base_config)
 
     def test_with_dict(self, base_config):
         """Test setting parameters using a dictionary."""
@@ -311,7 +322,7 @@ class TestSetParamsMultiple:
         # Set parameters using a dictionary
         set_params("argo.qcflags", {"psal": [100], "temp": [200]}, config=config)
 
-        self.assert_new_config(config, base_config)
+        self.assert_this_config(config, base_config)
 
     def test_with_keyword_args_and_dict(self, base_config):
         """Test setting parameters using a nested dictionary structure."""
@@ -320,7 +331,7 @@ class TestSetParamsMultiple:
         # Set parameters using a nested dictionary
         set_params("argo", qcflags={"psal": [100], "temp": [200]}, config=config)
 
-        self.assert_new_config(config, base_config)
+        self.assert_this_config(config, base_config)
 
     def test_with_nested_dict(self, base_config):
         """Test setting parameters using a fully nested dictionary."""
@@ -329,41 +340,90 @@ class TestSetParamsMultiple:
         # Set parameters using a fully nested dictionary
         set_params("argo", {"qcflags": {"psal": [100], "temp": [200]}}, config=config)
 
-        self.assert_new_config(config, base_config)
+        self.assert_this_config(config, base_config)
 
 
-def test_reset_params(base_config):
-    # Reset one value:
+class TestResetParams:
 
-    # Modify the base config:
-    x = base_config.copy()
-    set_params('name', 'Hello World', config=x)
-    # Reset back to base config value:
-    reset_params('name', config=x, reference=base_config)
-    # Check for it:
-    assert get_params('name', config=x) == get_params('name', config=base_config)
+    def test_Single(self, base_config):
+        """Test reset to one value from reference settings"""
 
-    # Reset ALL values:
-    # Modify the base config:
-    x = base_config.copy()
-    set_params('name', 'Hello World', config=x)
-    set_params('argo.src', 'http://world', config=x)
-    # Reset back ALL PARAMETERS to base config value:
-    reset_params(config=x, reference=base_config)
-    # Check for it:
-    assert get_params('name', config=x) == get_params('name', config=base_config)
-    assert get_params('argo.src', config=x) == get_params('argo.src', config=base_config)
+        # Modify the base config:
+        x = base_config.copy()
+        set_params("name", "Hello World", config=x)
+
+        # Reset back to base config value:
+        reset_params("name", config=x, reference=base_config)
+
+        # Check for it:
+        assert get_params("name", config=x) == get_params("name", config=base_config)
+
+    def test_All(self, base_config):
+        """Test reset to ALL values from reference settings"""
+        # Modify the base config:
+        x = base_config.copy()
+        set_params("name", "Hello World", config=x)
+        set_params("argo.src", "http://world", config=x)
+
+        # Reset back ALL PARAMETERS to base config value:
+        reset_params(config=x, reference=base_config)
+
+        # Check for it:
+        assert get_params("name", config=x) == get_params("name", config=base_config)
+        assert get_params("argo.src", config=x) == get_params(
+            "argo.src", config=base_config
+        )
+
+    def test_Ref_Factory(self, base_config, monkeypatch):
+        """Test reset to values from factory settings"""
+        x = base_config.copy()
+        set_params("name", "My new name", config=x)
+
+        # Define a mocked version of: load_factory_config()
+        factory_value = "Reset Name"
+
+        def mock_load_factory_config():
+            y = base_config.copy()
+            set_params("name", factory_value, config=y)
+            return y
+
+        #
+        with monkeypatch.context() as m:
+            m.setattr(
+                do._config.config, "load_factory_config", mock_load_factory_config
+            )  # So that reset_params will call the mock
+            reset_params(config=x, factory=True)
+            assert get_params("name", config=x) == factory_value
+
+    def test_Ref_Default(self, base_config, monkeypatch):
+        """Test reset to values from default settings"""
+        x = base_config.copy()
+        set_params("name", "My new name", config=x)
+
+        # Define a mocked version of: load_configs()
+        default_value = "Reset Name"
+
+        def mock_load_configs():
+            y = base_config.copy()
+            set_params("name", default_value, config=y)
+            return y
+
+        #
+        with monkeypatch.context() as m:
+            m.setattr(
+                do._config.config, "load_configs", mock_load_configs
+            )  # So that reset_params will call the mock
+            reset_params(config=x, factory=False)
+            assert get_params("name", config=x) == default_value
 
 
 def test_config_print_text(base_config, monkeypatch, capfd):
-    # config_print(base_config)
-    # out, err = capfd.readouterr()
-    # assert out.startswith("<pydox.configuration>")
-
     # With a mock, we do not assume anything about where we're running this test:
     with monkeypatch.context() as m:
+
         def mock_runner():
             return "terminal"
+
         m.setattr(
             do._config.config, "runner", mock_runner
         )  # So that config_print will call the mock
@@ -375,8 +435,10 @@ def test_config_print_text(base_config, monkeypatch, capfd):
 def test_config_print_html(base_config, monkeypatch):
 
     with monkeypatch.context() as m:
+
         def mock_runner():
             return "notebook"
+
         m.setattr(
             do._config.config, "runner", mock_runner
         )  # So that config_print will call the mock
@@ -475,3 +537,49 @@ def test_configdir_uses_userprofile_on_windows_if_exists(tmp_path):
 
 def test_uid(base_config):
     assert uid(base_config) != uid(base_config)
+
+
+def test_runner(monkeypatch):
+
+    with monkeypatch.context() as m:
+        m.setattr(do._config.utils, "get_shell", lambda: "ZMQInteractiveShell")
+        assert runner() == "notebook"
+
+    with monkeypatch.context() as m:
+        m.setattr(do._config.utils, "get_shell", lambda: "TerminalInteractiveShell")
+        assert runner() == "terminal"
+
+    def mock():
+        raise NameError()
+
+    with monkeypatch.context() as m:
+        m.setattr(do._config.utils, "get_shell", mock)
+        assert runner() == "standard"
+
+    with monkeypatch.context() as m:
+        m.setattr(do._config.utils, "get_shell", lambda: False)
+        assert not runner()
+
+
+class Dummy:
+    def __str__(self):
+        return "Dummy"
+
+
+val_list = ["hello", 12, 1.2, True, [1, 2, 3], Dummy]
+val_list_id = [f"{type(v)}" for v in val_list]
+
+
+@pytest.mark.parametrize("value", val_list, indirect=False, ids=val_list_id)
+def test_format_value_txt(value):
+    """Test format_value_txt with various input types."""
+    assert isinstance(format_value_txt(value), str)
+
+
+@pytest.mark.parametrize("value", val_list, indirect=False, ids=val_list_id)
+def test_format_value_html(value):
+    """Test format_value_html with various input types."""
+    match = lambda x: re.match(
+        r'<span\s+class="[^"]*(?:str|bool|num|list|any)">.*?</span>', x
+    )
+    assert match(format_value_html(value))

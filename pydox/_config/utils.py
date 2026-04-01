@@ -50,6 +50,18 @@ def format_value_txt(value: Any) -> str:
     else:
         return str(value)
 
+def dict_to_string(d: Dict[str, Any], level: int = 0, indent: int = 2) -> str:
+    """Recursively convert a nested dictionary to a formatted string."""
+    indent_str = " " * (level * indent)
+    lines = []
+    for key, value in d.items():
+        if isinstance(value, dict):
+            lines.append(f"{indent_str}{key}:")
+            lines.append(dict_to_string(value, level + 1, indent=indent))
+        else:
+            lines.append(f"{indent_str}{key}: {format_value_txt(value)}")
+    return "\n".join(lines)
+
 
 def format_value_html(value: Any) -> str:
     """Format values appropriately for HTML output."""
@@ -80,21 +92,8 @@ def config_repr_txt(config: Dict[str, Any], indent: int = 2) -> str:
     str
         A pretty-printed string representation of the configuration.
     """
-
-    def dict_to_string(d: Dict[str, Any], level: int = 0) -> str:
-        """Recursively convert a nested dictionary to a formatted string."""
-        indent_str = " " * (level * indent)
-        lines = []
-        for key, value in d.items():
-            if isinstance(value, dict):
-                lines.append(f"{indent_str}{key}:")
-                lines.append(dict_to_string(value, level + 1))
-            else:
-                lines.append(f"{indent_str}{key}: {format_value_txt(value)}")
-        return "\n".join(lines)
-
     lines = ["<pydox.configuration>"]
-    desc = dict_to_string(config)
+    desc = dict_to_string(config, indent=indent)
     [lines.append(l) for l in desc.split("\n")]
     return "\n".join(lines)
 

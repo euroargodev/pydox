@@ -42,6 +42,8 @@ calibration_methods:
   default: in_air
 
   in_air:
+    long_name: This would be a long name for the 'in air' methodology
+    reference: http://dx.doi/...
     carryover: False
     dataset: ncep
     data:
@@ -49,7 +51,8 @@ calibration_methods:
         name: NCEP 2, real-time ?
         src: ${HOME}/ARGO_NEW/NEW_LOCODOX/NCEP_DATA/
       era5:
-        null
+        name: ERA5, higher res ?
+        src: null
 
   climatology:
      min_pressure: 0.  # dbar
@@ -81,10 +84,11 @@ calibration_methods:
 # ============================================= Calibration Shared Parameters
 # These parameters are used by all methods
 calibration_parameters:
-  piecewise: # Setting nb_segments to more than 1 or auto to True will trigger use of a piecewise fit
-    auto: False
-    nb_segments: 1  # 1 means no piecewise fit, overwritten if auto=True
-    breakpoint: null  # list of integers for cycle numbers to break, only used if auto=False
+  piecewise: # The logic must be clarified in here to end up with a consistent set of parameters for piecewise !
+    auto_segment: False # Let pydox determine if more than one segment is needed or not, and how many are needed
+    nb_segments: 1  # 1 means no piecewise fit, overwritten if auto_segment=True
+    auto_break: True # Let pydox determine where to break segments
+    breakpoints: null  # list of integers for cycle numbers to break, only used if auto_break=False
   initial_guess:
     gain: 1.
     drift: 0.
@@ -175,6 +179,13 @@ pressure_coefficients:
   rinko:
     pcoef2: 0.
     pcoef3: 0.04
+
+# ============================================= Pydox user interface
+pydox:
+  verbose:
+    cell_text: False # Should we force to use text output in notebook cells, even when HTML is available
+    configs: False  # Should we print ALL parameters of a configuration set, or omit meta-data like src of the reference dataset
+
 
 # ============================================= Misc
 specification: 1.2.2 # YAML specification https://yaml.org/spec/1.2.2/

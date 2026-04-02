@@ -1,20 +1,30 @@
 """
 
+Commodity classes (dataclass or not) with frozen states, ie attributes must be set at instanciation, not later.
+
+
 > If your object needs significant logic to be valid, hiding that logic in __post_init__ is rarely the best design.
 > If the class has no real behavior, @dataclass is perfect.
 https://medium.com/the-pythonworld/why-i-stopped-using-python-dataclass-everywhere-3d0cc5457e01
 """
 
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import dataclass, field, asdict
+from typing import Any, Dict, Optional
 
-@dataclass
+
+@dataclass(frozen=True)
 class Data:
+    """A placeholder for a numerical item: store its value and error"""
+
     value: float
-    error: float
+    error: float = field(default_factory=lambda: 0.0)
+
+    def __str__(self) -> str:
+        # Shorter version for some prints
+        return f"{self.value} (err={self.error})"
 
 
-@dataclass
+@dataclass(frozen=True)
 class ParamsShared:
     """A dataclass to hold a parameter set for one computation
     Define parameters shared by all methods
@@ -29,14 +39,15 @@ class ParamsShared:
     fit_drift: bool
     initial_gain: Data
     initial_drift: Data
+    cycles: Any  # not sure what to use exactly here
 
     @property
-    def uid(self)-> str:
+    def uid(self) -> str:
         """Return a unique string to identify this set of parameters"""
         return f"{int(self.fit_drift)}-{id(self.initial_gain)}-{id(self.initial_drift)}"
 
 
-@dataclass
+@dataclass(frozen=True)
 class ParamsInAir(ParamsShared):
     """A unique parameter set for the 'in air' method
 
@@ -50,16 +61,16 @@ class ParamsInAir(ParamsShared):
     carryover: bool
     dataset: str
     src: str
-    initial_carryover: Data = field(default_factory=lambda: Data(0., 0.))
+    initial_carryover: Data = field(default_factory=lambda: Data(0.0, 0.0))
     method: str = field(default="in_air", init=False)
 
     @property
-    def uid(self)-> str:
+    def uid(self) -> str:
         """Return a unique string to identify this set of parameters"""
         return f"{super().uid}-{self.method}-{int(self.carryover)}-{self.dataset}"
 
 
-@dataclass
+@dataclass(frozen=True)
 class ParamsClimatology(ParamsShared):
     """A unique parameter set for the 'climatology' method
 
@@ -77,25 +88,103 @@ class ParamsClimatology(ParamsShared):
     method: str = field(default="climatology", init=False)
 
     @property
-    def uid(self)-> str:
+    def uid(self) -> str:
         """Return a unique string to identify this set of parameters"""
         return f"{super().uid}-{self.method}-{int(self.min_pressure)}-{int(self.max_pressure)}-{self.dataset}"
 
 
-@dataclass
-class Coefficients:
-    """Maybe some placeholder for coefficients results"""
-    gain: Data = field(default_factory=lambda: Data(0., 0.))
+class PostInitCaller(type):
+    """A metaclass allowing to implement a __post_init__"""
 
-@dataclass
-class CoefficientsInAir:
-    """Maybe some placeholder for coefficients results"""
-    gain: Data = field(default_factory=lambda: Data(0., 0.))
-    drift: Data = field(default_factory=lambda: Data(0., 0.))
-    carryover: Data = field(default_factory=lambda: Data(0., 0.))
+    def __call__(cls, *args, **kwargs):
+        obj = type.__call__(cls, *args, **kwargs)
+        obj.__post_init__(*args, **kwargs)
+        return obj
 
-@dataclass
+
+# not a dataclass to handle data validation, a custom frozen state and print outputs
+class Coefficients(metaclass=PostInitCaller):
+    """Maybe some placeholder for coefficients results"""
+
+    _frozen: bool = False
+
+    def __init__(self, gain: Data, drift: Optional[Data] = None, **kwargs):
+        if gain is None:
+            raise ValueError(f"You must at least provide a :class:`Data` for the gain")
+        elif not isinstance(gain, Data):
+            raise ValueError(f"'gain' must be a :class:`Data` instance")
+        else:
+            self.gain: Data = gain
+
+        if drift is not None and not isinstance(drift, Data):
+            raise ValueError(f"'drift' must be a :class:`Data` instance")
+        else:
+            self.drift: Data = drift
+
+    def __post_init__(self, *args, **kwargs) -> None:
+        # this method is called at the end of __init__, thanks to the metaclass PostInitCaller
+        self._frozen = True if kwargs.get("frozen", True) is True else False
+
+    def __setattr__(self, attr, value):
+        if getattr(self, "_frozen", None):
+            raise AttributeError("Trying to set attribute on a frozen instance")
+        return super().__setattr__(attr, value)
+
+    def __str__(self):
+        msg = f"gain={str(self.gain)}"
+        if self.drift is not None:
+            msg += f", drift={str(self.drift)}"
+        return msg
+
+    def __repr__(self):
+        msg = f"{self.__class__.__name__}(gain={self.gain}"
+        if self.drift is not None:
+            msg += f", drift={self.drift}"
+        msg += ")"
+        return msg
+
+    def to_dict(self) -> Dict[str, Any]:
+        d = {"gain": asdict(self.gain)}
+        if self.drift is not None:
+            d["drift"] = asdict(self.drift)
+        return d
+
+
+class CoefficientsInAir(Coefficients):
+    """Maybe some placeholder for coefficients results"""
+
+    def __init__(self, carryover: Optional[Data] = None, **kwargs):
+        super().__init__(**{**kwargs, **{"frozen": False}})
+        # frozen=False ensures we can set more attributes in this init, but this will be set to True in a postinit
+
+        if carryover is not None and not isinstance(carryover, Data):
+            raise ValueError(f"'carryover' must be a :class:`Data` instance")
+        else:
+            self.carryover: Data = carryover
+
+    def __str__(self):
+        msg = super().__str__()
+        if self.carryover is not None:
+            msg += f", carryover={str(self.carryover)}"
+        return msg
+
+    def __repr__(self):
+        msg = super().__repr__()[0:-1]
+        if self.carryover is not None:
+            msg += f", carryover={self.carryover}"
+        msg += ")"
+        return msg
+
+    def to_dict(self) -> Dict[str, Any]:
+        d = super().to_dict()
+        if self.carryover is not None:
+            d["carryover"] = asdict(self.carryover)
+        return d
+
+
+@dataclass(frozen=True)
 class FitResults:
     """Maybe some placeholder for a single fit result"""
+
     coefs: Coefficients | CoefficientsInAir
     fit_data: Any

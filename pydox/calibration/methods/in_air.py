@@ -18,6 +18,26 @@ from pydox.calibration.method import Method
 from pydox.core import models
 
 
+
+def params2cycs(params: ParamsInAir, data: Any)-> list[int]:
+    """Return the explicit first and last cycle numbers to work with, based on the 'cycles' parameter
+
+    This function allows to use natural language values like 'first' or 'last' in ParamsInAir.
+
+    Here, we return real cycle numbers.
+    """
+    if params.cycles[0] == 'first':
+        cycle_first = 1 # or read from data
+    else:
+        raise NotImplementedError
+    if params.cycles[-1] == 'last':
+        cycle_last = len(data['PPOX1'])
+    else:
+        raise NotImplementedError
+
+    return [cycle_first, cycle_last]
+
+
 def inair_fit(params: ParamsInAir, data=Any) -> FitResults:
     """This method is low level
 
@@ -52,10 +72,11 @@ def inair_fit(params: ParamsInAir, data=Any) -> FitResults:
         - G * PPOX_obs_sufr - PPOX_air = C * (G * PPOX_obs_water - PPOX_air)
 
     """
-    # Read data from input:
+    # Read data from input object:
     PPOX1 = data['PPOX1']
     PPOX2 = data['PPOX2']
     NCEP_PPOX = data['NCEP_PPOX']
+    cycle_bounds = params2cycs(params, data)
 
     # Depending on parameters, we select a model and set arguments for curve_fit:
     if not params.fit_drift:
@@ -63,14 +84,24 @@ def inair_fit(params: ParamsInAir, data=Any) -> FitResults:
             f = models.Gain_CarryOver
             xdata = [PPOX1, PPOX2]
             ydata = NCEP_PPOX
-            p0 = [params.initial_gain.value, params.initial_carryover.value]
+            p0 = [params.initial_gain.value, params.initial_carryover.value] # G/C
         else:
             f = models.Gain
             xdata = PPOX1 / PPOX1
             ydata = NCEP_PPOX / PPOX1
-            p0 = params.initial_gain.value
+            p0 = params.initial_gain.value # G
     else:
         raise NotImplementedError(f"params.fit_drift = {params.fit_drift}")
+        # if params.carryover:
+        #     f = models.Gain_Derive_CarryOver
+        #     xdata = [PPOX1, PPOX2, delta_T_NCEP]
+        #     ydata = NCEP_PPOX
+        #     p0 = [params.initial_gain.value, params.initial_carryover.value, params.initial_drift.value] # G/C/D
+        # else:
+        #     f = models.Gain_Derive
+        #     xdata = [PPOX1 / PPOX1, delta_T_NCEP]
+        #     ydata = NCEP_PPOX / PPOX1
+        #     p0 = [params.initial_gain.value, params.initial_drift.value] # G/D
 
     # Then we can call curve_fit:
     # Assumes ``ydata = f(xdata, *params) + eps``.
@@ -102,11 +133,13 @@ def inair_fit(params: ParamsInAir, data=Any) -> FitResults:
         c['carryover'] = Data(fit_results[1], np.sqrt(np.diag(covariance))[1])
 
     coefs = CoefficientsInAir(**c)
-
-    fit_data = {"R2": 0.9999, "uid": params.uid}
+    fit_data = {"R2": float(np.random.random_sample(1)[0]), # Dummy
+                "uid": params.uid,
+                "cycle_bounds": cycle_bounds}
 
     # Finally gather all data:
     return FitResults(coefs=coefs, fit_data=fit_data)
+
 
 
 class MethodInAir(Method):
@@ -116,7 +149,7 @@ class MethodInAir(Method):
         super().__init__(*args, **kwargs)
 
         # Check if we have everything we need in the configuration to run the method:
-        # Check reference data access:
+        # Check reference data access: or is this to be done when loading data ?
         ...
         # Check something else ?
         ...
@@ -140,8 +173,10 @@ class MethodInAir(Method):
                 for ds in to_list(self._mparam("dataset")):
                     p = ParamsInAir(
                         fit_drift=fit_drift,
+                        cycles=self._sparam("cycles"),
                         initial_gain=Data(self._sparam("initial_guess.gain"), 0.0),
                         initial_drift=Data(self._sparam("initial_guess.drift"), 0.0),
+
                         carryover=carryover,
                         dataset=ds,
                         src=self._mparam(f"data.{ds}.src"),
@@ -159,6 +194,8 @@ class MethodInAir(Method):
         # We first need to load data that will be used to fit:
         # Data should probably be loaded BEFORE fit to be shared with all concurrent computations
 
+        # Load Argo float and atmospheric reference data:
+        input_data = {}
         if self._mparam("dataset") == "ncep":
             # dsair, dsinwater = get_argo_data_for_NCEP(
             #     ds_argo_Rtraj,
@@ -169,27 +206,39 @@ class MethodInAir(Method):
             #     min_pres,
             #     max_pres,
             # )
-            # argofloat_obj = {
-            #     'PPOX1': np.random.random_sample((n,)),
-            #     'PPOX2': np.random.random_sample((n,)),
-            #     'NCEP_PPOX': np.random.random_sample((n,)),
-            # }
+
+            # PPOX1 = dsair["PPOX_DOXY"].values
+            # PPOX2 = dsinwater["PPOX_DOXY"].values
+            # Dummy replacment:
+            input_data['PPOX1'] = argofloat_obj['PPOX1']
+            input_data['PPOX2'] = argofloat_obj['PPOX2']
+
             # print(
             #     f"Loaded {self._mparam('data.ncep.name')} data from src={self._mparam('data.ncep.src')}"
             # )
-            ...
+            input_data['NCEP_PPOX'] = np.random.random_sample((len(input_data['PPOX1']),)) # Dummy
+
         else:
             raise NotImplementedError(f"dataset={self._mparam('dataset')}")
 
-        # PPOX1 = dsair["PPOX_DOXY"].values
-        # PPOX2 = dsinwater["PPOX_DOXY"].values
-
-        # Execute sequential & ordered computations:
+        # Execute a sequential & ordered collection of computations:
         results = OrderedDict()
         for iset, params in self.configs.items():
-            r: Dict[Any, Any] = inair_fit(params=params, data=argofloat_obj)
-            # coefs: CoefficientsInAir = r["coefs"]
-            # fit_data: Dict[Any, Any] = r["fit_data"]
+            r: FitResults = inair_fit(params=params, data=input_data)
             results[iset] = r
 
-        return results
+        #
+        for iset, result in results.items():
+            self._coefs[iset] = result.coefs
+            self._fit_data[iset] = result.fit_data
+
+        # Update fitted status:
+        self._fitted = True
+        self._fitted_float = {'WMO': argofloat_obj['WMO'], 'CYCLE_NUMBER': params2cycs(params, argofloat_obj)}
+        return self
+
+    def _repr_coefs(self)->list[str]:
+        summary = []
+        for ic, coef in self.coefs.items():
+            summary += [f"  {ic}: {str(coef)}"]
+        return summary

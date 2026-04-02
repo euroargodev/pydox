@@ -15,7 +15,7 @@ from pydox.calibration.commodities import ParamsClimatology, ParamsInAir, Data, 
 
 
 def list_methods() -> list[str]:
-    """Return the list of calibration methods"""
+    """Return the list of calibration methods, as described in the configuration"""
     methods = []
     for key in do.get_params("calibration_methods"):
         if key != "default":
@@ -26,7 +26,7 @@ def list_methods() -> list[str]:
 class Method(Workflow, ABC):
     """
     Base class for one methodology implementation
-    Support more than one configuration (but only one method)
+    Support more than one configuration, but only one method
     """
 
     rcgroup: str = None
@@ -48,7 +48,7 @@ class Method(Workflow, ABC):
     def method(self) -> str:
         """A more verbose description of this method
 
-        Allow to print more information about the method than the configuration group name, eg some long_name
+        Allow to print more information about the method than the configuration group name, eg: some long_name
         Can be used in the repr of the class, or figure titles for instance
         """
         try:
@@ -76,8 +76,8 @@ class Method(Workflow, ABC):
         'dataset' and 'data' subgroups in the configuration is organised
         similarly for all methods group, typically:
         ```yaml
-          dataset: 'some_ds'
-          data:
+          dataset: 'some_ds'  # Define the default dataset to use
+          data: # A subgroup with the description of all dataset, always with at least a 'name' and a 'src'
             some_ds:
               name: 'hello world'
               src: null
@@ -106,8 +106,22 @@ class Method(Workflow, ABC):
                 summary += [f"      {line}" for line in lines]
         return summary
 
+    @abstractmethod
+    def _repr_coefs(self) -> list[str]:
+        """Return a description of coefficients specific to a method
+
+        Returns
+        -------
+        list[str]
+            To be used by :class:`Method.__repr__`
+        """
+        raise NotImplementedError
+
     def __repr__(self):
-        """Overwrite the basic Workflow repr"""
+        """Overwrite the basic Workflow repr
+
+        Allows to insert the method specific parameters before the configuration list.
+        """
         # summary : list[str] = super().__repr__().split("\n")
 
         if self.method == self.rcgroup:
@@ -117,16 +131,27 @@ class Method(Workflow, ABC):
                 f"<pydox.Workflow.Calibration.{self.rcgroup}> '{self.method.title()}'"
             ]
 
-        summary += [f"fitted: {self.fitted}"]
+        [summary.append(line) for line in self._repr_fitted()]
+
+        summary += [""]  # Blank line
 
         summary += ["parameters (shared by all methods):"]
         [summary.append(line) for line in self._repr_params_shared()]
 
+        summary += [""]  # Blank line
+
         summary += [f"parameters (specific to '{self.rcgroup}'):"]
         [summary.append(line) for line in self._repr_params()]
 
+        summary += [""]  # Blank line
+
         summary += [f"configurations [{self.n_configs}]:"]
         [summary.append(line) for line in self._repr_configs()]
+
+        if self.fitted:
+            summary += [""]  # Blank line
+            summary += [f"coefficients [{len(self.coefs)}]:"]
+            [summary.append(line) for line in self._repr_coefs()]
 
         return "\n".join(summary)
 

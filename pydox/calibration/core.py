@@ -45,6 +45,9 @@ class Workflow(ABC):
         # Init private placeholders
         self._cfg: Config = deepcopy(config)
         self._fitted: bool = False
+        self._fitted_float: Dict = None # Used to register float WMO/CYCLES used for fit
+        self._coefs = OrderedDict()
+        self._fit_data = OrderedDict()
 
     @classmethod
     def from_config(cls, config, *args, **kwargs) -> "Workflow":
@@ -102,18 +105,37 @@ class Workflow(ABC):
             d.pop("method")
             if not self.get_params("pydox.verbose.configs"):
                 d.pop("src")
-            summary += [f"  {ii}: '{method}'{d}"]
+            summary += [f"  {ii}: method='{method}' {d}"]
 
+        return summary
+
+    def _repr_fitted(self)->list[str]:
+        """Return a description of the fit
+
+        Returns
+        -------
+        list[str]
+            To be used by :class:`Method.__repr__`
+        """
+        summary = []
+        if self.fitted:
+            summary += [f"fitted: {self.fitted} (WMO={self._fitted_float.get('WMO', '?')}, CYCLES {self._fitted_float.get('CYCLE_NUMBER', '?')})"]
+        else:
+            summary += [f"fitted: {self.fitted}"]
         return summary
 
     def __repr__(self):
         """Repr data shared by any class inheriting from this based class"""
         summary = ["<pydox.Workflow>"]
 
-        summary += [f"fitted: {self.fitted}"]
+        [summary.append(line) for line in self._repr_fitted()]
+
+        summary += [""]  # Blank line
 
         summary += ["parameters (shared by all methods):"]
         [summary.append(line) for line in self._repr_params_shared()]
+
+        summary += [""]  # Blank line
 
         if self.n_configs == 0:
             summary += ["no configurations"]
@@ -201,3 +223,11 @@ class Workflow(ABC):
     @abstractmethod
     def fit(self, data: Any) -> Self:
         raise NotImplementedError
+
+    @property
+    def coefs(self) -> OrderedDict[int, dataclass]:
+        """A property to directly access the dictionary of coefficients"""
+        if self.fitted:
+            return self._coefs
+        else:
+            raise ValueError(f"No coefficients computed")

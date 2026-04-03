@@ -13,7 +13,7 @@ import logging
 
 log = logging.getLogger("pydox.utils.compute")
 
-ComputeMethods: TypeAlias = Literal["sequential", "thread"]
+ExecutionMethods: TypeAlias = Literal["sequential", "thread"]
 ErrorMethods: TypeAlias = Literal["raise", "ignore", "silent"]
 
 try:
@@ -41,7 +41,7 @@ def compute_fits(
     fct: Callable,
     progress: bool = False,
     max_workers: int = 6,
-    method: ComputeMethods = "sequential",
+    method: ExecutionMethods = "sequential",
     errors: ErrorMethods = "raise",
 ) -> OrderedDict[int, Any]:
     """A function to compute a collection of fit sequentially or in parallel, using several methods.

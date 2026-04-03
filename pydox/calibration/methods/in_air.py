@@ -5,7 +5,7 @@ from functools import partial
 import numpy as np
 
 from pydox.utils.casting import to_list
-from pydox.utils.compute import compute_fits, ComputeMethods
+from pydox.utils.compute import compute_fits, ExecutionMethods
 from pydox.commodities import (
     Data,
     ConfigsDict,
@@ -65,7 +65,7 @@ class MethodInAir(Method):
                     icfg += 1
         return configs
 
-    def fit(self, argofloat_obj, method: ComputeMethods = "sequential") -> Self:
+    def fit(self, argofloat_obj, method: ExecutionMethods = "thread") -> Self:
         """Compute calibration coefficients for all possible configuration set and one Argo float
 
         According to instance configurations (self.configs), this method is in charge of:
@@ -81,7 +81,7 @@ class MethodInAir(Method):
             An object that will be able to return Argo float data
             #Todo: define clearly what we expect here
 
-        method: ComputeMethods
+        method: ExecutionMethods
 
         Returns
         -------

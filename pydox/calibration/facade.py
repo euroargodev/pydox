@@ -1,10 +1,11 @@
 from copy import deepcopy
 from typing import Any, Self, Optional
 from collections import OrderedDict
+import numpy as np
 
 import pydox as do
 from pydox._config.utils import list_methods
-from pydox.utils.compute import ComputeMethods
+from pydox.utils.compute import ExecutionMethods
 from pydox.commodities import ConfigsDict
 from pydox.calibration.utils import params2cycs
 from pydox.calibration.spec import Workflow
@@ -71,16 +72,65 @@ class CalibrationSet(Workflow):
                 icfg += 1
         return configs
 
-    def fit(self, argofloat_obj, method: ComputeMethods = "sequential") -> Self:
+    def is_cumulative(self) -> bool:
+        """Check if this instance can perform a cumulative fit
 
-        icfg: int = 0
+        An instance is eligible if:
+        - There is at least 2 methods
+        - There is only one configuration for each method
+        """
+        if self.n_configs < 2:
+            raise ValueError(
+                f"Fit with cumulative gain requires at least 2 configurations"
+            )
+
         for im, this_method in self._methods.items():
-            this_method.fit(argofloat_obj=argofloat_obj, method=method)
+            if this_method.n_configs != 1:
+                raise ValueError(
+                    "Fit with cumulative gain requires methods to have a single configuration"
+                )
 
-            # Gather more detailed results in dedicated placeholders of the instance:
-            for iset, coefs in this_method._coefs.items():
-                self._coefs[icfg] = coefs
-                self._fit_data[icfg] = this_method._fit_data[iset]
+        # Return False if methods are not different ?
+        # if len(np.unique([m.rcgroup for m in self._methods.values()])) == 1:
+        #     return False
+
+        return True
+
+    def fit(self, argofloat_obj, cumulative: Optional[bool] = False) -> Self:
+
+        if not cumulative:
+            icfg: int = 0
+            for im, this_method in self._methods.items():
+                this_method.fit(argofloat_obj=argofloat_obj)
+
+                # Gather more detailed results in dedicated placeholders of the instance:
+                for iset, coefs in this_method._coefs.items():
+                    self._coefs[icfg] = coefs
+                    self._fit_data[icfg] = this_method._fit_data[iset]
+                    icfg += 1
+
+        elif (
+            self.is_cumulative()
+        ):  # (cumulative was set to True, so we check eligibility immediately)
+
+            icfg: int = 0
+            for im, this_method in self._methods.items():
+                this_method.fit(argofloat_obj=argofloat_obj)
+                coefs = this_method.coefs[0]
+
+                # Gather more detailed results in dedicated placeholders of the instance:
+                for iset, coefs in this_method._coefs.items():
+                    self._coefs[icfg] = coefs
+                    self._fit_data[icfg] = this_method._fit_data[iset]
+
+                # Update next method configuration initial conditions with this estimate:
+                if im + 1 < len(self._methods):
+                    self._methods[im + 1].set_params(
+                        "calibration_parameters.initial_guess.gain",
+                        coefs.gain.value,
+                    )
+                    # So it is the fit method responsibility to use the initial value accordingly
+
                 icfg += 1
 
         # Update fitted status:

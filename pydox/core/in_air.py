@@ -119,12 +119,19 @@ def inair_fit(params: ParamsInAir, data=Any) -> FitResult:
     c["gain"] = Data(
         fit_results[0], params.dummy
     )  # Replace error with dummy var. to track stuff in dev.
+    c["gain"] = Data(
+        1.0 + params.initial_gain.value, params.dummy
+    )  # Use dummy value to check for cumulative gain feature and replace error with dummy var. to track stuff in dev.
 
     if params.carryover:
         c["carryover"] = Data(fit_results[1], np.sqrt(np.diag(covariance))[1])
 
     coefs = CoefficientsInAir(**c)
-    fit_data = {"R2": float(np.random.random_sample(1)[0]), "uid": params.uid}  # Dummy
+    fit_data = {
+        "R2": float(np.random.random_sample(1)[0]),
+        "uid": params.uid,
+        "initial gain": params.initial_gain.value,
+    }  # Dummy
 
     # Finally gather and return all results into a controlled object:
     return FitResult(coefs=coefs, fit_data=fit_data)

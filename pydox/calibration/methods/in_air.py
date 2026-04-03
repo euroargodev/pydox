@@ -58,14 +58,14 @@ class MethodInAir(Method):
                         carryover=carryover,
                         dataset=ds,
                         src=self._mparam(f"data.{ds}.src"),
+                        dummy=icfg
+                        + 1000,  # For dev. to track config number down to coefs results
                     )
                     configs[icfg] = p
                     icfg += 1
         return configs
 
-    def fit(
-        self, argofloat_obj: Optional[Any] = None, method: ComputeMethods = "sequential"
-    ) -> Self:
+    def fit(self, argofloat_obj, method: ComputeMethods = "sequential") -> Self:
         """Compute calibration coefficients for all possible configuration set and one Argo float
 
         According to instance configurations (self.configs), this method is in charge of:
@@ -77,7 +77,8 @@ class MethodInAir(Method):
 
         Parameters
         ----------
-        argofloat_obj:
+        argofloat_obj
+            An object that will be able to return Argo float data
             #Todo: define clearly what we expect here
 
         method: ComputeMethods

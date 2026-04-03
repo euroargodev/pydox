@@ -4,7 +4,9 @@ from collections import OrderedDict
 
 import pydox as do
 from pydox._config.utils import list_methods
+from pydox.utils.compute import ComputeMethods
 from pydox.commodities import ConfigsDict
+from pydox.calibration.utils import params2cycs
 from pydox.calibration.spec import Workflow
 from pydox.calibration.method import Method
 from pydox.calibration.methods.in_air import MethodInAir
@@ -69,5 +71,25 @@ class CalibrationSet(Workflow):
                 icfg += 1
         return configs
 
-    def fit(self, data: Any) -> Self:
-        raise NotImplementedError
+    def fit(self, argofloat_obj, method: ComputeMethods = "sequential") -> Self:
+
+        icfg: int = 0
+        for im, this_method in self._methods.items():
+            this_method.fit(argofloat_obj=argofloat_obj, method=method)
+
+            # Gather more detailed results in dedicated placeholders of the instance:
+            for iset, coefs in this_method._coefs.items():
+                self._coefs[icfg] = coefs
+                self._fit_data[icfg] = this_method._fit_data[iset]
+                icfg += 1
+
+        # Update fitted status:
+        self._fitted = all(
+            [m.fitted for m in self._methods.values()]
+        )  # is the set fitted when all methods are fitted, or at least one ?
+        self._fitted_float = {
+            "WMO": argofloat_obj["WMO"],
+            "CYCLE_NUMBER": params2cycs(self.configs[0], argofloat_obj),
+            # self.configs[*].cycles are all the same
+        }
+        return self

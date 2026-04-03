@@ -83,6 +83,7 @@ class Params:
     initial_gain: Data
     initial_drift: Data
     cycles: Any  # not sure what to use exactly here
+    dummy: int  # For dev. only
 
     @property
     def uid(self) -> str:

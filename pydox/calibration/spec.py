@@ -46,8 +46,10 @@ class Workflow(ABC):
         # Init private placeholders:
         self._cfg: Config = deepcopy(config)
         self._fitted: bool = False
-        self._fitted_float: Dict = None # Used to register float WMO/CYCLES used for fit
-        self._coefs : CoefsDict = OrderedDict()
+        self._fitted_float: Dict = (
+            None  # Used to register float WMO/CYCLES used for fit
+        )
+        self._coefs: CoefsDict = OrderedDict()
         self._fit_data = OrderedDict()
 
     @classmethod
@@ -110,7 +112,7 @@ class Workflow(ABC):
 
         return summary
 
-    def _repr_fitted(self)->list[str]:
+    def _repr_fitted(self) -> list[str]:
         """Return a description of the fit
 
         Returns
@@ -120,9 +122,24 @@ class Workflow(ABC):
         """
         summary = []
         if self.fitted:
-            summary += [f"fitted: {self.fitted} (WMO={self._fitted_float.get('WMO', '?')}, CYCLES {self._fitted_float.get('CYCLE_NUMBER', '?')})"]
+            summary += [
+                f"fitted: {self.fitted} (WMO={self._fitted_float.get('WMO', '?')}, CYCLES {self._fitted_float.get('CYCLE_NUMBER', '?')})"
+            ]
         else:
             summary += [f"fitted: {self.fitted}"]
+        return summary
+
+    def _repr_coefs(self) -> list[str]:
+        """Return a description of coefficients when fitted
+
+        Returns
+        -------
+        list[str]
+            To be used by :class:`Method.__repr__`
+        """
+        summary = []
+        for ic, coef in self.coefs.items():
+            summary += [f"  {ic}: {str(coef)}"]
         return summary
 
     def __repr__(self):
@@ -143,6 +160,11 @@ class Workflow(ABC):
         else:
             summary += [f"configurations [{self.n_configs}]:"]
             [summary.append(line) for line in self._repr_configs()]
+
+        if self.fitted:
+            summary += [""]  # Blank line
+            summary += [f"coefficients [{len(self.coefs)}]:"]
+            [summary.append(line) for line in self._repr_coefs()]
 
         return "\n".join(summary)
 

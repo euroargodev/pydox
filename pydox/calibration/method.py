@@ -6,7 +6,6 @@ from pydox.utils.casting import to_list
 from pydox.calibration.spec import Workflow
 
 
-
 class Method(Workflow, ABC):
     """Base class for one methodology implementation.
 
@@ -92,19 +91,6 @@ class Method(Workflow, ABC):
         """
         raise NotImplementedError
 
-    def _repr_coefs(self) -> list[str]:
-        """Return a description of coefficients when fitted
-
-        Returns
-        -------
-        list[str]
-            To be used by :class:`Method.__repr__`
-        """
-        summary = []
-        for ic, coef in self.coefs.items():
-            summary += [f"  {ic}: {str(coef)}"]
-        return summary
-
     def __repr__(self):
         """Overwrite the basic Workflow repr
 
@@ -142,4 +128,3 @@ class Method(Workflow, ABC):
             [summary.append(line) for line in self._repr_coefs()]
 
         return "\n".join(summary)
-

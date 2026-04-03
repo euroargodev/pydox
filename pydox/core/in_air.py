@@ -60,7 +60,9 @@ def inair_fit(params: ParamsInAir, data=Any) -> FitResult:
     # Read data from input object:
     PPOX1 = data["PPOX1"]
     PPOX2 = data["PPOX2"]
-    REF_PPOX = data["REF_PPOX"]  # REF_PPOX is a generic term to replace NCEP_PPOX and ERA5_PPOX
+    REF_PPOX = data[
+        "REF_PPOX"
+    ]  # REF_PPOX is a generic term to replace NCEP_PPOX and ERA5_PPOX
 
     # Depending on parameters, we select a model and set arguments for curve_fit:
     if not params.fit_drift:
@@ -113,7 +115,10 @@ def inair_fit(params: ParamsInAir, data=Any) -> FitResult:
 
     # And fill in results for output:
     c = {}
-    c["gain"] = Data(fit_results[0], np.sqrt(np.diag(covariance))[0])
+    # c["gain"] = Data(fit_results[0], np.sqrt(np.diag(covariance))[0])
+    c["gain"] = Data(
+        fit_results[0], params.dummy
+    )  # Replace error with dummy var. to track stuff in dev.
 
     if params.carryover:
         c["carryover"] = Data(fit_results[1], np.sqrt(np.diag(covariance))[1])

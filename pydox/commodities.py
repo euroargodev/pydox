@@ -218,6 +218,9 @@ class CoefficientsInAir(Coefficients):
         return d
 
 
+CoefsDict: TypeAlias = OrderedDict[int, Coefficients | CoefficientsInAir]
+
+
 @dataclass(frozen=True)
 class FitResult:
     """Maybe some placeholder for a single fit result"""

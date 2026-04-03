@@ -4,7 +4,6 @@ from functools import partial
 
 import numpy as np
 
-
 from pydox.utils.casting import to_list
 from pydox.utils.compute import compute_fits
 from pydox.commodities import (

@@ -8,14 +8,15 @@ from dataclasses import dataclass, asdict
 
 import pydox as do
 from pydox._config.config import check_config, Config
-from pydox.commodities import ConfigsDict
+from pydox.commodities import ConfigsDict, CoefsDict
 
 
 class Workflow(ABC):
     """
-    Base class for a calibrations
+    Base class for one or more calibrations
     - Support more than one configuration set
     - Support more than one method
+    - Support ordered vs sequential vs parallel gain computation
 
     Notes
     -----
@@ -42,11 +43,11 @@ class Workflow(ABC):
         )  # Will raise an error if not a valid configuration
         # but, this may not be coherent with the from_config class method expectation, see below.
 
-        # Init private placeholders
+        # Init private placeholders:
         self._cfg: Config = deepcopy(config)
         self._fitted: bool = False
         self._fitted_float: Dict = None # Used to register float WMO/CYCLES used for fit
-        self._coefs = OrderedDict()
+        self._coefs : CoefsDict = OrderedDict()
         self._fit_data = OrderedDict()
 
     @classmethod
@@ -77,7 +78,7 @@ class Workflow(ABC):
         # Piecewise subgroup:
         summary += [f"  piecewise: {json.dumps(self._sparam('piecewise'))}"]
 
-        # Initial conditions subgroup:
+        # Initial condition subgroup:
         summary += [f"  initial_guess: {json.dumps(self._sparam('initial_guess'))}"]
 
         # Cycle numbers subgroup:
@@ -100,7 +101,7 @@ class Workflow(ABC):
         for ii, cfg in self.configs.items():
             d: dict = asdict(
                 cfg
-            )  # cfg is a commodity dataclass produced by self._flatten_configs
+            )  # cfg is a commodity ParameterSet produced by self._flatten_configs
             method = d["method"]
             d.pop("method")
             if not self.get_params("pydox.verbose.configs"):
@@ -185,19 +186,6 @@ class Workflow(ABC):
             value: Dict[str, Any] = self.get_params("calibration_parameters")
         return value if value is not None else fallback
 
-    @abstractmethod
-    def _flatten_configs(self) -> ConfigsDict:
-        """Scan all parameters and create an ordered dictionary with all configurations to compute
-
-        Dictionary keys are integers, values are commodity dataclasses with all required parameters for the coefs computation.
-
-        Notes
-        -----
-        This is a private method that "translates" information from the user-level API configuration
-        into internal dataclasses (see commodities) to be consumed by low-level computational functions.
-        """
-        raise NotImplementedError
-
     def flatten_configs(self) -> ConfigsDict:
         """Return a dictionary with all possible configurations
 
@@ -217,17 +205,37 @@ class Workflow(ABC):
 
     @property
     def n_configs(self) -> int:
-        """Return the number of all possible configurations"""
+        """Return the number of all possible configurations
+
+        In theory there is always at least 1 configuration.
+
+        But the number of configs depends on:
+            `self.configs < self.flatten_configs() < self._flatten_configs()`
+        So, if `self._flatten_configs()` is not or partially implemented, `n_configs` can be 0.
+        """
         return len(self.flatten_configs())
 
-    @abstractmethod
-    def fit(self, data: Any) -> Self:
-        raise NotImplementedError
-
     @property
-    def coefs(self) -> OrderedDict[int, dataclass]:
+    def coefs(self) -> CoefsDict:
         """A property to directly access the dictionary of coefficients"""
         if self.fitted:
             return self._coefs
         else:
             raise ValueError(f"No coefficients computed")
+
+    @abstractmethod
+    def _flatten_configs(self) -> ConfigsDict:
+        """Scan all parameters and create an ordered dictionary with all configurations to compute
+
+        Dictionary keys are integers, values are commodity dataclasses with all required parameters for the coefs computation.
+
+        Notes
+        -----
+        This is a private method that "translates" information from the user-level API configuration
+        into internal dataclasses (see commodities) to be consumed by low-level computational functions.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def fit(self, data: Any) -> Self:
+        raise NotImplementedError

@@ -68,5 +68,6 @@ class CalibrationSet(Workflow):
                 icfg += 1
         return configs
 
-    def fit(self, data: Any) -> Self: ...
+    def fit(self, data: Any) -> Self:
+        raise NotImplementedError
 

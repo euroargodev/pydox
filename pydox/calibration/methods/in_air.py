@@ -133,9 +133,3 @@ class MethodInAir(Method):
             # self.configs[*].cycles are all the same
         }
         return self
-
-    def _repr_coefs(self) -> list[str]:
-        summary = []
-        for ic, coef in self.coefs.items():
-            summary += [f"  {ic}: {str(coef)}"]
-        return summary

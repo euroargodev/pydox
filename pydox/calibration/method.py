@@ -92,16 +92,18 @@ class Method(Workflow, ABC):
         """
         raise NotImplementedError
 
-    @abstractmethod
     def _repr_coefs(self) -> list[str]:
-        """Return a description of coefficients specific to a method
+        """Return a description of coefficients when fitted
 
         Returns
         -------
         list[str]
             To be used by :class:`Method.__repr__`
         """
-        raise NotImplementedError
+        summary = []
+        for ic, coef in self.coefs.items():
+            summary += [f"  {ic}: {str(coef)}"]
+        return summary
 
     def __repr__(self):
         """Overwrite the basic Workflow repr

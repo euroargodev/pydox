@@ -1,32 +1,18 @@
 from abc import ABC, abstractmethod
-from copy import deepcopy
-from typing import Dict, Any, Self, Optional, LiteralString
-import json
+from typing import Any, Optional
 
-from collections import OrderedDict
-from dataclasses import dataclass, asdict
+from pydox._config.utils import dict_to_string
+from pydox.utils.casting import to_list
+from pydox.calibration.spec import Workflow
 
-import pydox as do
-from pydox._config.config import check_config, Config
-from pydox._config.utils import format_value_txt, dict_to_string
-from pydox.calibration.core import Workflow
-from pydox.calibration.utils import to_list
-from pydox.calibration.commodities import ParameterSet, ParamsClimatology, ParamsInAir, Data, Coefficients
-
-
-def list_methods() -> list[str]:
-    """Return the list of calibration methods, as described in the configuration"""
-    methods = []
-    for key in do.get_params("calibration_methods"):
-        if key != "default":
-            methods.append(key)
-    return methods
 
 
 class Method(Workflow, ABC):
-    """
-    Base class for one methodology implementation
-    Support more than one configuration, but only one method
+    """Base class for one methodology implementation.
+
+    Support more than one configuration, but only one method.
+
+    In-air, climatology and ctd-based methodology implementations MUST inherit from this class.
     """
 
     rcgroup: str = None
@@ -57,17 +43,6 @@ class Method(Workflow, ABC):
         except:
             y = self.rcgroup
         return y
-
-    @abstractmethod
-    def _repr_params(self) -> list[str]:
-        """Return a description of parameters specific to a method
-
-        Returns
-        -------
-        list[str]
-            To be used by :class:`Method.__repr__`
-        """
-        raise NotImplementedError
 
     def _repr_dataset(self) -> list[str]:
         """Return a description of dataset parameters
@@ -105,6 +80,17 @@ class Method(Workflow, ABC):
                 lines = dict_to_string(self._mparam(f"data.{ds}")).split("\n")
                 summary += [f"      {line}" for line in lines]
         return summary
+
+    @abstractmethod
+    def _repr_params(self) -> list[str]:
+        """Return a description of parameters specific to a method
+
+        Returns
+        -------
+        list[str]
+            To be used by :class:`Method.__repr__`
+        """
+        raise NotImplementedError
 
     @abstractmethod
     def _repr_coefs(self) -> list[str]:

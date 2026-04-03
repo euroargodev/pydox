@@ -1,8 +1,12 @@
+# Import facades for configuration management:
+from pydox._config.config import get_params, set_params, reset_params, config_files, config_print, get_configdir
+from pydox._config.config import rcParams as params
+
+# Import facades for calibrations:
+from pydox.calibration.facade import Calibration, CalibrationSet
+
+#
 from importlib.metadata import version as _version
-
-from ._config.config import get_params, set_params, reset_params, config_files, config_print, get_configdir
-from ._config.config import rcParams as params
-
 
 try:
     __version__ = _version("pydox")

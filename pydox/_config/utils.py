@@ -5,7 +5,9 @@ from pathlib import Path
 import importlib
 import re
 
-from pydox._config import _valid_config_version, _read_only_dotted_params, _not_overloaded_dotted_params
+
+import pydox as do
+from pydox._config import _read_only_dotted_params
 
 _path2static = Path(importlib.util.find_spec("pydox.static").submodule_search_locations[0])
 
@@ -239,3 +241,12 @@ def config_repr_html(
         return clean_html(html)
 
     return html
+
+
+def list_methods() -> list[str]:
+    """Return the list of calibration methods, as described in the configuration"""
+    methods = []
+    for key in do.get_params("calibration_methods"):
+        if key != "default":
+            methods.append(key)
+    return methods

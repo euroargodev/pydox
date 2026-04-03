@@ -1,15 +1,25 @@
 """
+Commodity classes
 
-Commodity classes (dataclass or not) with frozen states, ie attributes must be set at instanciation, not later.
+These are objects used as interface between high-level APIs (eg: `Calibration`) and low-level computational functions (eg: `inair_fit`).
 
 
+All Commodity classes have a _frozen_ state:
+
+Frozen == attributes must be set at instanciation, not later, ie instances are read-only
+
+We also define custom types
+
+Notes
+-----
 > If your object needs significant logic to be valid, hiding that logic in __post_init__ is rarely the best design.
 > If the class has no real behavior, @dataclass is perfect.
 https://medium.com/the-pythonworld/why-i-stopped-using-python-dataclass-everywhere-3d0cc5457e01
 """
 
 from dataclasses import dataclass, field, asdict
-from typing import Any, Dict, Optional, TypeAlias, OrderedDict, Protocol
+from typing import Any, Dict, Optional, TypeAlias, OrderedDict, Protocol, runtime_checkable
+
 
 @dataclass(frozen=True)
 class Data:
@@ -23,21 +33,26 @@ class Data:
         return f"{self.value} (err={self.error})"
 
 
-
+@runtime_checkable
 class ParameterSet(Protocol):
-    """A protocol for the bare minimal and unique collection of parameters for a single computation of coefficients
+    """Define a type for a unique collection of parameters describing a single computation of coefficients
 
-    A protocol allows to define types for expected instances of Params, ParamsInAir, ParamsClimatology
+    Notes
+    -----
+    - This protocol allows to define types wherever instances of Params, ParamsInAir, ParamsClimatology are expected
+    - We set in here what is expected from any implementation, on our case, this will be the Params class and its children ParamsInAir, ParamsClimatology.
     """
-    fit_drift = None
-    initial_gain = None
-    initial_drift = None
-    cycles = None
 
-    def uid(self) -> str:
-        ...
+    fit_drift: bool
+    initial_gain: Data
+    initial_drift: Data
+    cycles: Any  # not sure what to use exactly here
 
-ConfigsDict : TypeAlias = OrderedDict[int, ParameterSet]
+    @property
+    def uid(self) -> str: ...
+
+
+ConfigsDict: TypeAlias = OrderedDict[int, ParameterSet]
 """A type for the Workflow.configs attribute, hence for Workflow.flatten_configs() and Workflow._flatten_configs() methods"""
 
 
@@ -112,7 +127,10 @@ class ParamsClimatology(Params):
 
 
 class PostInitCaller(type):
-    """A metaclass allowing to implement a __post_init__"""
+    """A metaclass allowing to implement a __post_init__
+
+    __post_init__ is primarily used to freeze an instance
+    """
 
     def __call__(cls, *args, **kwargs):
         obj = type.__call__(cls, *args, **kwargs)
@@ -120,7 +138,7 @@ class PostInitCaller(type):
         return obj
 
 
-# not a dataclass to handle data validation, a custom frozen state and print outputs
+# We don't use a dataclass to handle data validation, a custom frozen state and print outputs
 class Coefficients(metaclass=PostInitCaller):
     """Maybe some placeholder for coefficients results"""
 
@@ -169,7 +187,7 @@ class Coefficients(metaclass=PostInitCaller):
 
 
 class CoefficientsInAir(Coefficients):
-    """Maybe some placeholder for coefficients results"""
+    """Maybe some placeholder for coefficients results from the in-air method"""
 
     def __init__(self, carryover: Optional[Data] = None, **kwargs):
         super().__init__(**{**kwargs, **{"frozen": False}})
@@ -201,10 +219,11 @@ class CoefficientsInAir(Coefficients):
 
 
 @dataclass(frozen=True)
-class FitResults:
+class FitResult:
     """Maybe some placeholder for a single fit result"""
 
     coefs: Coefficients | CoefficientsInAir
     fit_data: Any
 
+FitResults: TypeAlias = OrderedDict[int, FitResult]
 

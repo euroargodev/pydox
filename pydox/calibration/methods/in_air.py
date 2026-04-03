@@ -70,10 +70,22 @@ class MethodInAir(Method):
 
         According to instance configurations (self.configs), this method is in charge of:
         - Loading/preprocessing Argo Float data,
-        - Loading/preprocessing Reference data,
+        - Loading/preprocessing Reference data (eg: from NCEP),
         - Executing all possible computations, sequentially or in parallel
 
-        All of these steps are delegated to external functions taking `argofloat_obj` and one value from `self.configs` as input.
+        All of these steps are delegated to external functions taking `argofloat_obj` and a :class:`ParameterSet` (ie one value from `self.configs`) as input.
+
+        Parameters
+        ----------
+        argofloat_obj:
+            #Todo: define clearly what we expect here
+
+        method: ComputeMethods
+
+        Returns
+        -------
+        Self
+
         """
 
         # We first need to load data that will be used to fit:
@@ -102,7 +114,7 @@ class MethodInAir(Method):
             # print(
             #     f"Loaded {self._mparam('data.ncep.name')} data from src={self._mparam('data.ncep.src')}"
             # )
-            input_data["NCEP_PPOX"] = np.random.random_sample(
+            input_data["REF_PPOX"] = np.random.random_sample(
                 (len(input_data["PPOX1"]),)
             )  # Dummy
 

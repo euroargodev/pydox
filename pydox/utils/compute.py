@@ -14,7 +14,7 @@ import logging
 log = logging.getLogger("pydox.utils.compute")
 
 ComputeMethods: TypeAlias = Literal["sequential", "thread"]
-ErrorMethods: TypeAlias = Literal["ignore", "raise", "silent"]
+ErrorMethods: TypeAlias = Literal["raise", "ignore", "silent"]
 
 try:
     from tqdm import tqdm
@@ -46,9 +46,37 @@ def compute_fits(
 ) -> OrderedDict[int, Any]:
     """A function to compute a collection of fit sequentially or in parallel, using several methods.
 
+    Parameters
+    ----------
+    items: List[Tuple[int, Any]]
+        List of tuples, where 1st value is an integer and 2nd value is anything (typically a unique set of parameters).
+        The integer value is used to build the result `OrderedDict`.
+    fct: Callable
+        A callable object that will reveice the 2nd value of the items tuples.
+    max_workers: int, default: 6
+        Maximum number of threads or processes
+    method: str, default: ``sequential``
+        Define the execution method:
+            - ``sequential``/``seq``  (default): open data sequentially in a simple loop, no parallelization applied
+            - ``thread``: based on :class:`concurrent.futures.ThreadPoolExecutor` with a pool of at most ``max_workers`` threads
+            - ``process``: based on :class:`concurrent.futures.ProcessPoolExecutor` with a pool of at most ``max_workers`` processes
+    progress: bool, default: False
+        Display a progress bar
+    errors: str, default: ``raise``
+        Define how to handle errors raised during data URIs fetching:
+            - ``raise`` (default): Raise any error encountered
+            - ``ignore``: Do not stop processing, simply issue a debug message in log console
+            - ``silent``: Do not stop processing and do not issue log message
+
+    Returns
+    -------
+    OrderedDict[int, Any]
+        Collected results ordered similarly to the input `items`.
+        Eg: OrderedDict[12, Any] = fct(items[12][1])
+
     Notes
     -----
-    For the :class:`distributed.client.Client` and :class:`concurrent.futures.ProcessPoolExecutor` to work appropriately, the pre-processing :class:`collections.abc.Callable` must be serializable. This can be checked with:
+    For the :class:`distributed.client.Client` and :class:`concurrent.futures.ProcessPoolExecutor` to work appropriately, the function :class:`collections.abc.Callable` must be serializable. This can be checked with:
 
     >>> from distributed.protocol import serialize
     >>> from distributed.protocol.serialize import ToPickle
@@ -68,7 +96,8 @@ def compute_fits(
             try:
                 data = fct(params)
                 # This is where we should implement progressive gain computation
-                # by updating the new params from the previous iteration
+                # by updating the new params from the previous iteration.
+                # This could be done using a callback function defined by the caller.
             except Exception:
                 failed.append(params)
                 if errors == "ignore":
@@ -86,6 +115,11 @@ def compute_fits(
 
     ################################
     elif method in ["thread", "process"]:
+        if not _is_serial(fct):
+            raise ValueError(
+                "For a function to be executed in parallel, it must be serializable. This one is not."
+            )
+
         if method == "thread":
             ConcurrentExecutor = ThreadPoolExecutor(max_workers=max_workers)
         else:

@@ -1,4 +1,4 @@
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np
 from scipy.optimize import curve_fit
@@ -13,69 +13,80 @@ from pydox.core import models
 
 
 def inair_fit(params: ParamsInAir, data=Any) -> FitResult:
-    """This method is low level
+    """Generic in-air calibration computation method
 
-    This method must be located away for the 'calibration' submodule, but stay here for dev
-    This method should probably be serializable for parallelization
+    This method is low level and should not be called by users.
+    This method must not rely on anything from the 'calibration' submodule.
+    This method should probably be serializable for parallelization.
 
     Parameters
     ----------
     params: ParamsInAir
+        A set of parameters defining the calibration to compute.
 
     data: Any
-        Let's place here Argo and reference data needed for this fit
-        - PPOX1, PPOX2, NCEP_PPOX
+        This object must contain ALL required data for the computation, from an Argo float and from Reference data.
+        This would typically provide data like: PPOX1, PPOX2, REF_PPOX arrays.
 
     Returns
     -------
     FitResult
-        An dataclass holding fit result for a single set of parameters
+        An dataclass holding one fit result for a single set of parameters
 
     Notes
     -----
-    4 possible corrections:
+    Depending on `ParamsInAir`, this function can compute 4 possible calibrations:
     - a gain (G)
     - a gain (G) estimated with CarryOver (C)
     - a gain (G) and a time drift (D)
     - a gain (G) and a time drift (D) estimated with CarryOver (C)
 
-    We use curve_fit for G, D and C estimation.
+    We use :function:`scipy.optimize.curve_fit` for G, D and C estimation.
 
-    The Carryover represents the fact that the InAir Argo PPOX may be polluted by water (waves).
-    The CarryOver is determined by the article 'Oxygen Optode Sensors : Principle, characterization, calibration and application in the Ocean' (Bittig and al. 2018) :
-        - G * PPOX_obs_sufr - PPOX_air = C * (G * PPOX_obs_water - PPOX_air)
+    Notes
+    -----
+    _Carryover_ represents the fact that the in-air Argo PPOX may be polluted by water (waves).
+
+    It is determined according to Bittig and al. 2018 [1]_ as:
+
+    .. math::
+        - G * PPOX_{obs_surf} - PPOX_{air} = C * \left(G * PPOX_{obs_water} - PPOX_{air} \right)
+
+    References
+    ----------
+    .. [1] Bittig and al. 2018: 'Oxygen Optode Sensors : Principle, characterization, calibration and application in the Ocean'
 
     """
     # Read data from input object:
     PPOX1 = data["PPOX1"]
     PPOX2 = data["PPOX2"]
-    NCEP_PPOX = data["NCEP_PPOX"]
+    REF_PPOX = data["REF_PPOX"]  # REF_PPOX is a generic term to replace NCEP_PPOX and ERA5_PPOX
 
     # Depending on parameters, we select a model and set arguments for curve_fit:
     if not params.fit_drift:
         if params.carryover:
             f = models.Gain_CarryOver
             xdata = [PPOX1, PPOX2]
-            ydata = NCEP_PPOX
+            ydata = REF_PPOX
             p0: models.Array = np.array(
                 [params.initial_gain.value, params.initial_carryover.value]
             )  # G/C
         else:
             f = models.Gain
             xdata = PPOX1 / PPOX1
-            ydata = NCEP_PPOX / PPOX1
+            ydata = REF_PPOX / PPOX1
             p0: models.Array = np.array(params.initial_gain.value)  # G
     else:
         raise NotImplementedError(f"params.fit_drift = {params.fit_drift}")
         # if params.carryover:
         #     f = models.Gain_Derive_CarryOver
-        #     xdata = [PPOX1, PPOX2, delta_T_NCEP]
-        #     ydata = NCEP_PPOX
+        #     xdata = [PPOX1, PPOX2, delta_T_REF]
+        #     ydata = REF_PPOX
         #     p0 = [params.initial_gain.value, params.initial_carryover.value, params.initial_drift.value] # G/C/D
         # else:
         #     f = models.Gain_Derive
-        #     xdata = [PPOX1 / PPOX1, delta_T_NCEP]
-        #     ydata = NCEP_PPOX / PPOX1
+        #     xdata = [PPOX1 / PPOX1, delta_T_REF]
+        #     ydata = REF_PPOX / PPOX1
         #     p0 = [params.initial_gain.value, params.initial_drift.value] # G/D
 
     # Then we can call curve_fit:
@@ -110,5 +121,5 @@ def inair_fit(params: ParamsInAir, data=Any) -> FitResult:
     coefs = CoefficientsInAir(**c)
     fit_data = {"R2": float(np.random.random_sample(1)[0]), "uid": params.uid}  # Dummy
 
-    # Finally gather all data:
+    # Finally gather and return all results into a controlled object:
     return FitResult(coefs=coefs, fit_data=fit_data)

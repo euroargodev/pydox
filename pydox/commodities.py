@@ -18,7 +18,15 @@ https://medium.com/the-pythonworld/why-i-stopped-using-python-dataclass-everywhe
 """
 
 from dataclasses import dataclass, field, asdict
-from typing import Any, Dict, Optional, TypeAlias, OrderedDict, Protocol, runtime_checkable
+from typing import (
+    Any,
+    Dict,
+    Optional,
+    TypeAlias,
+    OrderedDict,
+    Protocol,
+    runtime_checkable,
+)
 
 
 @dataclass(frozen=True)
@@ -60,7 +68,9 @@ ConfigsDict: TypeAlias = OrderedDict[int, ParameterSet]
 class Params:
     """A dataclass to hold a parameter set for one computation
 
-    Define here parameters shared by all methods
+    Define here parameters shared by all methods.
+
+    This class produces instances that type as `ParameterSet`
 
     Notes
     -----
@@ -145,6 +155,13 @@ class Coefficients(metaclass=PostInitCaller):
     _frozen: bool = False
 
     def __init__(self, gain: Data, drift: Optional[Data] = None, **kwargs):
+        """
+
+        Parameters
+        ----------
+        gain : Data
+        drift : Optional[Data]
+        """
         if gain is None:
             raise ValueError(f"You must at least provide a :class:`Data` for the gain")
         elif not isinstance(gain, Data):
@@ -228,5 +245,5 @@ class FitResult:
     coefs: Coefficients | CoefficientsInAir
     fit_data: Any
 
-FitResults: TypeAlias = OrderedDict[int, FitResult]
 
+FitResults: TypeAlias = OrderedDict[int, FitResult]

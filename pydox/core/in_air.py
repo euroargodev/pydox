@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Callable
 
 import numpy as np
 from scipy.optimize import curve_fit
@@ -57,12 +57,14 @@ def inair_fit(params: ParamsInAir, data=Any) -> FitResult:
             f = models.Gain_CarryOver
             xdata = [PPOX1, PPOX2]
             ydata = NCEP_PPOX
-            p0 = [params.initial_gain.value, params.initial_carryover.value]  # G/C
+            p0: models.Array = np.array(
+                [params.initial_gain.value, params.initial_carryover.value]
+            )  # G/C
         else:
             f = models.Gain
             xdata = PPOX1 / PPOX1
             ydata = NCEP_PPOX / PPOX1
-            p0 = params.initial_gain.value  # G
+            p0: models.Array = np.array(params.initial_gain.value)  # G
     else:
         raise NotImplementedError(f"params.fit_drift = {params.fit_drift}")
         # if params.carryover:
@@ -106,11 +108,7 @@ def inair_fit(params: ParamsInAir, data=Any) -> FitResult:
         c["carryover"] = Data(fit_results[1], np.sqrt(np.diag(covariance))[1])
 
     coefs = CoefficientsInAir(**c)
-    fit_data = {
-        "R2": float(np.random.random_sample(1)[0]),  # Dummy
-        "uid": params.uid
-    }
+    fit_data = {"R2": float(np.random.random_sample(1)[0]), "uid": params.uid}  # Dummy
 
     # Finally gather all data:
     return FitResult(coefs=coefs, fit_data=fit_data)
-

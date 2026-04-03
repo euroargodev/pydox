@@ -1,11 +1,20 @@
 from collections import OrderedDict
-from typing import Any, Callable, Iterable, Literal
-import concurrent.futures
+from typing import (
+    Any,
+    Callable,
+    List,
+    Literal,
+    Tuple,
+    TypeAlias,
+)
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 import multiprocessing
 import logging
 
-
 log = logging.getLogger("pydox.utils.compute")
+
+ComputeMethods: TypeAlias = Literal["sequential", "thread"]
+ErrorMethods: TypeAlias = Literal["ignore", "raise", "silent"]
 
 try:
     from tqdm import tqdm
@@ -28,13 +37,13 @@ def _is_serial(obj: Callable) -> bool:
 
 
 def compute_fits(
-    items: Iterable,
+    items: List[Tuple[int, Any]],
     fct: Callable,
     progress: bool = False,
     max_workers: int = 6,
-    method: Literal["sequential", "thread"] = "sequential",
-    errors: Literal["ignore", "raise", "silent"] = "raise",
-) -> OrderedDict[Any, Any]:
+    method: ComputeMethods = "sequential",
+    errors: ErrorMethods = "raise",
+) -> OrderedDict[int, Any]:
     """A function to compute a collection of fit sequentially or in parallel, using several methods.
 
     Notes
@@ -78,15 +87,11 @@ def compute_fits(
     ################################
     elif method in ["thread", "process"]:
         if method == "thread":
-            ConcurrentExecutor = concurrent.futures.ThreadPoolExecutor(
-                max_workers=max_workers
-            )
+            ConcurrentExecutor = ThreadPoolExecutor(max_workers=max_workers)
         else:
             if max_workers == 6:
                 max_workers = multiprocessing.cpu_count()
-            ConcurrentExecutor = concurrent.futures.ProcessPoolExecutor(
-                max_workers=max_workers
-            )
+            ConcurrentExecutor = ProcessPoolExecutor(max_workers=max_workers)
 
         with ConcurrentExecutor as executor:
             future_to_url = {
@@ -96,7 +101,7 @@ def compute_fits(
                 ): iparam
                 for iparam, params in items
             }
-            futures = concurrent.futures.as_completed(future_to_url)
+            futures = as_completed(future_to_url)
             if progress:
                 futures = tqdm(
                     futures, total=len(items), disable="disable" in [progress]

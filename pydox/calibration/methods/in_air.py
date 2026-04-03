@@ -5,7 +5,7 @@ from functools import partial
 import numpy as np
 
 from pydox.utils.casting import to_list
-from pydox.utils.compute import compute_fits
+from pydox.utils.compute import compute_fits, ComputeMethods
 from pydox.commodities import (
     Data,
     ConfigsDict,
@@ -64,7 +64,7 @@ class MethodInAir(Method):
         return configs
 
     def fit(
-        self, argofloat_obj: Optional[Any] = None, method: str = "sequential"
+        self, argofloat_obj: Optional[Any] = None, method: ComputeMethods = "sequential"
     ) -> Self:
         """Compute calibration coefficients for all possible configuration set and one Argo float
 
@@ -115,15 +115,19 @@ class MethodInAir(Method):
         fct = partial(inair_fit, data=input_data)
         items = [(iset, params) for iset, params in self.configs.items()]
 
-        results : FitResults = compute_fits(items, fct, method=method)
+        results: FitResults = compute_fits(items, fct, method=method)
+
+        compute_fits([], lambda x: x, method=method)
 
         # Gather more detailed results in dedicated placeholders of the instance:
         for iset, result in results.items():
-            self._coefs[iset] : CoefficientsInAir = result.coefs
+            self._coefs[iset]: CoefficientsInAir = result.coefs
             self._fit_data[iset] = result.fit_data
 
             # Possibly add more data:
-            self._fit_data[iset]['cycle_bounds'] = params2cycs(self.configs[iset], argofloat_obj)
+            self._fit_data[iset]["cycle_bounds"] = params2cycs(
+                self.configs[iset], argofloat_obj
+            )
 
         # Update fitted status:
         self._fitted = True

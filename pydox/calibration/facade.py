@@ -11,8 +11,9 @@ from pydox.calibration.methods.in_air import MethodInAir
 from pydox.calibration.methods.climatology import MethodClimatology
 
 
-
-def Calibration(method: Optional[str] = None, *args, **kwargs)-> MethodInAir | MethodClimatology:
+def Calibration(
+    method: Optional[str] = None, *args, **kwargs
+) -> MethodInAir | MethodClimatology:
     """Facade to create a single methodology calibration workflow
 
     Notes
@@ -60,8 +61,8 @@ class CalibrationSet(Workflow):
         return self
 
     def _flatten_configs(self) -> ConfigsDict:
-        configs : ConfigsDict = OrderedDict()
-        icfg : int = 0
+        configs: ConfigsDict = OrderedDict()
+        icfg: int = 0
         for im, m in self._methods.items():
             for idc, dc in m.configs.items():
                 configs[icfg] = dc
@@ -70,4 +71,3 @@ class CalibrationSet(Workflow):
 
     def fit(self, data: Any) -> Self:
         raise NotImplementedError
-

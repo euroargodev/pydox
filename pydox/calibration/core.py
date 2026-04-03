@@ -9,6 +9,7 @@ from dataclasses import dataclass, asdict
 import pydox as do
 from pydox._config.config import check_config, Config
 from pydox._config.utils import format_value_txt, dict_to_string
+from pydox.calibration.commodities import ConfigsDict
 
 
 class Workflow(ABC):
@@ -186,7 +187,7 @@ class Workflow(ABC):
         return value if value is not None else fallback
 
     @abstractmethod
-    def _flatten_configs(self) -> OrderedDict[int, dataclass]:
+    def _flatten_configs(self) -> ConfigsDict:
         """Scan all parameters and create an ordered dictionary with all configurations to compute
 
         Dictionary keys are integers, values are commodity dataclasses with all required parameters for the coefs computation.
@@ -198,7 +199,7 @@ class Workflow(ABC):
         """
         raise NotImplementedError
 
-    def flatten_configs(self) -> OrderedDict[int, dataclass]:
+    def flatten_configs(self) -> ConfigsDict:
         """Return a dictionary with all possible configurations
 
         Dictionary keys are integers, values are commodity dataclasses with all required parameters for the coefs computation.
@@ -211,7 +212,7 @@ class Workflow(ABC):
         return self._flatten_configs()
 
     @property
-    def configs(self) -> OrderedDict[int, dataclass]:
+    def configs(self) -> ConfigsDict:
         """A property to directly access the dictionary of configurations"""
         return self.flatten_configs()
 

@@ -11,7 +11,7 @@ from pydox._config.config import check_config, Config
 from pydox._config.utils import format_value_txt, dict_to_string
 from pydox.calibration.core import Workflow
 from pydox.calibration.utils import to_list
-from pydox.calibration.commodities import ParamsClimatology, ParamsInAir, Data, Coefficients
+from pydox.calibration.commodities import ParameterSet, ParamsClimatology, ParamsInAir, Data, Coefficients
 
 
 def list_methods() -> list[str]:

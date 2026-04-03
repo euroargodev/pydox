@@ -4,6 +4,7 @@ from typing import Dict, Any, Self, Optional, LiteralString, Callable
 import json
 from collections import OrderedDict
 from dataclasses import dataclass, asdict
+from functools import partial
 
 import numpy as np
 from scipy.optimize import curve_fit
@@ -12,8 +13,8 @@ import pydox as do
 from pydox._config.config import check_config, Config
 from pydox._config.utils import format_value_txt, dict_to_string
 from pydox.calibration.core import Workflow
-from pydox.calibration.utils import to_list
-from pydox.calibration.commodities import ParamsInAir, Data, CoefficientsInAir, FitResults
+from pydox.calibration.utils import to_list, execute_fit
+from pydox.calibration.commodities import Data, ConfigsDict, ParamsInAir, CoefficientsInAir, FitResults
 from pydox.calibration.method import Method
 from pydox.core import models
 
@@ -165,9 +166,10 @@ class MethodInAir(Method):
 
         return summary
 
-    def _flatten_configs(self) -> OrderedDict[int, dataclass]:
+    def _flatten_configs(self) -> ConfigsDict:
         """Define the entire configuration space to explore with the 'in_air' method"""
-        configs, icfg = OrderedDict(), 0
+        configs : ConfigsDict = OrderedDict()
+        icfg : int = 0
         for fit_drift in to_list(self._sparam("fit_drift")):
             for carryover in to_list(self._mparam("carryover")):
                 for ds in to_list(self._mparam("dataset")):
@@ -181,15 +183,21 @@ class MethodInAir(Method):
                         dataset=ds,
                         src=self._mparam(f"data.{ds}.src"),
                     )
-
-                    # plist.append(asdict(p))
-                    # configs[icfg] = asdict(p)  # Not sure what to carry in here...
-                    configs[icfg] = p  # let's keep a dataclass
+                    configs[icfg] = p
                     icfg += 1
         return configs
 
-    def fit(self, argofloat_obj: Optional[Any] = None) -> Self:
-        """Compute calibration coefficients for all possible configuration set and some Argo float"""
+    def fit(self, argofloat_obj: Optional[Any] = None, method:str='sequential') -> Self:
+        """Compute calibration coefficients for all possible configuration set and some Argo float
+
+        According to instance configurations (self.configs), this method will do the following:
+        - Load Argo Float data,
+        - Load Reference data,
+        - Execute all possible computations, sequentially or in parallel
+
+        All of these steps are delegated to external functions taking argofloat_obj
+        The only new data source here is from Argo and Reference Data, so that there's no need to call on self method.
+        """
 
         # We first need to load data that will be used to fit:
         # Data should probably be loaded BEFORE fit to be shared with all concurrent computations
@@ -221,20 +229,25 @@ class MethodInAir(Method):
         else:
             raise NotImplementedError(f"dataset={self._mparam('dataset')}")
 
-        # Execute a sequential & ordered collection of computations:
-        results = OrderedDict()
-        for iset, params in self.configs.items():
-            r: FitResults = inair_fit(params=params, data=input_data)
-            results[iset] = r
+        # Execute all computations, 'method' determines how to do it:
+        # 'sequential': one after the other
+        # 'thread'/'process' or a Dask client: in parallel
+        fct = partial(inair_fit, data=input_data)
+        items = [(iset, params) for iset, params in self.configs.items()]
 
-        #
+        results = execute_fit(items, fct, method=method)
+
+        # Gather more detailed results in dedicated placeholders of the instance:
         for iset, result in results.items():
             self._coefs[iset] = result.coefs
             self._fit_data[iset] = result.fit_data
 
         # Update fitted status:
         self._fitted = True
-        self._fitted_float = {'WMO': argofloat_obj['WMO'], 'CYCLE_NUMBER': params2cycs(params, argofloat_obj)}
+        self._fitted_float = {'WMO': argofloat_obj['WMO'],
+                              'CYCLE_NUMBER': params2cycs(self.configs[0], argofloat_obj)
+                              # self.configs[*].cycles are all the same
+                              }
         return self
 
     def _repr_coefs(self)->list[str]:

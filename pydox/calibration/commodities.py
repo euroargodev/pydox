@@ -9,12 +9,11 @@ https://medium.com/the-pythonworld/why-i-stopped-using-python-dataclass-everywhe
 """
 
 from dataclasses import dataclass, field, asdict
-from typing import Any, Dict, Optional
-
+from typing import Any, Dict, Optional, TypeAlias, OrderedDict, Protocol
 
 @dataclass(frozen=True)
 class Data:
-    """A placeholder for a numerical item: store its value and error"""
+    """A placeholder for a numerical item: store a value and an error"""
 
     value: float
     error: float = field(default_factory=lambda: 0.0)
@@ -24,10 +23,29 @@ class Data:
         return f"{self.value} (err={self.error})"
 
 
+
+class ParameterSet(Protocol):
+    """A protocol for the bare minimal and unique collection of parameters for a single computation of coefficients
+
+    A protocol allows to define types for expected instances of Params, ParamsInAir, ParamsClimatology
+    """
+    fit_drift = None
+    initial_gain = None
+    initial_drift = None
+    cycles = None
+
+    def uid(self) -> str:
+        ...
+
+ConfigsDict : TypeAlias = OrderedDict[int, ParameterSet]
+"""A type for the Workflow.configs attribute, hence for Workflow.flatten_configs() and Workflow._flatten_configs() methods"""
+
+
 @dataclass(frozen=True)
-class ParamsShared:
+class Params:
     """A dataclass to hold a parameter set for one computation
-    Define parameters shared by all methods
+
+    Define here parameters shared by all methods
 
     Notes
     -----
@@ -48,7 +66,7 @@ class ParamsShared:
 
 
 @dataclass(frozen=True)
-class ParamsInAir(ParamsShared):
+class ParamsInAir(Params):
     """A unique parameter set for the 'in air' method
 
     Notes
@@ -71,7 +89,7 @@ class ParamsInAir(ParamsShared):
 
 
 @dataclass(frozen=True)
-class ParamsClimatology(ParamsShared):
+class ParamsClimatology(Params):
     """A unique parameter set for the 'climatology' method
 
     Notes
@@ -188,3 +206,5 @@ class FitResults:
 
     coefs: Coefficients | CoefficientsInAir
     fit_data: Any
+
+

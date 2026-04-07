@@ -13,7 +13,7 @@ import logging
 
 log = logging.getLogger("pydox.utils.compute")
 
-ExecutionMethods: TypeAlias = Literal["sequential", "thread"]
+ExecutionMethods: TypeAlias = Literal["sequential", "thread", "process"]
 ErrorMethods: TypeAlias = Literal["raise", "ignore", "silent"]
 
 try:
@@ -23,6 +23,16 @@ except ModuleNotFoundError:
 
     def tqdm(fct, **kw):
         return fct
+
+
+try:
+    import distributed
+
+    has_distributed = True
+except ModuleNotFoundError:
+    log.debug("pydox needs 'distributed' to use a Dask cluster/client")
+    has_distributed = False
+    distributed = None
 
 
 def _is_serial(obj: Callable) -> bool:
@@ -44,7 +54,7 @@ def compute_fits(
     method: ExecutionMethods = "sequential",
     errors: ErrorMethods = "raise",
 ) -> OrderedDict[int, Any]:
-    """A function to compute a collection of fit sequentially or in parallel, using several methods.
+    """A function to compute a collection of fits sequentially or in parallel
 
     Parameters
     ----------
@@ -60,8 +70,9 @@ def compute_fits(
             - ``sequential``/``seq``  (default): open data sequentially in a simple loop, no parallelization applied
             - ``thread``: based on :class:`concurrent.futures.ThreadPoolExecutor` with a pool of at most ``max_workers`` threads
             - ``process``: based on :class:`concurrent.futures.ProcessPoolExecutor` with a pool of at most ``max_workers`` processes
+            - :class:`distributed.client.Client`: use a Dask client
     progress: bool, default: False
-        Display a progress bar
+        Display a progress bar, with tqdm
     errors: str, default: ``raise``
         Define how to handle errors raised during data URIs fetching:
             - ``raise`` (default): Raise any error encountered
@@ -82,6 +93,8 @@ def compute_fits(
     >>> from distributed.protocol.serialize import ToPickle
     >>> serialize(ToPickle(preprocess_function))
 
+    Adapted from Argopy:
+    https://github.com/euroargodev/argopy/blob/v1.4.0/argopy/stores/implementations/http.py#L605
     """
     results = OrderedDict()
     failed = []
@@ -162,6 +175,10 @@ def compute_fits(
                     results[iparam] = data
 
         return results
+
+    ################################
+    elif has_distributed and isinstance(method, distributed.client.Client):
+        raise NotImplementedError
 
     ################################
     else:

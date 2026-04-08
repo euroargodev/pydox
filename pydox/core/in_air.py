@@ -16,7 +16,7 @@ def inair_fit(params: ParamsInAir, data=Any) -> FitResult:
     """Generic in-air calibration computation method
 
     This method is low level and should not be called by users.
-    This method must not rely on anything from the 'calibration' submodule.
+    This method must NOT rely on anything from the 'calibration' submodule.
     This method should probably be serializable for parallelization.
 
     Parameters

@@ -12,6 +12,25 @@ class Method(Workflow, ABC):
     Support more than one configuration, but only one method.
 
     In-air, climatology and ctd-based methodology implementations MUST inherit from this class.
+
+    Examples
+    --------
+    ..code-block::python
+
+        from pydox import Calibration
+
+        c = Calibration('in_air')
+        c.set_params('calibration_methods.in_air', carryover=[False, True])
+
+        c = Calibration('climatology')
+        c.set_params('calibration_methods.climatology.max_pressure', [25., 50.])
+
+        c.n_configs
+        c.configs
+
+        c.fitted
+        c.coefs
+
     """
 
     rcgroup: str = None

@@ -9,6 +9,7 @@ from pydox.calibration.method import Method
 
 class MethodClimatology(Method):
     """Quick and dirty implementation for dev purposes"""
+
     rcgroup = "climatology"
 
     def __init__(self, *args, **kwargs):
@@ -30,24 +31,25 @@ class MethodClimatology(Method):
 
     def _flatten_configs(self) -> ConfigsDict:
         """Define the entire configuration space to explore with the 'climatology' method"""
-        configs : ConfigsDict = OrderedDict()
-        icfg : int = 0
+        configs: ConfigsDict = OrderedDict()
+        icfg: int = 0
         for fit_drift in to_list(self._sparam("fit_drift")):
             for min_pressure in to_list(self._mparam("min_pressure")):
                 for max_pressure in to_list(self._mparam("max_pressure")):
                     for ds in to_list(self._mparam("dataset")):
-                        p : ParameterSet = ParamsClimatology(
+                        p: ParameterSet = ParamsClimatology(
                             fit_drift=fit_drift,
                             cycles=self._sparam("cycles"),
                             initial_gain=Data(self._sparam("initial_guess.gain"), 0.0),
                             initial_drift=Data(
                                 self._sparam("initial_guess.drift"), 0.0
                             ),
-
                             min_pressure=min_pressure,
                             max_pressure=max_pressure,
                             dataset=ds,
                             src=self._mparam(f"data.{ds}.src"),
+                            dummy=icfg
+                            + 1000,  # For dev. to track config number down to coefs results
                         )
                         configs[icfg] = p
                         icfg += 1
@@ -55,4 +57,3 @@ class MethodClimatology(Method):
 
     def fit(self, data: Any) -> Self:
         raise NotImplementedError
-

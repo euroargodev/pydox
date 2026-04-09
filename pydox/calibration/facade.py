@@ -44,6 +44,23 @@ class CalibrationSet(Workflow):
     -----
     - Support more than one configuration
     - Handle sequential or parallel execution of configuration sets
+
+    Examples
+    --------
+    ..code-block::python
+
+        from pydox import Calibration, CalibrationSet
+
+        s = CalibrationSet()
+        s.commit(Calibration('in_air').set_params('calibration_methods.in_air', carryover=[False, True], dataset=['ncep', 'era5']))
+        s.commit(Calibration('climatology').set_params('calibration_methods.climatology.max_pressure', [25., 50.]))
+
+        s.n_configs
+        s.configs
+
+        s.fitted
+        s.coefs
+
     """
 
     def __init__(self, *args, **kwargs):
@@ -57,10 +74,10 @@ class CalibrationSet(Workflow):
         summary[0] = "<pydox.Workflow.CalibrationSet>"
         return "\n".join(summary)
 
-    def commit(self, m: MethodInAir | MethodClimatology) -> Self:
+    def commit(self, o: MethodInAir | MethodClimatology) -> Self:
         """This method looks like the real added difference compared to a 'Workflow' for a single method ('Method')"""
         ii = len(self._methods)
-        self._methods.update({ii: deepcopy(m)})
+        self._methods.update({ii: deepcopy(o)})
         return self
 
     def _flatten_configs(self) -> ConfigsDict:

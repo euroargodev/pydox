@@ -5,7 +5,9 @@ from pathlib import Path
 import importlib
 import re
 
-from pydox._config import _valid_config_version, _read_only_dotted_params, _not_overloaded_dotted_params
+
+import pydox as do
+from pydox._config import _read_only_dotted_params
 
 _path2static = Path(importlib.util.find_spec("pydox.static").submodule_search_locations[0])
 
@@ -50,6 +52,18 @@ def format_value_txt(value: Any) -> str:
     else:
         return str(value)
 
+def dict_to_string(d: Dict[str, Any], level: int = 0, indent: int = 2) -> str:
+    """Recursively convert a nested dictionary to a formatted string."""
+    indent_str = " " * (level * indent)
+    lines = []
+    for key, value in d.items():
+        if isinstance(value, dict):
+            lines.append(f"{indent_str}{key}:")
+            lines.append(dict_to_string(value, level + 1, indent=indent))
+        else:
+            lines.append(f"{indent_str}{key}: {format_value_txt(value)}")
+    return "\n".join(lines)
+
 
 def format_value_html(value: Any) -> str:
     """Format values appropriately for HTML output."""
@@ -80,21 +94,8 @@ def config_repr_txt(config: Dict[str, Any], indent: int = 2) -> str:
     str
         A pretty-printed string representation of the configuration.
     """
-
-    def dict_to_string(d: Dict[str, Any], level: int = 0) -> str:
-        """Recursively convert a nested dictionary to a formatted string."""
-        indent_str = " " * (level * indent)
-        lines = []
-        for key, value in d.items():
-            if isinstance(value, dict):
-                lines.append(f"{indent_str}{key}:")
-                lines.append(dict_to_string(value, level + 1))
-            else:
-                lines.append(f"{indent_str}{key}: {format_value_txt(value)}")
-        return "\n".join(lines)
-
     lines = ["<pydox.configuration>"]
-    desc = dict_to_string(config)
+    desc = dict_to_string(config, indent=indent)
     [lines.append(l) for l in desc.split("\n")]
     return "\n".join(lines)
 
@@ -240,3 +241,12 @@ def config_repr_html(
         return clean_html(html)
 
     return html
+
+
+def list_methods() -> list[str]:
+    """Return the list of calibration methods, as described in the configuration"""
+    methods = []
+    for key in do.get_params("calibration_methods"):
+        if key != "default":
+            methods.append(key)
+    return methods

@@ -1,13 +1,14 @@
 # ‼️ This is the only module where the global configuration object is to be referred to as ``rcParams`` and not ``do.params``
 
 import importlib
+import warnings
 from pathlib import Path
 from matplotlib.rcsetup import validate_stringlist
 import os
 import sys
 from functools import reduce
 import operator
-from typing import List, Dict, Any, Generator
+from typing import List, Dict, Any, Generator, TypeAlias
 from copy import deepcopy
 import tempfile
 import shutil
@@ -15,12 +16,14 @@ import atexit
 import logging
 from IPython.display import HTML
 
+
 from pydox._config import _valid_config_version, _read_only_dotted_params, _not_overloaded_dotted_params
 from pydox._config.utils import runner, config_repr_txt, config_repr_html
 from pydox._config.yaml import load_config_from_file
 
 
 log = logging.getLogger("pydox.config")
+Config: TypeAlias = Dict[str, Any]
 
 _path2static = Path(importlib.util.find_spec("pydox.static").submodule_search_locations[0])
 
@@ -144,7 +147,7 @@ def config_files() -> list[Path]:
 
 
 def flatten_config_keys(
-    d: dict[str, Any], parent_key: str = "", sep: str = "."
+    d: Config, parent_key: str = "", sep: str = "."
 ) -> list[str]:
     """Flatten a nested dictionary into a list of dotted strings representing all possible keys.
 
@@ -160,7 +163,7 @@ def flatten_config_keys(
     Returns
     -------
     list[str]:
-        A list of dotted strings representing all possible keys.
+        A list of dotted strings representing all possible keys. Case-sensitive
     """
     items = []
     for k, v in d.items():
@@ -172,7 +175,7 @@ def flatten_config_keys(
     return items
 
 
-def overload_config(x, y) -> dict[str, Any]:
+def overload_config(x, y) -> Config:
     """Overload configuration x with values from configuration y
 
     Overloading is done one parameter at a time, whatever the nesting depth using the dotted.string pattern.
@@ -181,14 +184,14 @@ def overload_config(x, y) -> dict[str, Any]:
 
     Parameters
     ----------
-    x: dict[str, Any]
+    x: Config
         A configuration set of parameters, possibly loaded from a file
-    y: dict[str, Any]
+    y: Config
         A configuration set of parameters, possibly loaded from a file
 
     Returns
     -------
-    dict[str, Any]
+    Config
         A deep copy of x, with updated values from y
     """
     z = deepcopy(x)
@@ -198,14 +201,14 @@ def overload_config(x, y) -> dict[str, Any]:
     return z
 
 
-def load_factory_config() -> dict[str, Any]:
+def load_factory_config() -> Config:
     """Load the _factory_ configuration, ie from the internal static file
 
     This file is always available, otherwise the Pydox installation is totally broke !
 
     Returns
     -------
-    dict[str, Any]
+    Config
 
     See Also
     --------
@@ -217,12 +220,12 @@ def load_factory_config() -> dict[str, Any]:
     )  # _factory_ config is always the first one
 
 
-def load_configs() -> dict[str, Any]:
+def load_configs() -> Config:
     """Load the _default_ configuration from the sequence of all possible configuration files
 
     Returns
     -------
-    dict[str, Any]
+    Config
         Default Pydox configuration object
 
     See Also
@@ -291,6 +294,23 @@ def set_by_path(config: Dict | List, key: str, value: Any) -> Dict | List:
     return config
 
 
+def hint_params(key: str, **kwargs)->list[str]|None:
+    """Return striong-dotted parameter hints for a given key"""
+
+    # Which configuration to work with:
+    config = kwargs.get("config", rcParams)
+
+    # Get the full list of all possible string-dotted parameter pointers:
+    flat_keys = flatten_config_keys(config)
+
+    key_hint = []
+    for k in flat_keys:
+        if key in k.split('.'):
+            key_hint.append(k)
+
+    return key_hint
+
+
 def get_params(param: str, config: Any = None) -> Any | Dict:
     """Retrieve the value of a configuration parameter or (sub)group of parameters
 
@@ -303,7 +323,7 @@ def get_params(param: str, config: Any = None) -> Any | Dict:
         - ``argo.qcflags.doxy`` will return this single parameter value,
         - ``argo.qcflags`` will return a subgroup of parameters, as a :class:`dict`,
         - ``argo`` will return a group of parameters, as a :class:`dict`.
-    config: None | dict[str, Any]
+    config: None | Config
         The configuration object to get parameters from.
         By default, use the global configuration object :class:`pydox.params`.
 
@@ -344,7 +364,7 @@ def set_params(param_or_grp: str, value: Any | Dict = None, **kwargs) -> None:
 
     Other Parameters
     ----------------
-    config: None | dict[str, Any]
+    config: None | Config
         The configuration object to set parameters to.
         By default, use the global configuration object :class:`pydox.params`.
 
@@ -398,6 +418,12 @@ def set_params(param_or_grp: str, value: Any | Dict = None, **kwargs) -> None:
         else:
             if f"{root}.{current_key}" in flat_keys:
                 dotted_params[f"{root}.{current_key}"] = value
+            else:
+                msg = f"Trying to set an unknown parameter '{root}.{current_key}'."
+                hints = hint_params(current_key, config=config)
+                if len(hints) > 0:
+                    msg += f" Maybe you were trying to set one the following parameters: {hints}."
+                raise ValueError(msg)
 
     # Create a dictionary with string-dotted parameter pointers as keys, and new values as values
     dotted_params = {}
@@ -451,7 +477,7 @@ def reset_params(
         - ``argo.qcflags.doxy`` reset a single parameter value,
         - ``argo.qcflags`` reset a subgroup of parameters,
         - ``argo`` reset a group of parameters.
-    config: None | dict[str, Any]
+    config: None | Config
         The configuration object to reset parameters from.
         By default, use the global configuration object :class:`pydox.params`.
     factory: bool, default=False
@@ -459,7 +485,7 @@ def reset_params(
 
     Other Parameters
     ----------------
-    reference: dict[str, Any]
+    reference: Config
         The configuration object to use as a reference if different from the _default_ or _factory_ objects. This argument is primarily for internal use only.
 
     Returns
@@ -504,12 +530,12 @@ def reset_params(
             set_params(p, reference_value, config=config)
 
 
-def config_print(config: Dict[str, Any] = None, **kwargs) -> str | HTML:
+def config_print(config: Config = None, **kwargs) -> str | HTML:
     """Render a configuration object as text or HTML
 
     Parameters
     ----------
-    config : Dict[str, Any], default = None
+    config : Config, default = None
         A configuration object to print.
         By default, use the global configuration object :class:`pydox.params`.
 
@@ -527,9 +553,39 @@ def config_print(config: Dict[str, Any] = None, **kwargs) -> str | HTML:
         return print(config_repr_txt(config), **kwargs)
 
 
-def is_config(obj: Any)->bool:
-    """Check if an object is a valid configuration"""
-    return 'version' in obj
+def check_config(obj: Any) -> Config:
+    """Check if the object is a valid configuration or not, raise an error on fail
+
+    Raises
+    ------
+    ValueError
+    """
+    try:
+        'version' in obj
+        return obj
+    except:
+        raise ValueError("This is not a valid configuration object")
+
+
+def is_config(obj: Any) -> bool:
+    """Check if an object is a valid configuration
+
+    This method won't raise an error if the object is not a valid configuration. To raise an error, use :function:`check_config`
+
+    Returns
+    -------
+    bool
+        Is this a valid configuration object or not
+
+    See Also
+    --------
+    :function:`check_config`
+    """
+    try:
+        check_config(obj)
+        return True
+    except ValueError:
+        return False
 
 
 # Load the default configuration to be used globally as `do.params`:

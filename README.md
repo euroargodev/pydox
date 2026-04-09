@@ -65,17 +65,33 @@ Let's try to keep up to date the current pydox structure:
 ```bash
 pydox/
 │
-├── dummy/               # Dummy submodule for dev. purposes
-│   └── utils.py         # dummy class and function for dev.
+├── commodities.py       # Objects to communicate stateful data between low and high level APIs 
 │
-├── _config/             # Configuration manager (private)
+├── _config/             # Configuration manager (private, user APIs defined at pydox module level)
 │   ├── yaml.py          # Functions specific to handling YAML configuration files
-│   ├── utils.py         # Some other config specific utilities
+│   ├── utils.py         # Specific utilities, possibly relying on high-level objects
 │   └── config.py        # Primary functions to manage pydox settings
 │
-├── static/              # Static data file required internally
-│   ├── style.css        # A CSS stylesheet to be used in HTML rendering of pydox object
-│   └── pydoxrc          # Factory configuration file
+├── calibration/           # High-level user interface to running calibrations
+│   ├── facade.py          # Provides `Calibration` and `CalibrationSet`
+│   ├── spec.py            # The inner machinery: `Workflow`, one base class to rule them all
+│   ├── method.py          # `Method` base class for method implementations, could be merge with spec.py
+│   ├── utils.py           # Specific utilities, possibly relying on high-level objects
+│   └── methods/           # Submodules for each method implementation
+│       ├── in_air.py      # In-air calibration
+│       └── climatology.py # Climatology-based calibration
+│
+├── core/                 # Core Maths and Chemistry functions
+│   ├── models.py         # Curve fitting models (functions passed to scipy.optimize.curve_fit)
+│   └── in_air.py         # Functions for in-air methodology fit computations of G/D/C
+│
+├── utils/                # Non-specific utilities (low-level/limited-scope/autonomous functions)
+│   ├── casting.py        # Enforce object types
+│   └── compute.py        # Handle serial or parallel low-level fit functions execution 
+│
+├── static/               # Static data files required internally
+│   ├── style.css         # A CSS stylesheet to be used in HTML rendering of pydox object
+│   └── pydoxrc           # Factory configuration file
 │
 └── tests/                # Unit and integration tests
     ├── test_config.py    # Tests for pydox._config

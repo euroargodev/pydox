@@ -1,0 +1,149 @@
+from abc import ABC, abstractmethod
+from typing import Any, Optional
+
+from pydox._config.utils import dict_to_string
+from pydox.utils.casting import to_list
+from pydox.calibration.spec import Workflow
+
+
+class Method(Workflow, ABC):
+    """Base class for one methodology implementation.
+
+    Support more than one configuration, but only one method.
+
+    In-air, climatology and ctd-based methodology implementations MUST inherit from this class.
+
+    Examples
+    --------
+    ..code-block::python
+
+        from pydox import Calibration
+
+        c = Calibration('in_air')
+        c.set_params('calibration_methods.in_air', carryover=[False, True])
+
+        c = Calibration('climatology')
+        c.set_params('calibration_methods.climatology.max_pressure', [25., 50.])
+
+        c.n_configs
+        c.configs
+
+        c.fitted
+        c.coefs
+
+    """
+
+    rcgroup: str = None
+    """Group name of the configuration file section to get this method parameters"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def _mparam(self, param: str, fallback: Optional[Any] = None) -> Any:
+        """Return method parameter
+
+        Get one specific method parameter value, and possibly return a fallback if value is None.
+        (These parameters are stored into a specific group in the configuration, eg 'calibration_methods.in_air')
+        """
+        value = self.get_params(f"calibration_methods.{self.rcgroup}.{param}")
+        return value if value is not None else fallback
+
+    @property
+    def method(self) -> str:
+        """A more verbose description of this method
+
+        Allow to print more information about the method than the configuration group name, eg: some long_name
+        Can be used in the repr of the class, or figure titles for instance
+        """
+        try:
+            y = self._mparam("long_name", None)  # long_name is not necessarily defined
+            y = y if y is not None else self.rcgroup
+        except:
+            y = self.rcgroup
+        return y
+
+    def _repr_dataset(self) -> list[str]:
+        """Return a description of dataset parameters
+
+        This method is in the `Method` base class because we assume that the
+        'dataset' and 'data' subgroups in the configuration is organised
+        similarly for all methods group, typically:
+        ```yaml
+          dataset: 'some_ds'  # Define the default dataset to use
+          data: # A subgroup with the description of all dataset, always with at least a 'name' and a 'src'
+            some_ds:
+              name: 'hello world'
+              src: null
+            another_ds:
+              name: 'bye bye'
+              src: null
+        ```
+
+        Returns
+        -------
+        list[str]
+            To be used by :class:`Method.__repr__`
+        """
+        summary = []
+        dataset_names = to_list(self._mparam("dataset"))
+        if len(dataset_names) == 1:
+            ds = dataset_names[0]
+            summary += [f"  dataset: '{ds}'"]
+            lines = dict_to_string(self._mparam(f"data.{ds}")).split("\n")
+            summary += [f"    {line}" for line in lines]
+        else:
+            summary += [f"  dataset: {dataset_names}"]
+            for ds in dataset_names:
+                summary += [f"    data: '{ds}'"]
+                lines = dict_to_string(self._mparam(f"data.{ds}")).split("\n")
+                summary += [f"      {line}" for line in lines]
+        return summary
+
+    @abstractmethod
+    def _repr_params(self) -> list[str]:
+        """Return a description of parameters specific to a method
+
+        Returns
+        -------
+        list[str]
+            To be used by :class:`Method.__repr__`
+        """
+        raise NotImplementedError
+
+    def __repr__(self):
+        """Overwrite the basic Workflow repr
+
+        Allows to insert the method specific parameters before the configuration list.
+        """
+        # summary : list[str] = super().__repr__().split("\n")
+
+        if self.method == self.rcgroup:
+            summary = [f"<pydox.Workflow.Calibration.{self.rcgroup}>"]
+        else:
+            summary = [
+                f"<pydox.Workflow.Calibration.{self.rcgroup}> '{self.method.title()}'"
+            ]
+
+        [summary.append(line) for line in self._repr_fitted()]
+
+        summary += [""]  # Blank line
+
+        summary += ["parameters (shared by all methods):"]
+        [summary.append(line) for line in self._repr_params_shared()]
+
+        summary += [""]  # Blank line
+
+        summary += [f"parameters (specific to '{self.rcgroup}'):"]
+        [summary.append(line) for line in self._repr_params()]
+
+        summary += [""]  # Blank line
+
+        summary += [f"configurations [{self.n_configs}]:"]
+        [summary.append(line) for line in self._repr_configs()]
+
+        if self.fitted:
+            summary += [""]  # Blank line
+            summary += [f"coefficients [{len(self.coefs)}]:"]
+            [summary.append(line) for line in self._repr_coefs()]
+
+        return "\n".join(summary)

@@ -1,6 +1,6 @@
-| <img src="docs/_static/pydox_logo_long.png" alt="pydox logo" width="300"/><br>``pydox`` is a python Python library dedicated to Argo Oxygen data Calibration and Adjustment |
-|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
-|                                            ‼️ **Pydox** is in active development phase and cannot be used as it is right now ‼️                                             |
+|    <img src="docs/_static/pydox_logo_long.png" alt="pydox logo" width="300"/><br>``pydox`` is a Python library dedicated to Argo Oxygen data Calibration and Adjustment    |
+|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
+|                                            ‼️ **Pydox** is in active development phase and cannot be used as it is right now ‼️                                            |
 
 
 

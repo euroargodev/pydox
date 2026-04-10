@@ -127,6 +127,8 @@ def inair_fit(params: ParamsInAir, data=Any) -> FitResult:
         c["carryover"] = Data(fit_results[1], np.sqrt(np.diag(covariance))[1])
 
     coefs = CoefficientsInAir(**c)
+    # coefs = CoefficientsInAir(gain=Data(12., 3.), carryover=...)
+
     fit_data = {
         "R2": float(np.random.random_sample(1)[0]),
         "uid": params.uid,

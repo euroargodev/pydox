@@ -27,7 +27,7 @@ license-files = [
 
 [project.optional-dependencies]
 parallel = ["dask[complete]"]
-viz = ["cartopy>=0.24", "nc-time-axis"]
+viz = ["cartopy>=0.25.0", "nc-time-axis"]
 
 
 [project.urls]

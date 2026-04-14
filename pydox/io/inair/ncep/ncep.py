@@ -19,10 +19,10 @@ def open_ncep()->xr.Dataset:
     src_data_ncep = do.get_params('calibration_methods.in_air.data.ncep.src')
 
     if not src_data_ncep:
-        raise ValueError("NCEP directory not defined")
+        raise ValueError("The NCEP data source parameter is not defined in the configuration. Please set 'calibration_methods.in_air.data.ncep.src' appropriately.")
 
     if not Path(src_data_ncep).is_dir():
-        raise ValueError("NCEP directory does not exist")
+        raise ValueError(f"The NCEP data source parameter {src_data_ncep} does not point toward a valid directory.")
 
     files_ncep = [p.resolve() for p in list(Path(src_data_ncep).glob('*.nc'))]
 
@@ -37,8 +37,6 @@ def open_ncep()->xr.Dataset:
     if not_available:
         raise ValueError(f"No NCEP files availables for : {not_available} in {src_data_ncep}")
 
-    print('merdum")')
-    print(ds_ncep)
 
     m1 = ds_ncep['air'].isnull()
     m2 = ds_ncep['slp'].isnull()

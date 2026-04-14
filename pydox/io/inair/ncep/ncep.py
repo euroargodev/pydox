@@ -37,7 +37,13 @@ def open_ncep()->xr.Dataset:
     if not_available:
         raise ValueError(f"No NCEP files availables for : {not_available} in {src_data_ncep}")
 
-
+#
+# this takes a long time.
+# Maybe this is not in this file that we must check that we associate a reference data point with each floating-point data point in the fit.
+# We'll have to see where it makes the most sense to do that...
+# For now, we leave it as is
+# .. TO DO ...
+#
     m1 = ds_ncep['air'].isnull()
     m2 = ds_ncep['slp'].isnull()
     m3 = ds_ncep['rhum'].isnull()

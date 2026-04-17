@@ -196,3 +196,5 @@ knotebooks/
 pydox/tests/cov.xml
 pydox/tests/test_local.py
 pydox/tests/test_tobeignored*.py
+pydox/io/cov.xml
+pydox/io/inair/ncep/cov.xml

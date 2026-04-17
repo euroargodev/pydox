@@ -84,4 +84,7 @@ def interp_NCEP_on_ARGO(ds_ncep: xr.Dataset, coord_argo: dict) -> xr.Dataset:
     else:
         raise ValueError(f"the NCEP variable 'air' must be in Celsius units")
 
+    # todo : Test if each ARGO Position is associated to each NCEP data.
+    # Maybe not to do in that function. Create a dedicated function ?
+
     return ds_ncep_interp

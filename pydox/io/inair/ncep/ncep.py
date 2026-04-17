@@ -51,3 +51,37 @@ def open_ncep()->xr.Dataset:
         raise ValueError(f"The 3 variables (air/rhum/slp) don't have the NaN at the same time. Check your NCEP files")
 
     return ds_ncep
+
+
+def interp_NCEP_on_ARGO(ds_ncep: xr.Dataset, coord_argo: dict) -> xr.Dataset:
+    """
+    Function to interpolate a NCEP xarray dataset containing variables 'slp,',air,'rhum' on
+    ARGO cooordinates (lon/lat/time).
+    The ARGO coordinates are given in a dictionnary with the keys : 'lon','lat','time'.
+    The associated values are  DataArray.
+
+    Returns a xarray Dataset with the NCEP variables interpolated on ARGO lon/lat/time.
+
+    """
+    # Force NCEP lon to be in [-180 180] as the ARGO longitude
+    ds_ncep['lon'] = xr.where(ds_ncep['lon'] > 180, ds_ncep['lon'] - 360, ds_ncep['lon'])
+
+    ds_ncep_interp = ds_ncep.interp(lat=coord_argo['lat'], lon=coord_argo['lon'], time=coord_argo['time'])
+    #
+    # Units Conversion
+    #
+    if ds_ncep_interp['slp'].units == 'Pascals':
+        # Transform Pascal to HectoPascal/Millibar
+        print(f"NCEP slp : Conversion Pascals to HectoPascal/Millibar for NCEP PPOX computing")
+        ds_ncep_interp['slp'] = ds_ncep_interp['slp'] / 100
+    else:
+        raise ValueError(f"the NCEP variable 'slp' must be in Pascals units")
+
+    if ds_ncep_interp['air'].units == 'degK':
+        # Transform Pascal to HectoPascal/Millibar
+        print(f"NCEP air : Conversion Kelvin to Celsius for NCEP PPOX computing")
+        ds_ncep_interp['air'] = ds_ncep_interp['air'] - 273.15
+    else:
+        raise ValueError(f"the NCEP variable 'air' must be in Celsius units")
+
+    return ds_ncep_interp

@@ -24,7 +24,7 @@ jobs:
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@v3
         with:
-          environment-file: ci/requirements/pi3.11-all-pinned.yml
+          environment-file: ci/requirements/py3.11-all-pinned.yml
           auto-activate-base: false
           activate-environment: pydox-dev
 

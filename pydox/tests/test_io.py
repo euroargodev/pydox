@@ -1,5 +1,6 @@
 import pytest
 import xarray as xr
+import numpy as np
 import pydox as do
 import pydox.io.inair.ncep.ncep as ncep
 
@@ -60,3 +61,57 @@ def test_dir_ncep_no_ncfiles(monkeypatch,tmp_path):
     )
     with pytest.raises(ValueError):
         ncep.open_ncep()
+
+def create_dataset_for_test_interp():
+    lon = xr.DataArray([0,1],dims="lon")
+    lat = xr.DataArray([0,1],dims="lat")
+    time = xr.DataArray([0,1],dims="time")
+
+    data = np.ones((2,2,2))
+
+    ds = xr.Dataset(
+        {
+            "slp":(("time","lat","lon"),data.copy()),
+            "air": (("time", "lat", "lon"), data.copy()),
+            "rhum": (("time", "lat", "lon"), data.copy())
+        },
+        coords = {"lon": lon, "lat": lat, "time": time}
+    )
+
+    ds["slp"].attrs["units"] = "Pascals"
+    ds["air"].attrs["units"] = "degK"
+
+    return ds
+
+def create_coord_for_test_interp():
+    return {
+        "lon":xr.DataArray([0.5],dims="points"),
+        "lat":xr.DataArray([0.5],dims="points"),
+        "time":xr.DataArray([0.5],dims="points"),
+    }
+
+def test_slp_units():
+    ds_ncep = create_dataset_for_test_interp()
+    ds_ncep["slp"].attrs['units'] = "hPa"
+    coord_argo = create_coord_for_test_interp()
+    with pytest.raises(ValueError):
+        ncep.interp_NCEP_on_ARGO(ds_ncep,coord_argo)
+
+def test_air_units():
+    ds_ncep = create_dataset_for_test_interp()
+    ds_ncep["air"].attrs['units'] = "Celsius"
+    coord_argo = create_coord_for_test_interp()
+    with pytest.raises(ValueError):
+            ncep.interp_NCEP_on_ARGO(ds_ncep, coord_argo)
+
+def test_interp_ok():
+    ds_ncep = create_dataset_for_test_interp()
+    coord_argo = create_coord_for_test_interp()
+    ds_interp = ncep.interp_NCEP_on_ARGO(ds_ncep, coord_argo)
+
+    assert "slp" in ds_interp
+    assert "air" in ds_interp
+    assert "rhum" in ds_interp
+
+    assert ds_interp['slp']==1/100
+    assert ds_interp['air']==1-273.15

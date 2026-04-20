@@ -1,23 +1,24 @@
-
-import pydox as do
-import pydox.io.inair.ncep.ncep as ncep
 import pytest
 import xarray as xr
+import pydox as do
+import pydox.io.inair.ncep.ncep as ncep
+
 
 def test_dir_ncep_not_defined(monkeypatch):
-    monkeypatch.setattr("pydox.io.inair.ncep.ncep.do.get_params", lambda x: None)
+    monkeypatch.setattr(do,"get_params", lambda x: None)
+
     with pytest.raises(ValueError):
         ncep.open_ncep()
 
 def test_dir_ncep_not_valid(monkeypatch):
-    monkeypatch.setattr("pydox.io.inair.ncep.ncep.do.get_params", lambda x: "/bidon")
+    monkeypatch.setattr(do,"get_params", lambda x: "/bidon")
     with pytest.raises(ValueError):
         ncep.open_ncep()
 
 def test_dir_ncep_exists(monkeypatch,tmp_path):
-    monkeypatch.setattr('pydox.io.inair.ncep.ncep.do.get_params' , lambda x: tmp_path)
+    monkeypatch.setattr(do,'get_params' , lambda x: tmp_path)
     monkeypatch.setattr(
-        "pydox.io.inair.ncep.ncep.xr.open_mfdataset",
+        ncep.xr,"open_mfdataset",
         lambda files: None
     )
     (tmp_path / "file.nc").touch()
@@ -28,13 +29,13 @@ def test_dir_ncep_exists(monkeypatch,tmp_path):
     })
 
     monkeypatch.setattr(
-        "pydox.io.inair.ncep.ncep.xr.open_mfdataset",
+        ncep.xr,"open_mfdataset",
         lambda files: fake_ds
     )
     ncep.open_ncep()
 
 def test_dir_var_ncep_missing(monkeypatch, tmp_path):
-    monkeypatch.setattr('pydox.io.inair.ncep.ncep.do.get_params', lambda x: tmp_path)
+    monkeypatch.setattr(do,'get_params', lambda x: tmp_path)
 
     (tmp_path / "file.nc").touch()
     fake_ds = xr.Dataset({
@@ -44,7 +45,7 @@ def test_dir_var_ncep_missing(monkeypatch, tmp_path):
     })
 
     monkeypatch.setattr(
-            "pydox.io.inair.ncep.ncep.xr.open_mfdataset",
+            ncep.xr,"open_mfdataset",
             lambda files: fake_ds
     )
     with pytest.raises(ValueError):
@@ -54,7 +55,7 @@ def test_dir_ncep_no_ncfiles(monkeypatch,tmp_path):
     empty_dir = tmp_path /"bid"
     empty_dir.mkdir()
     monkeypatch.setattr(
-        "pydox.io.inair.ncep.ncep.do.get_params",
+        do,"get_params",
         lambda x : empty_dir
     )
     with pytest.raises(ValueError):

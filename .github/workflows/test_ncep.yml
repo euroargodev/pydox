@@ -47,4 +47,4 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE
           conda activate pydox-dev
-          pytest tests/test_io.py -v -k 'ncep' --cov=io --cov-report=xml --cov-report=term-missing
+          pytest pydox/tests/test_io.py -v -k 'ncep' --cov=io --cov-report=xml --cov-report=term-missing

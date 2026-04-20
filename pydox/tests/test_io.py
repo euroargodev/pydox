@@ -90,21 +90,21 @@ def create_coord_for_test_interp():
         "time":xr.DataArray([0.5],dims="points"),
     }
 
-def test_slp_units():
+def test_ncep_slp_units():
     ds_ncep = create_dataset_for_test_interp()
     ds_ncep["slp"].attrs['units'] = "hPa"
     coord_argo = create_coord_for_test_interp()
     with pytest.raises(ValueError):
         ncep.interp_NCEP_on_ARGO(ds_ncep,coord_argo)
 
-def test_air_units():
+def test_ncep_air_units():
     ds_ncep = create_dataset_for_test_interp()
     ds_ncep["air"].attrs['units'] = "Celsius"
     coord_argo = create_coord_for_test_interp()
     with pytest.raises(ValueError):
             ncep.interp_NCEP_on_ARGO(ds_ncep, coord_argo)
 
-def test_interp_ok():
+def test_ncep_interp_ok():
     ds_ncep = create_dataset_for_test_interp()
     coord_argo = create_coord_for_test_interp()
     ds_interp = ncep.interp_NCEP_on_ARGO(ds_ncep, coord_argo)

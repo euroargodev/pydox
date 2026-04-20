@@ -78,11 +78,11 @@ def interp_NCEP_on_ARGO(ds_ncep: xr.Dataset, coord_argo: dict) -> xr.Dataset:
         raise ValueError(f"the NCEP variable 'slp' must be in Pascals units")
 
     if ds_ncep_interp['air'].units == 'degK':
-        # Transform Pascal to HectoPascal/Millibar
+        # Transform Kelvin to Celsius
         print(f"NCEP air : Conversion Kelvin to Celsius for NCEP PPOX computing")
         ds_ncep_interp['air'] = ds_ncep_interp['air'] - 273.15
     else:
-        raise ValueError(f"the NCEP variable 'air' must be in Celsius units")
+        raise ValueError(f"the NCEP variable 'air' must be in Kelvin units")
 
     # todo : Test if each ARGO Position is associated to each NCEP data.
     # Maybe not to do in that function. Create a dedicated function ?

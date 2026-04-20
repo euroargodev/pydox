@@ -39,5 +39,11 @@ jobs:
       #    python -m pip install --upgrade pip
       #    pip install pytest
 
-      - name: Run test NCEP IO.py
-        run: pytest tests/test_io.py -v -k 'ncep' --cov=io --cov-report=xml --cov-report=term-missing
+      #- name: Run test NCEP IO.py
+      #  run: pytest tests/test_io.py -v -k 'ncep' --cov=io --cov-report=xml --cov-report=term-missing
+
+      - name: Run tests
+        shell: bash -l {0}
+        run: |
+        conda activate myenv
+        pytest tests/test_io.py -v -k 'ncep' --cov=io --cov-report=xml --cov-report=term-missing

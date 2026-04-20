@@ -45,5 +45,6 @@ jobs:
       - name: Run NCEP test IO
         shell: bash -l {0}
         run: |
+          cd $GITHUB_WORKSPACE
           conda activate pydox-dev
           pytest tests/test_io.py -v -k 'ncep' --cov=io --cov-report=xml --cov-report=term-missing

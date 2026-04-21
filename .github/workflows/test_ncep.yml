@@ -46,6 +46,7 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           setx HOME "C:\Users\runneradmin"
+          setx PWD "C:\Users\runneradmin\tmp"
 
       - name: Run NCEP test IO
         shell: bash -l {0}

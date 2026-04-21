@@ -9,7 +9,7 @@ on:
       - InAir_Dev
 
 jobs:
-  test:
+  test_ncep:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
@@ -47,4 +47,16 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE
           conda activate pydox-dev
-          pytest pydox/tests/test_io.py -v -k 'ncep' --cov=io --cov-report=xml --cov-report=term-missing
+          pytest pydox/tests/test_io.py -v -k 'ncep' --cov=io --cov-report=xml --cov-report=term-missing --junitxml=test-results.xml
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: coverage.xml
+
+      - name: Upload test results
+        uses: actions/upload-test-report@v3
+        with:
+          name: pytest-results
+          path: test-results.xml

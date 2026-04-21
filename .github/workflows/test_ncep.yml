@@ -47,6 +47,7 @@ jobs:
         run: |
           setx HOME "C:\Users\runneradmin"
           setx PWD "C:\Users\runneradmin\tmp"
+          setx USER "runneradmin"
 
       - name: Run NCEP test IO
         shell: bash -l {0}

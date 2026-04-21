@@ -46,7 +46,6 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           setx HOME "C:\Users\runneradmin"
-        #setx PWD "C:\Users\runneradmin\tmp"
           setx USER "runneradmin"
 
       - name: Run NCEP test IO

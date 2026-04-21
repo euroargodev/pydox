@@ -42,6 +42,11 @@ jobs:
       #- name: Run test NCEP IO.py
       #  run: pytest tests/test_io.py -v -k 'ncep' --cov=io --cov-report=xml --cov-report=term-missing
 
+      - name: Set environment variables for Windows ($HOME automatically defined for linux/macOs)
+        if: runner.os == 'Windows'
+        run: |
+          setx HOME "C:\Users\runneradmin"
+
       - name: Run NCEP test IO
         shell: bash -l {0}
         run: |

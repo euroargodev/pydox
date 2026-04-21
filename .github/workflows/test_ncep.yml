@@ -50,7 +50,7 @@ jobs:
           pytest pydox/tests/test_io.py -v -k 'ncep' --cov=io --cov-report=xml --cov-report=term-missing --junitxml=test-results.xml
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: coverage.xml

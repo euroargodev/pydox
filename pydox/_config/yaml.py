@@ -29,6 +29,7 @@ def osenv_constructor(loader, node) -> str:
     value = node.value
     match = _osenv_matcher.match(value)
     env_var = match.group()[2:-1]
+    print(f"problem with {env_var}")
     return os.environ.get(env_var) + value[match.end() :]
 
 

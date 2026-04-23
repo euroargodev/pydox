@@ -18,6 +18,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     continue-on-error: true
 
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # Force to use Node.js 24
+      #ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true # Force to Node.js 20 (node 20 will be unavailable at 2026 end)
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6

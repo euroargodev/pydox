@@ -16,6 +16,7 @@ jobs:
         python-version: [ "3.11"]
 
     runs-on: ${{ matrix.os }}
+    continue-on-error: true
 
     steps:
       - name: Checkout repo

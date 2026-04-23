@@ -53,7 +53,7 @@ def open_ncep()->xr.Dataset:
     return ds_ncep
 
 
-def interp_NCEP_on_ARGO(ds_ncep: xr.Dataset, coord_argo: dict) -> xr.Dataset:
+def interp_NCEP_on_ARGO(ds_ncep: xr.Dataset, coord_argo: dict[str,xr.DataArray]) -> xr.Dataset:
     """
     Function to interpolate a NCEP xarray dataset containing variables 'slp,',air,'rhum' on
     ARGO cooordinates (lon/lat/time).

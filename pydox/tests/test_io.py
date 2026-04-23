@@ -67,8 +67,9 @@ def create_dataset_for_test_interp():
     lat = xr.DataArray([0,1],dims="lat")
     time = xr.DataArray([0,1],dims="time")
 
-    data = np.ones((2,2,2))
-
+    #data = np.ones((2,2,2))
+    data = np.array([[[1, 2], [3, 4]],
+                 [[5, 6], [7, 8]]])
     ds = xr.Dataset(
         {
             "slp":(("time","lat","lon"),data.copy()),
@@ -113,5 +114,5 @@ def test_ncep_interp_ok():
     assert "air" in ds_interp
     assert "rhum" in ds_interp
 
-    assert ds_interp['slp']==1/100
-    assert ds_interp['air']==1-273.15
+    assert ds_interp['slp']==4.5/100
+    assert ds_interp['air']==4.5-273.15

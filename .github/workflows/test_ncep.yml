@@ -57,7 +57,6 @@ jobs:
         shell: bash -l {0}
         run: |
           cd $GITHUB_WORKSPACE
-          #conda activate pydox-dev
           pytest pydox/tests/test_io.py -v -k 'ncep' --cov=pydox/io --cov-report=xml:coverage.xml --cov-report=term-missing --junitxml=test-results.xml
 
       - name: Upload coverage report

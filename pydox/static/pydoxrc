@@ -20,7 +20,7 @@ operator:
 # Any file saved by pydox will be under "<output.root>/<WMO>"
 # where <WMO> will be filled automatically by pydox
 output:
-  root: # e.g. : ${HOMEPATH}/ARGO/DMQC/OXYGEN/PYDOX
+  root: # e.g. : ${HOME}/ARGO/DMQC/OXYGEN/PYDOX
 
 # ============================================= Argo Float data
 argo:

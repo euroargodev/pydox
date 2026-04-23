@@ -10,7 +10,7 @@ version: '0.1' # Pydox configuration file format version (must be in any configu
 
 # ============================================= Operator Designation
 operator:
-  name: ${USER} ('factory' value)
+  name: ${USERNAME} ('factory' value)
   email:
   orcid:
   affiliation:
@@ -20,7 +20,7 @@ operator:
 # Any file saved by pydox will be under "<output.root>/<WMO>"
 # where <WMO> will be filled automatically by pydox
 output:
-  root: ${HOME}/ARGO/DMQC/OXYGEN/PYDOX
+  root: ${HOMEPATH}/ARGO/DMQC/OXYGEN/PYDOX
 
 # ============================================= Argo Float data
 argo:

@@ -25,17 +25,26 @@ jobs:
     steps:
       - name: Check Node version
         run: node -v
-        
+
       - name: Checkout repo
         uses: actions/checkout@v6
 
-      - name: Setup Miniconda
-        uses: conda-incubator/setup-miniconda@v4
+      #- name: Setup Miniconda
+      #  uses: conda-incubator/setup-miniconda@v4
+      #  with:
+      #    environment-file: ci/requirements/py3.11-all-pinned.yml
+      #    auto-activate: true
+      #    activate-environment: pydox-dev
+
+      - name: Setup Micromamba
+        uses: mamba-org/setup-micromamba@v1
         with:
           environment-file: ci/requirements/py3.11-all-pinned.yml
-          auto-activate: true
-          activate-environment: pydox-dev
-
+          environment-name: pydox-dev
+          init-shell: bash
+          cache-environment: true # change to false to remove mamba env. in the cache
+                                  # When true, github save the env. in the cache.
+                                  # The first run can be long, the following are faster
 
       #- name: Setup Python
       #  uses: actions/setup-python@v6

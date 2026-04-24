@@ -42,7 +42,7 @@ jobs:
           environment-file: ci/requirements/py3.11-all-pinned.yml
           environment-name: pydox-dev
           init-shell: bash
-          cache-environment: false # change to false to remove mamba env. in the cache
+          cache-environment: true # change to false to remove mamba env. in the cache
                                   # When true, github save the env. in the cache.
                                   # The first run can be long, the following are faster
 

@@ -6,6 +6,7 @@ from typing import (
     Literal,
     Tuple,
     TypeAlias,
+    Iterable,
 )
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 import multiprocessing
@@ -183,3 +184,18 @@ def compute_fits(
     ################################
     else:
         raise NotImplementedError
+
+
+def mth_run(fct: Callable, items: Iterable, *args, **kwargs) -> list[Any]:
+    """Naive multi-threading execution of a function for a list of items"""
+    Y = []
+    ConcurrentExecutor = ThreadPoolExecutor()
+    with ConcurrentExecutor as executor:
+        future_to_url = {
+            executor.submit(fct, item, *args, **kwargs): item for item in items
+        }
+        futures = as_completed(future_to_url)
+        for future in futures:
+            y = future.result()
+            Y.append(y)
+    return Y

@@ -38,7 +38,7 @@ argo:
     max_pressure: 10. # dbar
   codes:
     in_air: [699, 711, 799] # Argo Code associated to InAir Data in the Rtraj Argo file
-    in_water: [690, 710] # AArgo Code associated to InWater Data in the Rtraj Argo file
+    in_water: [690, 710] # Argo Code associated to InWater Data in the Rtraj Argo file
 
 # ============================================= Calibration Methods Parameters
 calibration_methods:

@@ -28,6 +28,11 @@ dependencies:
   - pyproj = 3.7.1
   - seaborn = 0.13.2
 
+# EXT.MISC:
+  - tqdm = 4.67.3
+  - snakeviz = 2.2.2
+
+
 # EXT.?:
   - IPython = 9.4.0
   - ipykernel = 6.29.5

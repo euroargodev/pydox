@@ -7,10 +7,12 @@ from typing import (
     Tuple,
     TypeAlias,
     Iterable,
+    Optional,
 )
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 import multiprocessing
 import logging
+import itertools
 
 log = logging.getLogger("pydox.utils.compute")
 
@@ -186,16 +188,64 @@ def compute_fits(
         raise NotImplementedError
 
 
-def mth_run(fct: Callable, items: Iterable, *args, **kwargs) -> list[Any]:
-    """Naive multi-threading execution of a function for a list of items"""
+def mth_run(
+    fct: Callable, items: Iterable, *args, chunks: Optional[int] = None, **kwargs
+) -> list[Any]:
+    """Naive multi-threading execution of a function for a list of items, grouped by chunk or not
+
+    Parameters
+    ----------
+    fct: Callable
+        A function that will receive one item as first argument followed by all *args and **kwargs.
+    items: Iterable
+        A list of items to be processed by `fct`.
+    chunks: int, optional, default=1
+        The chunk size, if any. This is size of one batch of items to be processed by a single thread.
+        By default, one thread receives one item to processed with `fct`.
+
+    Returns
+    -------
+    list[Any]
+        The _unordered_ list of `fct` returns called with to all `items`.
+    """
+
+    # Y = []
+    # ConcurrentExecutor = ThreadPoolExecutor()
+    # with ConcurrentExecutor as executor:
+    #     future_to_url = {
+    #         executor.submit(fct, item, *args, **kwargs): item for item in items
+    #     }
+    #     futures = as_completed(future_to_url)
+    #     for future in futures:
+    #         y = future.result()
+    #         Y.append(y)
+    # return Y
+
+    def batched(iterable, n):
+        # https://docs.python.org/3.12/library/itertools.html#itertools.batched
+        # batched('ABCDEFG', 3) → ABC DEF G
+        iterator = iter(iterable)
+        while batch := tuple(itertools.islice(iterator, n)):
+            yield batch
+
+    def fct_chunk(one_chunk, *args, **kwargs) -> list[Any]:
+        """An intermediate function that will handle one chunk of items"""
+        return [fct(item, *args, **kwargs) for item in one_chunk]
+
+    chunks = 1 if chunks is None else chunks
+    if chunks < 1:
+        raise ValueError(
+            f"'chunks' argument must be at least one ! ({chunks} provided)"
+        )
+
     Y = []
     ConcurrentExecutor = ThreadPoolExecutor()
     with ConcurrentExecutor as executor:
         future_to_url = {
-            executor.submit(fct, item, *args, **kwargs): item for item in items
+            executor.submit(fct_chunk, chunk, *args, **kwargs): chunk
+            for chunk in batched(items, chunks)
         }
         futures = as_completed(future_to_url)
         for future in futures:
-            y = future.result()
-            Y.append(y)
+            [Y.append(y) for y in future.result()]
     return Y

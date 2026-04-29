@@ -6,7 +6,7 @@ import logging
 from copy import deepcopy
 
 import numpy as np
-from argopy import ArgoFloat
+import argopy as ar
 import xarray as xr
 import matplotlib.pyplot as plt
 
@@ -398,14 +398,20 @@ def psal_rtraj_substitute_sprof(
     return da
 
 
-def semantic_cycle2values(input: Config | ParameterSet, af: ArgoFloat) -> list[int]:
-    Sprof: xr.Dataset = af.dataset("Sprof")
-    if isinstance(input, Config):
+def semantic_cycle2values(
+    input: Config | ParameterSet, a_float: ar.ArgoFloat
+) -> list[int]:
+    Sprof: xr.Dataset = a_float.dataset("Sprof")
+
+    try:
         semantic_cycles: tuple = do.get_params(
             "calibration_parameters.cycles", config=input
         )
-    elif isinstance(input, ParameterSet):
-        semantic_cycles: tuple = ParameterSet.cycles
+    except Exception as e:
+        if isinstance(input, ParameterSet):
+            semantic_cycles: tuple = input.cycles
+        else:
+            raise e
 
     if semantic_cycles[0] == "first":
         cycle_first = Sprof["CYCLE_NUMBER"].min().item()
@@ -718,7 +724,7 @@ def _get_argo_data_for_in_air_method(
 
 
 def get_argo_data_for_in_air_method(
-    af: ArgoFloat,
+    a_float: ar.ArgoFloat,
     config: Config,
     params: Optional[ParameterSet] = None,
     debug_plot: bool = False,
@@ -745,12 +751,12 @@ def get_argo_data_for_in_air_method(
 
     # Read other parameters from the ParameterSet:
     if params is None:
-        cycles: list[int] = semantic_cycle2values(input=config, af=af)
+        cycles: list[int] = semantic_cycle2values(input=config, a_float=a_float)
     else:
-        cycles: list[int] = semantic_cycle2values(input=params, af=af)
+        cycles: list[int] = semantic_cycle2values(input=params, a_float=a_float)
 
-    # Read parameters from the ArgoFloat:
-    # optode_height: float = af.launchconfig["OptodeVerticalPressureOffset_dbar"]
+    # Read parameters from the ar.ArgoFloat:
+    # optode_height: float = a_float.launchconfig["OptodeVerticalPressureOffset_dbar"]
 
     ############################################################################################
     # Load data and select variables:
@@ -758,8 +764,8 @@ def get_argo_data_for_in_air_method(
     # GDAC Argo data are loaded when accessing 'Sprof' and 'Rtraj' attributes
 
     # From full xr.DataSet objects, sub-select only variables that we really need to work with:
-    Sprof: MultiProfData = parameter_selection_sprof(af.dataset("Sprof"))
-    Rtraj: TrajData = parameter_selection_rtraj(af.dataset("Rtraj"))
+    Sprof: MultiProfData = parameter_selection_sprof(a_float.dataset("Sprof"))
+    Rtraj: TrajData = parameter_selection_rtraj(a_float.dataset("Rtraj"))
 
     return _get_argo_data_for_in_air_method(
         min_pres=min_pres,

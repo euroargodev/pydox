@@ -50,7 +50,7 @@ def _is_serial(obj: Callable) -> bool:
 
 
 def compute_fits(
-    items: List[Tuple[int, Any]],
+    items: List[Tuple[int, Any, Any]],
     fct: Callable,
     progress: bool = False,
     max_workers: int = 6,
@@ -65,7 +65,7 @@ def compute_fits(
         List of tuples, where 1st value is an integer and 2nd value is anything (typically a unique set of parameters).
         The integer value is used to build the result `OrderedDict`.
     fct: Callable
-        A callable object that will reveice the 2nd value of the items tuples.
+        A callable object that will reveice the 2nd and 3rd values of the items tuples, typicaly `params` and `data`.
     max_workers: int, default: 6
         Maximum number of threads or processes
     method: str, default: ``sequential``
@@ -107,10 +107,10 @@ def compute_fits(
         if progress:
             items = tqdm(items, total=len(items), disable="disable" in [progress])
 
-        for iparam, params in items:
+        for iparam, params, input_data in items:
             data = None
             try:
-                data = fct(params)
+                data = fct(params, input_data)
                 # This is where we should implement progressive gain computation
                 # by updating the new params from the previous iteration.
                 # This could be done using a callback function defined by the caller.
@@ -148,8 +148,9 @@ def compute_fits(
                 executor.submit(
                     fct,
                     params,
+                    input_data,
                 ): iparam
-                for iparam, params in items
+                for iparam, params, input_data in items
             }
             futures = as_completed(future_to_url)
             if progress:

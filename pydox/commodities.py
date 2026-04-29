@@ -244,7 +244,7 @@ class FitResult:
     """Maybe some placeholder for a single fit result"""
 
     coefs: Coefficients | CoefficientsInAir
-    fit_data: Any
+    fit_data: dict[str, Any]
 
 
 FitResults: TypeAlias = OrderedDict[int, FitResult]

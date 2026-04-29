@@ -1,19 +1,16 @@
-from typing import Any, Self, Optional, Callable, Iterable, Annotated, TypedDict
+from typing import Any, Self
 from collections import OrderedDict
-from functools import partial
 import logging
 from copy import deepcopy
 
-import numpy as np
 import argopy as ar
 import xarray as xr
-import matplotlib.pyplot as plt
 
 import pydox as do
 from pydox._config.config import Config
-from pydox.utils.casting import to_list, is_ctelist
-from pydox.utils.compute import compute_fits, ExecutionMethods, mth_run
-from pydox.utils.xarray import xr_append_history
+from pydox._config.utils import format_value_txt
+from pydox.utils.casting import to_list
+from pydox.utils.compute import compute_fits, ExecutionMethods
 from pydox.commodities import (
     Data,
     ConfigsDict,
@@ -22,7 +19,6 @@ from pydox.commodities import (
     CoefficientsInAir,
     FitResults,
 )
-from pydox._config.utils import format_value_txt
 from pydox.core.in_air import inair_fit
 from pydox.calibration.method import Method
 from pydox.calibration.methods.utils import (
@@ -32,29 +28,29 @@ from pydox.calibration.methods.utils import (
 
 log = logging.getLogger("pydox.calibration.methods.in_air")
 
-#
-# class ArgoData:
-#
-#     def __init__(self, wmo: int, **kwargs) -> None:
-#         self._cfg: Config = deepcopy(kwargs.get("config", do.params))
-#         self.a_float: ar.ArgoFloat = ar.ArgoFloat(
-#             wmo, host=do.get_params("argo.src", config=self._cfg), cache=True
-#         )
-#         self.cast = kwargs.get("cast", True)
-#         self._sprof = None
-#         self._rtraj = None
-#
-#     @property
-#     def Sprof(self) -> xr.Dataset:
-#         if self._sprof is None:
-#             self._sprof = self.a_float.open_dataset("Sprof", cast=self.cast)
-#         return self._sprof
-#
-#     @property
-#     def Rtraj(self) -> xr.Dataset:
-#         if self._rtraj is None:
-#             self._rtraj = self.a_float.open_dataset("Rtraj", cast=self.cast)
-#         return self._rtraj
+
+class ArgoData:
+
+    def __init__(self, wmo: int, **kwargs) -> None:
+        self._cfg: Config = deepcopy(kwargs.get("config", do.params))
+        self.a_float: ar.ArgoFloat = ar.ArgoFloat(
+            wmo, host=do.get_params("argo.src", config=self._cfg), cache=True
+        )
+        self.cast = kwargs.get("cast", True)
+        self._sprof = None
+        self._rtraj = None
+
+    @property
+    def Sprof(self) -> xr.Dataset:
+        if self._sprof is None:
+            self._sprof = self.a_float.open_dataset("Sprof", cast=self.cast)
+        return self._sprof
+
+    @property
+    def Rtraj(self) -> xr.Dataset:
+        if self._rtraj is None:
+            self._rtraj = self.a_float.open_dataset("Rtraj", cast=self.cast)
+        return self._rtraj
 
 
 class MethodInAir(Method):

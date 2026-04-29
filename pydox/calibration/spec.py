@@ -9,6 +9,7 @@ from dataclasses import dataclass, asdict
 import pydox as do
 from pydox._config.config import check_config, Config
 from pydox.commodities import ConfigsDict, CoefsDict
+from pydox.utils.casting import is_ctelist
 
 
 class Workflow(ABC):
@@ -78,16 +79,22 @@ class Workflow(ABC):
         summary = []
 
         # Piecewise subgroup:
-        summary += [f"  piecewise: {json.dumps(self._sparam('piecewise'))}"]
+        summary += [f"  piecewise (not used): {json.dumps(self._sparam('piecewise'))}"]
 
         # Initial condition subgroup:
         summary += [f"  initial_guess: {json.dumps(self._sparam('initial_guess'))}"]
 
         # Cycle numbers subgroup:
-        summary += [f"  cycles: {json.dumps(self._sparam('cycles'))}"]
+        if is_ctelist([c.cycles for c in self.configs.values()]):
+            summary += [f"  cycles: {json.dumps(self._sparam('cycles'))}"]
+        else:
+            summary += [f"  cycles: <Values depend on configurations, see below>"]
 
         # Fit drift:
-        summary += [f"  fit_drift: {json.dumps(self._sparam('fit_drift'))}"]
+        if is_ctelist([c.fit_drift for c in self.configs.values()]):
+            summary += [f"  fit_drift: {json.dumps(self._sparam('fit_drift'))}"]
+        else:
+            summary += [f"  fit_drift: <Values depend on configurations, see below>"]
 
         return summary
 
@@ -150,7 +157,7 @@ class Workflow(ABC):
 
         summary += [""]  # Blank line
 
-        summary += ["parameters (shared by all methods):"]
+        summary += ["default parameters shared by all methods:"]
         [summary.append(line) for line in self._repr_params_shared()]
 
         summary += [""]  # Blank line

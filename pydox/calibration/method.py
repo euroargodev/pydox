@@ -109,7 +109,7 @@ class Method(Workflow, ABC):
 
         summary += [""]  # Blank line
 
-        summary += ["parameters (shared by all methods):"]
+        summary += ["default parameters shared by all methods:"]
         [summary.append(line) for line in self._repr_params_shared()]
 
         summary += [""]  # Blank line

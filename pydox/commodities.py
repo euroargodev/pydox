@@ -61,22 +61,22 @@ class ParameterSet(Protocol):
 
 
 ConfigsDict: TypeAlias = OrderedDict[int, ParameterSet]
-"""A type for the Workflow.configs attribute, hence for Workflow.flatten_configs() and Workflow._flatten_configs() methods"""
+"""A type for the Workflow.configs attribute, hence for Workflow.flatten_configs() and Workflow._flatten_configs() methods output"""
 
 
 @dataclass(frozen=True)
 class Params:
-    """A dataclass to hold a parameter set for one computation
+    """A dataclass to hold a unique parameter set for one computation
 
-    Define here parameters shared by all methods.
-
-    This class produces instances that type as `ParameterSet`
+    This class produces instances that type as `ParameterSet`.
 
     Notes
     -----
-    - These parameters are from the 'calibration_parameters' group of the configuration
-    - There is no reason to expect all parameters from this group
-    - There is no reason do not have more parameters
+    - These parameters are from any group of the configuration, but shared by ALL methods
+    - Each parameter has a unique value, even if a list is supplied in the configuration
+    - Instance of `Params` are expected to be produced by Workflow._flatten_configs() and to fill values of a `ConfigsDict` type.
+    - There is no reason to do not have parameters from outside the configuration
+    - Create children to be specific about one method parameters
     """
 
     fit_drift: bool
@@ -98,8 +98,8 @@ class ParamsInAir(Params):
     Notes
     -----
     - These parameters are from the 'calibration_methods.in_air' subgroup of the configuration
-    - There is no reason to expect all parameters from this subgroup
-    - There is no reason do not have more parameters
+    - There is no reason to expect all parameters from this subgroup to be attributes of this class
+    - Each parameter has a unique value, even if a list is supplied in the configuration
     """
 
     carryover: bool
@@ -121,8 +121,8 @@ class ParamsClimatology(Params):
     Notes
     -----
     - These parameters are from the 'calibration_methods.climatology' subgroup of the configuration
-    - There is no reason to expect all parameters from this subgroup
-    - There is no reason do not have more parameters
+    - There is no reason to expect all parameters from this subgroup to be attributes of this class
+    - Each parameter has a unique value, even if a list is supplied in the configuration
     """
 
     min_pressure: float

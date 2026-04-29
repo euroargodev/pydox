@@ -10,6 +10,7 @@ def params2cycs(params: ParameterSet, data: Any) -> list[int]:
 
     Here, we return real cycle numbers.
     """
+    raise DeprecationWarning("Use semantic_cycle2values instead")
     if params.cycles[0] == "first":
         cycle_first = 1  # or read from data
     else:
@@ -20,4 +21,3 @@ def params2cycs(params: ParameterSet, data: Any) -> list[int]:
         raise NotImplementedError
 
     return [cycle_first, cycle_last]
-

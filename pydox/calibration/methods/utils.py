@@ -6,9 +6,9 @@ import logging
 from copy import deepcopy
 
 import numpy as np
-import argopy as ar
 import xarray as xr
 import matplotlib.pyplot as plt
+import argopy as ar
 
 import pydox as do
 from pydox._config.config import Config
@@ -26,7 +26,6 @@ from pydox.commodities import (
 from pydox._config.utils import format_value_txt
 from pydox.core.in_air import inair_fit
 from pydox.calibration.method import Method
-from pydox.calibration.utils import params2cycs
 
 
 log = logging.getLogger("pydox.calibration.methods.utils")
@@ -49,7 +48,7 @@ def xr_logging(
     obj: xr.Dataset | xr.DataArray, new_entry: str | list[str] = None
 ) -> xr.Dataset | xr.DataArray:
     """Log entry into a specific attribute of a xarray object"""
-    log.debug(new_entry)
+    # log.info(new_entry)
     return xr_append_history(obj, new_entry, attr="pydox_history")
 
 
@@ -668,8 +667,8 @@ def _get_argo_data_for_in_air_method(
             )
 
     #############
-    # Then we affect a position to each cycle
-    # For some ARGOS float (with Iridium Position, not GPS), the position are recalculated.
+    # Then we affect a correct position to each cycle
+    # Because for some ARGOS float (with Iridium Position, not GPS), the position are recalculated.
     # So, it's better to take the position from the Sprof file, where the position ar OK.
 
     for cyc in ds_inair["CYCLE_NUMBER"]:
@@ -688,25 +687,33 @@ def _get_argo_data_for_in_air_method(
                 this["POSITION_QC"].isel(N_PROF=0).item(),
             )
 
-        ds_inair["LATITUDE"].loc[
-            {"CYCLE_NUMBER": ds_inair["CYCLE_NUMBER"] == cyc}
-        ] = lat
-        ds_inair["LONGITUDE"].loc[
-            {"CYCLE_NUMBER": ds_inair["CYCLE_NUMBER"] == cyc}
-        ] = lon
-        ds_inair["POSITION_QC"].loc[
-            {"CYCLE_NUMBER": ds_inair["CYCLE_NUMBER"] == cyc}
-        ] = pqc
+        for ds in [ds_inwater, ds_inwater]:
+            for pname, pvalue in [
+                ("LATITUDE", lat),
+                ("LONGITUDE", lon),
+                ("POSITION_QC", pqc),
+            ]:
+                ds[pname].loc[{"CYCLE_NUMBER": ds["CYCLE_NUMBER"] == cyc}] = pvalue
 
-        ds_inwater["LATITUDE"].loc[
-            {"CYCLE_NUMBER": ds_inwater["CYCLE_NUMBER"] == cyc}
-        ] = lat
-        ds_inwater["LONGITUDE"].loc[
-            {"CYCLE_NUMBER": ds_inwater["CYCLE_NUMBER"] == cyc}
-        ] = lon
-        ds_inwater["POSITION_QC"].loc[
-            {"CYCLE_NUMBER": ds_inwater["CYCLE_NUMBER"] == cyc}
-        ] = pqc
+        # ds_inair["LATITUDE"].loc[
+        #     {"CYCLE_NUMBER": ds_inair["CYCLE_NUMBER"] == cyc}
+        # ] = lat
+        # ds_inair["LONGITUDE"].loc[
+        #     {"CYCLE_NUMBER": ds_inair["CYCLE_NUMBER"] == cyc}
+        # ] = lon
+        # ds_inair["POSITION_QC"].loc[
+        #     {"CYCLE_NUMBER": ds_inair["CYCLE_NUMBER"] == cyc}
+        # ] = pqc
+        #
+        # ds_inwater["LATITUDE"].loc[
+        #     {"CYCLE_NUMBER": ds_inwater["CYCLE_NUMBER"] == cyc}
+        # ] = lat
+        # ds_inwater["LONGITUDE"].loc[
+        #     {"CYCLE_NUMBER": ds_inwater["CYCLE_NUMBER"] == cyc}
+        # ] = lon
+        # ds_inwater["POSITION_QC"].loc[
+        #     {"CYCLE_NUMBER": ds_inwater["CYCLE_NUMBER"] == cyc}
+        # ] = pqc
 
     ############################################################################################
     # Update dataset attributes to keep track of processing:
@@ -720,6 +727,7 @@ def _get_argo_data_for_in_air_method(
         "ds_inwater": ds_inwater,
         "Sprof": Sprof,
         "Rtraj": Rtraj,
+        "cycles": cycles,
     }
 
 
@@ -791,23 +799,7 @@ def get_atmospheric_data_for_in_air_method(
     data: dict[str, Any] = {}
 
     if dataset == "ncep":
-        # dsair, dsinwater = get_argo_data_for_NCEP(
-        #     ds_argo_Rtraj,
-        #     ds_argo_Sprof,
-        #     which_var,
-        #     code_inair,
-        #     code_inwater,
-        #     min_pres,
-        #     max_pres,
-        # )
-
-        # PPOX1 = dsair["PPOX_DOXY"].values
-        # PPOX2 = dsinwater["PPOX_DOXY"].values
-
-        # Dummy replacement:
-        # input_data["PPOX1"] = a_float["PPOX1"]
-        # input_data["PPOX2"] = a_float["PPOX2"]
-
+        # todo Implement load NCEP data here
         # print(
         #     f"Loaded {self._mparam('data.ncep.name')} data from src={self._mparam('data.ncep.src')}"
         # )
@@ -819,3 +811,44 @@ def get_atmospheric_data_for_in_air_method(
         raise NotImplementedError(f"dataset={dataset}")
 
     return data
+
+
+def get_data_for_one_parameterset_for_in_air_method(
+    a_float: ar.ArgoFloat,
+    config: Config,
+    params: ParameterSet,
+    iset: int,
+    debug_plot: bool = False,
+) -> tuple[int, dict[str, Any]]:
+    """Load and process all data (Argo and atmosphere) required for a single fit
+
+    Parameters
+    ----------
+    a_float: ar.ArgoFloat
+    config: Config
+    params: ParameterSet
+    iset: int
+
+    debug_plot: bool, optional, default=False
+
+    Returns
+    -------
+    iset, data
+    """
+    data = {}  # Collect obj for output
+
+    # Load Argo float data:
+    this_argo = get_argo_data_for_in_air_method(
+        a_float, config, params, debug_plot=debug_plot
+    )
+    data["PPOX1"] = this_argo["ds_inair"]["PPOX_DOXY"].values
+    data["PPOX2"] = this_argo["ds_inwater"]["PPOX_DOXY"].values
+
+    # Load Atmospheric data:
+    this_atm = get_atmospheric_data_for_in_air_method(
+        this_argo, config, params, debug_plot=debug_plot
+    )
+    data["REF_PPOX"] = this_atm["REF_PPOX"]
+
+    #
+    return iset, data

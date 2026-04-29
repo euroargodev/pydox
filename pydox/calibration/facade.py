@@ -101,7 +101,7 @@ class CalibrationSet(Workflow):
         if not cumulative:
             icfg: int = 0
             for im, this_method in self._methods.items():
-                this_method.fit(argofloat_obj=argofloat_obj)
+                this_method.fit(argofloat_obj)
 
                 # Gather more detailed results in dedicated placeholders of the instance:
                 for iset, coefs in this_method._coefs.items():
@@ -115,7 +115,7 @@ class CalibrationSet(Workflow):
 
             icfg: int = 0
             for im, this_method in self._methods.items():
-                this_method.fit(argofloat_obj=argofloat_obj)
+                this_method.fit(argofloat_obj)
                 coefs = this_method.coefs[0]
 
                 # Gather more detailed results in dedicated placeholders of the instance:
@@ -138,8 +138,6 @@ class CalibrationSet(Workflow):
             [m.fitted for m in self._methods.values()]
         )  # is the set fitted when all methods are fitted, or at least one ?
         self._fitted_float = {
-            "WMO": argofloat_obj["WMO"],
-            "CYCLE_NUMBER": params2cycs(self.configs[0], argofloat_obj),
-            # self.configs[*].cycles are all the same
+            "WMO": argofloat_obj.WMO,
         }
         return self

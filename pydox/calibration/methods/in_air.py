@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 import pydox as do
 from pydox._config.config import Config
-from pydox.utils.casting import to_list
+from pydox.utils.casting import to_list, is_ctelist
 from pydox.utils.compute import compute_fits, ExecutionMethods, mth_run
 from pydox.utils.xarray import xr_append_history
 from pydox.commodities import (
@@ -25,10 +25,8 @@ from pydox.commodities import (
 from pydox._config.utils import format_value_txt
 from pydox.core.in_air import inair_fit
 from pydox.calibration.method import Method
-from pydox.calibration.utils import params2cycs
 from pydox.calibration.methods.utils import (
-    get_argo_data_for_in_air_method,
-    get_atmospheric_data_for_in_air_method,
+    get_data_for_one_parameterset_for_in_air_method,
 )
 
 
@@ -112,7 +110,7 @@ class MethodInAir(Method):
     ) -> Self:
         """Compute calibration coefficients for all possible configuration set and one Argo float
 
-        According to instance configurations (self.configs), this method is in charge of:
+        According to this instance configurations (self.configs), this method is in charge of:
         - Loading/preprocessing Argo Float data,
         - Loading/preprocessing Reference data (eg: from NCEP),
         - Executing all possible computations, sequentially or in parallel
@@ -121,7 +119,7 @@ class MethodInAir(Method):
 
         Parameters
         ----------
-        argofloat_obj
+        a_float
             An object that will be able to return Argo float data
             #Todo: define clearly what we expect here
 
@@ -139,44 +137,21 @@ class MethodInAir(Method):
 
         """
 
+        ############### Load data
         # We first need to load data that will be used to fit for each configuration
         input_data: dict[int, Any] = {}
 
-        def load_data_for_one_parameterset(
-            a_float: ar.ArgoFloat,
-            config: Config,
-            params: ParameterSet,
-            iset: int,
-            debug_plot: bool = False,
-        ) -> tuple[int, dict[str, Any]]:
-            data = {}  # Collect obj for output
-
-            # Load Argo float data:
-            this_argo = get_argo_data_for_in_air_method(
-                a_float, config, params, debug_plot=debug_plot
-            )
-            data["PPOX1"] = this_argo["ds_inair"]["PPOX_DOXY"].values
-            data["PPOX2"] = this_argo["ds_inwater"]["PPOX_DOXY"].values
-
-            # Load Atmospheric data:
-            this_atm = get_atmospheric_data_for_in_air_method(
-                this_argo, config, params, debug_plot=debug_plot
-            )
-            data["REF_PPOX"] = this_atm["REF_PPOX"]
-
-            #
-            return iset, data
-
         # todo Collect input data in parallel ?
         for iset, params in self.configs.items():
-            iset, data = load_data_for_one_parameterset(
+            iset, data = get_data_for_one_parameterset_for_in_air_method(
                 a_float, self._cfg, params, iset, debug_plot=debug_plot
             )
             input_data[iset] = data
 
-        # Execute all computations, argument 'method' determines how to do it:
-        # 'sequential': one after the other
-        # 'thread'/'process' or a Dask client: in parallel
+        ############### Execute all computations
+        # argument 'method' determines how to do it:
+        # - 'sequential': one after the other
+        # - 'thread'/'process' or a Dask client: in parallel
 
         # When we had one possible input_data:
         # fct = partial(inair_fit, data=input_data)
@@ -189,12 +164,14 @@ class MethodInAir(Method):
         ]
         results: FitResults = compute_fits(items, inair_fit, method=method)
 
+        ############### Finalize
         # Gather more detailed results in dedicated placeholders of the instance:
         for iset, result in results.items():
             self._coefs[iset]: CoefficientsInAir = result.coefs
             self._fit_data[iset] = result.fit_data
 
             # Possibly add more data:
+            # (be careful not to overwrite an attribute already set by inair_fit)
             self._fit_data[iset]["cycle_bounds"] = self.configs[iset].cycles
 
         # Update fitted status:

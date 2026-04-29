@@ -129,9 +129,18 @@ class Workflow(ABC):
         """
         summary = []
         if self.fitted:
-            summary += [
-                f"fitted: {self.fitted} (WMO={self._fitted_float.get('WMO', '?')}, CYCLES {self._fitted_float.get('CYCLE_NUMBER', '?')})"
-            ]
+            # summary += [
+            #     f"fitted: {self.fitted} (WMO={self._fitted_float.get('WMO', '?')}"
+            # ]
+            cycs = [c.cycles for c in self.configs.values()]
+            if is_ctelist(cycs):
+                summary += [
+                    f"fitted: {self.fitted} (WMO={self._fitted_float.get('WMO', '?')}, CYCLES {cycs[0]})"
+                ]
+            else:
+                summary += [
+                    f"fitted: {self.fitted} (WMO={self._fitted_float.get('WMO', '?')}, CYCLES range depend on configurations, see below)"
+                ]
         else:
             summary += [f"fitted: {self.fitted}"]
         return summary

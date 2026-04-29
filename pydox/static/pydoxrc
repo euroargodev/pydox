@@ -96,7 +96,7 @@ calibration_parameters:
     gain: 1.
     drift: 0.
   fit_drift: False
-  cycles: [first, last] # Cycle numbers to use to estimate coefficients
+  cycles: [first, last] # Cycle numbers to use to estimate coefficients, this is a range
   data:
     save:
       format: json

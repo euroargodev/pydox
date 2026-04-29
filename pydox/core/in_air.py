@@ -2,6 +2,7 @@ from typing import Any
 
 import numpy as np
 from scipy.optimize import curve_fit
+from tornado.util import raise_exc_info
 
 from pydox.commodities import (
     Data,
@@ -63,6 +64,13 @@ def inair_fit(params: ParamsInAir, data=Any) -> FitResult:
     REF_PPOX = data[
         "REF_PPOX"
     ]  # REF_PPOX is a generic term to replace NCEP_PPOX and ERA5_PPOX
+
+    if len(PPOX1) <= 2:
+        raise ValueError(
+            f"Not enough data for fit, may be you should increase the cycles range to use. {PPOX1}"
+        )
+    if len(PPOX1) != len(PPOX2) or len(PPOX1) != len(REF_PPOX):
+        raise ValueError("All PPOX data must have the same length")
 
     # Depending on parameters, we select a model and set arguments for curve_fit:
     if not params.fit_drift:

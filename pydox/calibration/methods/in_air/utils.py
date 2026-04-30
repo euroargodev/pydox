@@ -1,0 +1,177 @@
+from typing import Any, Optional
+from copy import deepcopy
+
+import argopy as ar
+import xarray as xr
+
+import pydox as do
+from pydox._config.config import Config
+from pydox.commodities import ParameterSet, ParamsInAir
+
+from pydox.io.argo.types import MultiProfData, TrajData, ArgoDataForInAir
+from pydox.io.argo.utils import (
+    semantic_cycle2values,
+    preprocess_raw_rtraj,
+    preprocess_raw_sprof,
+)
+from pydox.io.argo.facade import get_argo_data_for_in_air_method
+from pydox.io.ncep.facade import get_ncep_data_for_in_air_method
+
+
+# class ArgoData:
+#
+#     def __init__(self, wmo: int, **kwargs) -> None:
+#         self._cfg: Config = deepcopy(kwargs.get("config", do.params))
+#         self.a_float: ar.ArgoFloat = ar.ArgoFloat(
+#             wmo, host=do.get_params("argo.src", config=self._cfg), cache=True
+#         )
+#         self.cast = kwargs.get("cast", True)
+#         self._sprof = None
+#         self._rtraj = None
+#
+#     @property
+#     def Sprof(self) -> xr.Dataset:
+#         if self._sprof is None:
+#             self._sprof = self.a_float.open_dataset("Sprof", cast=self.cast)
+#         return self._sprof
+#
+#     @property
+#     def Rtraj(self) -> xr.Dataset:
+#         if self._rtraj is None:
+#             self._rtraj = self.a_float.open_dataset("Rtraj", cast=self.cast)
+#         return self._rtraj
+#
+
+
+def get_argo_data(
+    a_float: ar.ArgoFloat,
+    config: Config,
+    params: Optional[ParameterSet] = None,
+    debug_plot: bool = False,
+) -> ArgoDataForInAir | dict[str, xr.Dataset]:
+    """Load Argo float data to correct oxygen with atmospheric data (in-air method)"""
+
+    # Read parameters from the configuration object:
+
+    min_pres: float = do.get_params(
+        "argo.in_water_salinity.min_pressure", config=config
+    )
+    max_pres: float = do.get_params(
+        "argo.in_water_salinity.max_pressure", config=config
+    )
+    in_air_codes: list[int] = do.get_params("argo.codes.in_air", config=config)
+    in_water_codes: list[int] = do.get_params("argo.codes.in_water", config=config)
+    which_psal: int = do.get_params("argo.use", config=config)
+
+    # Read other parameters from the ParameterSet object:
+    if params is None:
+        cycles: list[int] = semantic_cycle2values(input=config, a_float=a_float)
+    else:
+        cycles: list[int] = semantic_cycle2values(input=params, a_float=a_float)
+
+    # Read parameters from the ArgoFloat instance:
+    # optode_height: float = a_float.launchconfig["OptodeVerticalPressureOffset_dbar"]
+
+    # Now we can load data and select variables:
+
+    # GDAC Argo data are loaded from file (local or remote) when accessing 'Sprof' and 'Rtraj' from the ArgoFloat dataset method:
+    Sprof: xr.Dataset = a_float.dataset("Sprof")
+    Rtraj: xr.Dataset = a_float.dataset("Rtraj")
+
+    # From raw GDAC xr.DataSet objects, we sub-select only variables that we really need to work with:
+    # (this makes data processing by specification method easier)
+    Sprof: MultiProfData = preprocess_raw_sprof(Sprof)
+    Rtraj: TrajData = preprocess_raw_rtraj(Rtraj)
+
+    return get_argo_data_for_in_air_method(
+        min_pres=min_pres,
+        max_pres=max_pres,
+        in_air_codes=tuple(in_air_codes),
+        in_water_codes=tuple(in_water_codes),
+        which_psal=which_psal,
+        cycles=tuple(cycles),
+        Sprof=Sprof,
+        Rtraj=Rtraj,
+        debug_plot=debug_plot,
+    )
+
+
+def get_atmospheric_data(
+    argo_data: ArgoDataForInAir,
+    config: Config,
+    params: Optional[ParamsInAir] = None,
+    debug_plot: bool = False,
+) -> dict[str, Any]:
+    """Load reference data to correct oxygen with atmospheric data (in-air method)"""
+
+    dataset: str = do.get_params("calibration_methods.in_air.dataset", config=config)
+
+    if dataset == "ncep":
+        name: str = do.get_params(
+            "calibration_methods.in_air.data.ncep.name", config=config
+        )
+
+        if params is None:
+            src: str = do.get_params(
+                "calibration_methods.in_air.data.ncep.src", config=config
+            )
+        else:
+            src: str = params.src
+
+        data = get_ncep_data_for_in_air_method(
+            argo_data, name=name, src=src, debug_plot=debug_plot
+        )
+    else:
+        raise NotImplementedError(f"No implementation to load dataset={dataset}")
+
+    return data
+
+
+def get_data_for_one_parameterset_for_in_air_method(
+    a_float: ar.ArgoFloat,
+    config: Config,
+    params: ParamsInAir,
+    iset: Optional[int] = None,
+    debug_plot: bool = False,
+) -> dict[str, Any] | tuple[dict[str, Any], int]:
+    """Load and process all data (Argo and atmosphere) required for a single fit
+
+    All downstream methods should rely on values from the `params` argument first, and then on values from `config`.
+    We use both because some settings may not be available in `params` attributes.
+
+    Parameters
+    ----------
+    a_float: ar.ArgoFloat
+    config: Config
+    params: ParamsInAir
+    iset: int, optional, default=None
+        Untouched, this argument is simply return to keep track of this configuration set in the procedure when performed in parallel.
+    debug_plot: bool, optional, default=False
+
+    Returns
+    -------
+    iset, data
+    """
+    data: dict[str, Any] = {
+        "PPOX1": None,
+        "PPOX2": None,
+        "REF_PPOX": None,
+    }  # Collect obj for output
+    # todo Consider using a dataclass instead of a dictionary
+
+    # Load Argo float data:
+    this_argo: ArgoDataForInAir = get_argo_data(
+        a_float, config, params, debug_plot=debug_plot
+    )
+    data["PPOX1"] = this_argo.in_air["PPOX_DOXY"].values
+    data["PPOX2"] = this_argo.in_water["PPOX_DOXY"].values
+
+    # Load Atmospheric data:
+    this_atm = get_atmospheric_data(this_argo, config, params, debug_plot=debug_plot)
+    data["REF_PPOX"] = this_atm["REF_PPOX"]
+
+    # Return
+    if iset is None:
+        return data
+    else:
+        return data, iset

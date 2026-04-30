@@ -1,3 +1,4 @@
+from typing import Optional, Literal
 import logging
 from copy import deepcopy
 
@@ -20,17 +21,45 @@ log = logging.getLogger("pydox.io.argo.utils")
 def xr_logging(
     obj: xr.Dataset | xr.DataArray, new_entry: str | list[str] = None
 ) -> xr.Dataset | xr.DataArray:
-    """Log entry into a specific attribute of a xarray object"""
+    """Log entry into a specific attribute of a xarray object
+
+    This function is used to register what modification we perform on a xr.Dataset or xr.DataArry.
+
+    Parameters
+    ----------
+    obj: xr.Dataset | xr.DataArray
+        Xarray object to log new entry into.
+    new_entry: str | list[str]
+        The new entry to be added to the `pydox_history` attribute of `obj`. If a list of strings is provided, each item is added as a new entry.
+
+    Returns
+    -------
+    xr.Dataset | xr.DataArray
+        Updated object
+    """
     # log.info(new_entry)
     return xr_append_history(obj, new_entry, attr="pydox_history")
 
 
-def parameter_selection_sprof(this: xr.Dataset) -> MultiProfData:
-    """From a Sprof :class:`xr.Dataset` object, sub-select only variables that we really need
+def preprocess_raw_sprof(ds_sprof: xr.Dataset) -> MultiProfData:
+    """Pre-process a Sprof :class:`xr.Dataset` object for in-air fit computation
 
-    This will make it easier to manipulate dataset
+    The goal of this function is to make it easier to manipulate the Sprof dataset, within the in-air fit context.
+
+    Processing steps:
+    - select only xr.DataArray(s) that we really need
+    - convert "N_PROF" and "N_LEVELS" dimensions to variables and coordinates (to be usable with xarray drop_sel)
+
+    Parameters
+    ----------
+    ds_sprof: xr.Dataset
+
+    Returns
+    -------
+    MultiProfData | xr.Dataset
+        This is a multi-profil :class:`xr.Dataset`, i.e. with `N_PROF` and `N_LEVELS` as dimensions and coordinates
     """
-    pkeep = [v for v in this.data_vars if "OXY" in v]
+    pkeep = [v for v in ds_sprof.data_vars if "OXY" in v]
     pkeep.remove("PROFILE_DOXY_QC")
     for p in ["PSAL", "TEMP", "PRES"]:
         pkeep.append(f"{p}")
@@ -50,20 +79,34 @@ def parameter_selection_sprof(this: xr.Dataset) -> MultiProfData:
 
     # Ensure that "N_PROF" and "N_LEVELS" are dataset variables and coordinates that can be used with drop_sel.
     for d in ["N_PROF", "N_LEVELS"]:
-        this[d] = this[d]
-    this = this.set_coords("CYCLE_NUMBER")  # Also for CYCLE_NUMBER
+        ds_sprof[d] = ds_sprof[d]
+    ds_sprof = ds_sprof.set_coords("CYCLE_NUMBER")  # Also for CYCLE_NUMBER
 
-    xr_logging(this, "Cherry-pick parameters in Sprof")
+    # Log and return
+    xr_logging(ds_sprof, "Pre-process raw Sprof")
+    return ds_sprof[pkeep]
 
-    return this[pkeep]
 
+def preprocess_raw_rtraj(ds_rtraj: xr.Dataset) -> TrajData:
+    """Pre-process a Rtraj :class:`xr.Dataset` object for in-air fit computation
 
-def parameter_selection_rtraj(this: xr.Dataset) -> TrajData:
-    """From a Rtraj :class:`xr.Dataset` object, sub-select only variables that we really need
+    The goal of this function is to make it easier to manipulate the Rtraj dataset, within the in-air fit context.
 
-    This will make it easier to manipulate dataset
+    Processing steps:
+    - select only xr.DataArray(s) that we really need
+    - convert `N_MEASUREMENT` dimension to a variable and coordinate (to be usable with xarray drop_sel)
+    - convert `CYCLE_NUMBER` variable to a coordinate (to be usable with xarray drop_sel)
+
+    Parameters
+    ----------
+    ds_rtraj_sprof: xr.Dataset
+
+    Returns
+    -------
+    TrajData | xr.Dataset
+        This is a trajectory :class:`xr.Dataset`, with `N_MEASUREMENT` as dimension and `CYCLE_NUMBER` as coordinates
     """
-    pkeep = [v for v in this.data_vars if "OXY" in v]
+    pkeep = [v for v in ds_rtraj.data_vars if "OXY" in v]
     for p in ["PSAL", "TEMP", "PRES"]:
         pkeep.append(f"{p}")
         for e in ["QC", "ADJUSTED", "ADJUSTED_QC"]:
@@ -93,35 +136,76 @@ def parameter_selection_rtraj(this: xr.Dataset) -> TrajData:
 
     # Ensure that "N_MEASUREMENT" is a dataset variable and a coordinate that can be used with drop_sel:
     for d in ["N_MEASUREMENT"]:
-        this[d] = this[d]
-    this = this.set_coords("CYCLE_NUMBER")  # Also for CYCLE_NUMBER
+        ds_rtraj[d] = ds_rtraj[d]
+    ds_rtraj = ds_rtraj.set_coords("CYCLE_NUMBER")  # Also for CYCLE_NUMBER
 
-    xr_logging(this, "Cherry-pick parameters in Rtraj")
-    return this[pkeep]
+    # Log and return
+    xr_logging(ds_rtraj, "Pre-process raw Rtraj")
+    return ds_rtraj[pkeep]
 
 
 def code_select(
-    ds_rtraj: xr.Dataset, code: int | list[int], dim: str = "N_MEASUREMENT"
+    ds_rtraj: xr.Dataset,
+    code: int | list[int],
 ) -> xr.Dataset:
-    """Return trajectory measurements from one or more measurement codes
+    """Select trajectory measurements for one or more measurement codes
 
-    We don't use 'where' because it does not preserve data types, use drop_sel/drop_isel instead
+    Parameters
+    ----------
+    ds_rtraj: xr.Dataset
+        The dataset to work with. Must have `N_MEASUREMENT` as dimension and `MEASUREMENT_CODE` in variables.
+    code: int | list[int]
+        The unique or list of codes, as integers, to select.
+
+    Returns
+    -------
+    xr.Dataset
 
     Examples
     --------
     ..code-block :: python
         code_select(Rtraj_inwater, code=in_air_codes)
     """
-    this = deepcopy(ds_rtraj)
-    this = this.drop_sel({dim: ds_rtraj[dim][~ds_rtraj["MEASUREMENT_CODE"].isin(code)]})
-    xr_logging(this, f"Select {dim} indexes for specific 'MEASUREMENT_CODE'={code}")
+    if "MEASUREMENT_CODE" not in ds_rtraj:
+        raise ValueError("'MEASUREMENT_CODE' is a mandatory variable for this function")
+
+    this = deepcopy(
+        ds_rtraj
+    )  # Make sure we do not modify the input data and return a modified deep copy
+    this = this.drop_sel(
+        {
+            "N_MEASUREMENT": ds_rtraj["N_MEASUREMENT"][
+                ~ds_rtraj["MEASUREMENT_CODE"].isin(code)
+            ]
+        }
+    )
+
+    # log step:
+    xr_logging(
+        this, f"Select 'N_MEASUREMENT' indexes for specific 'MEASUREMENT_CODE'={code}"
+    )
+
+    #
     return this
 
 
 def cycle_select(
     ds: xr.Dataset, cycle: int | list[int], dim: str = "N_MEASUREMENT"
 ) -> xr.Dataset:
-    """Return trajectory measurements for one or more cycle numbers
+    """Select trajectory measurements or multi-profil profiles for one or more cycle numbers
+
+    Parameters
+    ----------
+    ds: xr.Dataset
+        The dataset to work with. Must have `CYCLE_NUMBER` in variables.
+    code: int | list[int]
+        The unique or list of codes, as integers, to select.
+    dim: str, default = "N_MEASUREMENT"
+        The dataset dimension to select cycle from. With a trajectory file, this is `N_MEASUREMENT` (default). For a multi-profil file, this is `N_PROF`.
+
+    Returns
+    -------
+    xr.Dataset
 
     Examples
     --------
@@ -132,113 +216,163 @@ def cycle_select(
         # Works also with Sprof, just use the appropriate 'dim' argument:
         cyc_select(Sprof, cycle=10, dim='N_PROF')
     """
-    this = deepcopy(ds)
+    this = deepcopy(
+        ds
+    )  # Make sure we do not modify the input data and return a modified deep copy
     this = this.drop_sel({dim: ds[dim][~ds["CYCLE_NUMBER"].isin(cycle)]})
 
+    # log step:
     if (np.diff(cycle) == 1).all() and len(cycle) > 5:
         cyc_txt = f"[{cycle[0]}, ..., {cycle[-1]}]"
     else:
         cyc_txt = f"{cycle}"
     xr_logging(this, f"Select {dim} indexes for specific 'CYCLE_NUMBER'={cyc_txt}")
+
+    #
     return this
 
 
-def load_param(parray: xr.DataArray, valid_pres) -> xr.DataArray:  # (N_PROF, )
-    """
-    todo: This method should be renamed
+def get_variable_in_pres_range(
+    ds: MultiProfData,
+    min_pres: float,
+    max_pres: float,
+    varname: str,
+    mask: Optional[xr.DataArray] = None,
+    presname: str = "PRES",
+) -> xr.DataArray:  # (N_PROF, )
+    """A generic function to select the shallowest values over a pressure range for a given multi-prof dataset variable
 
     Parameters
     ----------
-    parray
-    valid_pres
+    ds: xr.Dataset
+        The multi-profil dataset to work with, i.e. with (`N_PROF`, `N_LEVELS`) dimensions.
+    min_pres: float
+        The minimum value (db) of the pressure range to consider.
+    max_pres: float
+        The maximum value (db) of the pressure range to consider.
+    varname: str
+        The dataset variable (Argo parameter) to return (i.e. one of the :class:`xr.Dataset.data_vars`).
+    presname: str, default='PRES'
+        The pressure axis to use. Could be `PRES` or `PRES_ADJUSTED`.
+    mask: Optional[xr.DataArray] = None
+        A mask to apply for sub-selecting data over the pressure range, typically based on QC values. This is a :class:`xr.DataArray` with dimensions (`N_PROF`, `N_LEVELS`)
 
     Returns
     -------
+    xr.DataArray
+        Selected data, with `N_PROF` dimension.
 
     """
-    min_pres_idx = valid_pres.argmin(
-        dim="N_LEVELS"
-    )  # Indices associated to the minimum correct pressure
-    pvalue = parray.isel(N_LEVELS=min_pres_idx)
-    pvalue = pvalue.where(valid_pres.min(dim="N_LEVELS") != np.inf)
-    return pvalue
+    # Get valid pressure levels:
+    prange_mask = (ds[presname] >= min_pres) & (
+        ds[presname] <= max_pres
+    )  # (N_PROF, N_LEVELS)
+    # todo: why not using PRES_ADJUSTED if available ?
+
+    # Mask
+    if mask is not None:
+        prange_mask = mask & prange_mask  # (N_PROF, N_LEVELS)
+
+    valid_pres = ds[presname].where(prange_mask, other=np.inf)  # (N_PROF, N_LEVELS)
+
+    # For each profile, get the index of the minimum correct pressure:
+    min_pres_idx = valid_pres.argmin(dim="N_LEVELS")  # (N_PROF, )
+
+    # Finally get the parameter first valid measurement in the given pressure range:
+    da = ds[varname].isel(N_LEVELS=min_pres_idx)
+    da = da.where(valid_pres.min(dim="N_LEVELS") != np.inf)
+
+    return da
 
 
 def get_psal_in_pres_range(
-    Sprof: xr.Dataset, min_pres: float, max_pres: float, pname: str = "PSAL"
+    ds: MultiProfData,
+    min_pres: float,
+    max_pres: float,
+    pname: Literal["PSAL", "PSAL_ADJUSTED"] = "PSAL",
 ) -> xr.DataArray:  # (N_PROF, )
-    # Get valid pressure levels:
-    valid_pres_range = (Sprof["PRES"] >= min_pres) & (
-        Sprof["PRES"] <= max_pres
-    )  # (N_PROF, N_LEVELS)
-    # todo: why not using PRES_ADJUSTED if available ?
-
-    # Get valid measurements:
-    valid_qc = (Sprof[f"{pname}_QC"] == 1) | (
-        Sprof[f"{pname}_QC"] == 2
-    )  # (N_PROF, N_LEVELS)
-    # todo: why don't we use flag values from do.get_params('argo.qcflags.psal') ?
-
-    # Mask
-    valid_mask = valid_qc & valid_pres_range  # (N_PROF, N_LEVELS)
-    valid_pres = Sprof["PRES"].where(valid_mask, other=np.inf)  # (N_PROF, N_LEVELS)
-
-    # For each profile, get the index of the minimum correct pressure:
-    min_pres_idx = valid_pres.argmin(dim="N_LEVELS")  # (N_PROF, )
-
-    # Finally get the parameter first valid measurement in the given pressure range:
-    pvalue = Sprof[pname].isel(N_LEVELS=min_pres_idx)
-    pvalue = pvalue.where(valid_pres.min(dim="N_LEVELS") != np.inf)
-
-    return pvalue
-
-
-def get_temp_in_pres_range(
-    Sprof: xr.Dataset, min_pres: float, max_pres: float, pname: str = "TEMP"
-) -> xr.DataArray:  # (N_PROF, )
-    """
-    # Attention : In Rtraj, all TEMP_QC = 3
-    # The Sprof contains TEMP for the profile and the near surface.
-    # TEMP_ADJUSTED doesn't contain the near surface data (it's empty)
-    # We work on TEMP
-    """
-    # Get valid pressure levels:
-    valid_pres_range = (Sprof["PRES"] >= min_pres) & (
-        Sprof["PRES"] <= max_pres
-    )  # (N_PROF, N_LEVELS)
-    # todo: why not using PRES_ADJUSTED if available ?
-
-    # Get valid measurements:
-    valid_qc = (
-        (Sprof["TEMP_QC"] == 1) | (Sprof["TEMP_QC"] == 2) | (Sprof["TEMP_QC"] == 3)
-    )  # (N_PROF, N_LEVELS)
-    # todo: why don't we use flag values from do.get_params('argo.qcflags.temp') ?
-
-    # Mask
-    valid_mask = valid_qc & valid_pres_range  # (N_PROF, N_LEVELS)
-    valid_pres = Sprof["PRES"].where(valid_mask, other=np.inf)  # (N_PROF, N_LEVELS)
-
-    # For each profile, get the index of the minimum correct pressure:
-    min_pres_idx = valid_pres.argmin(dim="N_LEVELS")  # (N_PROF, )
-
-    # Finally get the parameter first valid measurement in the given pressure range:
-    pvalue = Sprof[pname].isel(N_LEVELS=min_pres_idx)
-    pvalue = pvalue.where(valid_pres.min(dim="N_LEVELS") != np.inf)
-
-    return pvalue
-
-
-def get_ts_near_surface(
-    Sprof: xr.Dataset, min_pres: float, max_pres: float, debug_plot: bool = False
-) -> dict[str, xr.DataArray]:
-    """Load salinity and temperature near the surface from Sprof data
+    """Select the first valid PSAL values over a pressure range in a multi-profil dataset
 
     Parameters
     ----------
-    Sprof
-    min_pres
-    max_pres
-    debug_plot
+    ds: xr.Dataset
+        The multi-profil dataset to work with
+    min_pres: float
+        The minimum value (db) of the pressure range to consider.
+    max_pres: float
+        The maximum value (db) of the pressure range to consider.
+    pname: str, default="PSAL"
+        The Argo parameter to return (i.e. one of the :class:`xr.Dataset.data_vars`).
+
+    Returns
+    -------
+    xr.DataArray
+        Selected data, with `N_PROF` dimension.
+
+    """
+
+    # Get valid measurements:
+    valid_qc = (ds[f"{pname}_QC"] == 1) | (ds[f"{pname}_QC"] == 2)  # (N_PROF, N_LEVELS)
+    # todo: why don't we use flag values from do.get_params('argo.qcflags.psal') ?
+
+    return get_variable_in_pres_range(
+        ds, min_pres, max_pres, varname=pname, mask=valid_qc
+    )
+
+
+def get_temp_in_pres_range(
+    ds: MultiProfData, min_pres: float, max_pres: float, pname: str = "TEMP"
+) -> xr.DataArray:  # (N_PROF, )
+    """Select the first valid TEMP values over a pressure range in a multi-profil dataset
+
+    Parameters
+    ----------
+    ds: xr.Dataset
+        The multi-profil dataset to work with
+    min_pres: float
+        The minimum value (db) of the pressure range to consider.
+    max_pres: float
+        The maximum value (db) of the pressure range to consider.
+    pname: str, default="TEMP"
+        The Argo parameter to return (i.e. one of the :class:`xr.Dataset.data_vars`).
+
+    Returns
+    -------
+    xr.DataArray
+        Selected data, with `N_PROF` dimension.
+
+    Comments
+    --------
+    Attention : In Rtraj, all TEMP_QC = 3
+    The Sprof contains TEMP for the profile and the near surface.
+    TEMP_ADJUSTED doesn't contain the near surface data (it's empty)
+    We work on TEMP
+    """
+    # Get valid measurements:
+    valid_qc: xr.DataArray = (
+        (ds["TEMP_QC"] == 1) | (ds["TEMP_QC"] == 2) | (ds["TEMP_QC"] == 3)
+    )  # (N_PROF, N_LEVELS)
+    # todo: why don't we use flag values from do.get_params('argo.qcflags.temp') ?
+
+    return get_variable_in_pres_range(
+        ds, min_pres, max_pres, varname=pname, mask=valid_qc
+    )
+
+
+def get_ts_near_surface(
+    ds_sprof: MultiProfData, min_pres: float, max_pres: float, debug_plot: bool = False
+) -> dict[str, xr.DataArray]:
+    """Load valid salinity and temperature near the surface from a multi-profil Sprof dataset
+
+    Parameters
+    ----------
+    ds_sprof: xr.Dataset
+        The Sprof multi-profil dataset
+    min_pres: float
+        The minimum value (db) of the pressure range to consider.
+    max_pres: float
+        The maximum value (db) of the pressure range to consider.
+    debug_plot: bool, default=False
 
     Returns
     -------
@@ -250,21 +384,24 @@ def get_ts_near_surface(
     spsal, spsal_adj = None, None
 
     for i_var in range(0, len(var_psal)):
-        pname = var_psal[i_var]  # (N_PROF, N_LEVELS)
+        pname: str = var_psal[i_var]
         log.debug(
             f"Look for {pname} in Sprof near the surface between {min_pres} and {max_pres}"
         )
-        pvalue = get_psal_in_pres_range(Sprof, min_pres, max_pres, pname)
-
         # Extract associated PSAL (good QC and good pressure)
+        pvalue: xr.DataArray = get_psal_in_pres_range(
+            ds_sprof, min_pres, max_pres, pname
+        )  # (N_PROF, )
+
+        # Copy to the appropriate variable:
         if i_var == 0:
-            spsal = pvalue.copy()  # (N_PROF, )
+            spsal: xr.DataArray = pvalue.copy()  # (N_PROF, )
         else:
-            spsal_adj = pvalue.copy()  # (N_PROF, )
+            spsal_adj: xr.DataArray = pvalue.copy()  # (N_PROF, )
 
     # Merge psal_adj with psal
     # (keep values from psal_adj when available and those from psal when psal_adj is null)
-    spsal_merged = spsal_adj.copy().rename("PSAL_MERGED")
+    spsal_merged: xr.DataArray = spsal_adj.copy().rename("PSAL_MERGED")  # (N_PROF, )
     spsal_merged[spsal_adj.isnull()] = spsal[spsal_adj.isnull()]
 
     if debug_plot:
@@ -279,7 +416,7 @@ def get_ts_near_surface(
         plt.show()
 
     # Then get values for temperature:
-    stemp = get_temp_in_pres_range(Sprof, min_pres, max_pres, "TEMP")
+    stemp = get_temp_in_pres_range(ds_sprof, min_pres, max_pres, "TEMP")
 
     if debug_plot:
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 4), dpi=90, sharex=True)
@@ -299,11 +436,21 @@ def get_ts_near_surface(
 
 
 def traj_groupby_cycles(ds: xr.Dataset) -> xr.Dataset:
-    """A custom groupby CYCLE_NUMBER for Traj dataset that is able to handle data types correctly
+    """A custom group-by CYCLE_NUMBER for a trajectory dataset that is able to handle data types correctly
 
     Data types supported: int, float and datetime64
+
+    Parameters
+    ----------
+    ds: xr.Dataset
+        The dataset to work with. This must be a trajectory dataset, i.e. with `N_MEASUREMENT`
+
+    Returns
+    -------
+    xr.Dataset
+
     """
-    # Read type of input variables:
+    # Read data type of input variables:
     dtypes = {}
     [dtypes.update({v: ds[v].dtype}) for v in ds]
 
@@ -316,7 +463,7 @@ def traj_groupby_cycles(ds: xr.Dataset) -> xr.Dataset:
     this = ds.groupby("CYCLE_NUMBER").median(keep_attrs=True)
 
     # Make sure data types are conserved:
-    # (groupby.median tends to return only float64)
+    # (groupby.median tends to return only floats)
     for v in ds:
         if v in this and this[v].dtype != dtypes[v]:
             # log.debug(f"Convert {v} from {this[v].dtype} to {dtypes[v]}")
@@ -327,38 +474,100 @@ def traj_groupby_cycles(ds: xr.Dataset) -> xr.Dataset:
     return this
 
 
-def psal_rtraj_substitute_sprof(
-    Rtraj_psal: xr.DataArray, subs: xr.DataArray
-) -> xr.DataArray:
-    da = deepcopy(Rtraj_psal)
+def traj_da_substitute_with_mprof(
+    traj_array: xr.DataArray, mprof_array: xr.DataArray, return_cycs: bool = False
+) -> xr.DataArray | tuple[xr.DataArray, list[int]]:
+    """Substitute values from a trajectory :class:`xr.DataArray` with values from a multi-prof :class:`xr.DataArray`, using cycle numbers
 
-    # Read values to substitute
-    cyc_substituted: list[int] = []
+    This is done by cycle numbers, i.e. 'CYCLE_NUMBER' must be a coordinate in both arrays.
 
-    def fct(
-        cyc: xr.DataArray, subs: xr.DataArray, cyc_substituted: list[int]
+    Parameters
+    ----------
+    traj_array: xr.DataArray
+        Trajectory array with `CYCLE_NUMBER` as dimension and `CYCLE_NUMBER` as coordinates.
+    mprof_array: xr.DataArray
+        multi-profil array with `N_PROF` as dimension and `CYCLE_NUMBER` as coordinates.
+    return_cycs: bool, default=False
+        Also return the list of cycle number effectively substituted.
+
+    Returns
+    -------
+    xr.DataArray | (xr.DataArray, list[int])
+        A deepcopy of the input `traj_array` but with values substituted, on a cycle basis.
+        Possibly a tuple with the list of cycle numbers if `return_cycs` was set to True.
+    """
+    if "CYCLE_NUMBER" not in traj_array.dims:
+        raise ValueError
+    if "CYCLE_NUMBER" not in traj_array.coords:
+        raise ValueError
+    if "N_PROF" not in mprof_array.dims:
+        raise ValueError
+    if "CYCLE_NUMBER" not in mprof_array.coords:
+        raise ValueError
+
+    # Make sure we don't modify the input array and work/return a deepcopy:
+    da = deepcopy(traj_array)
+
+    # Read values to substitute from the multi-prof xr.DataArray:
+    # (we use a parallel implementation with multi-threading, faster than a naive sequential):
+    cyc_substituted: list[int] = []  # A placeholder to keep track of cycle numbers
+
+    def read_new_values(
+        trajcyc: xr.DataArray, subs: xr.DataArray, cyc_substituted: list[int]
     ) -> tuple[int, float]:
-        this = subs.loc[{"N_PROF": subs["CYCLE_NUMBER"] == cyc}]
+        this = subs.loc[{"N_PROF": subs["CYCLE_NUMBER"] == trajcyc}]
 
         if len(this["N_PROF"]) == 0:
-            log.debug(f"Cycle number {cyc.values} is in Rtraj but not in Sprof !")
+            log.debug(
+                f"This trajectory array cycle number {trajcyc.values} is not in multi-prof array, replaced with NaN."
+            )
             new_value = np.nan
         else:
             # Use data from primary profile:
             # todo: Check if using primary profile in Sprof is always a valid choice
             new_value = this.isel(N_PROF=0).item()
-            cyc_substituted.append(cyc.item())
+            cyc_substituted.append(trajcyc.item())
 
-        return cyc.item(), new_value
+        return trajcyc.item(), new_value
 
-    # (parallel implementation with multi-threading, faster than a naive sequential):
-    Y = mth_run(fct, da["CYCLE_NUMBER"], subs, cyc_substituted)
+    new_values: list[tuple[int, float]] = mth_run(
+        read_new_values, da["CYCLE_NUMBER"], mprof_array, cyc_substituted
+    )
 
-    # Replace Rtraj PSAL data with Sprof PSAL for each cycle:
-    for cyc, new_value in Y:
-        ii = da["CYCLE_NUMBER"] == cyc
-        da.loc[{"CYCLE_NUMBER": ii}] = new_value
+    # Then replace traj data with substitute data, for each cycle:
+    for trajcyc, new_value in new_values:
+        i_measurements = da["CYCLE_NUMBER"] == trajcyc
+        da.loc[{"CYCLE_NUMBER": i_measurements}] = new_value
+
     #
+    if return_cycs:
+        return da, cyc_substituted
+    else:
+        return da
+
+
+def psal_rtraj_substitute_sprof(
+    Rtraj_psal: xr.DataArray, Sprof_psal: xr.DataArray
+) -> xr.DataArray:
+    """Substitute salinity from Rtraj with those from Sprof data
+
+    It could be possible to extend this to use salinity from a climatology, not Sprof
+
+    Parameters
+    ----------
+    Rtraj_psal: xr.DataArray
+    Sprof_psal: xr.DataArray
+
+    Returns
+    -------
+    xr.DataArray
+        A deepcopy of Rtraj_psal with new values from Sprof_psal
+    """
+    da, cyc_substituted = traj_da_substitute_with_mprof(
+        Rtraj_psal, Sprof_psal, return_cycs=True
+    )
+
+    # Log and return
     if (np.diff(cyc_substituted) == 1).all() and len(cyc_substituted) > 5:
         cyc_txt = f"[{cyc_substituted[0]}, ..., {cyc_substituted[-1]}]"
     else:
@@ -372,20 +581,30 @@ def psal_rtraj_substitute_sprof(
 
 
 def semantic_cycle2values(
-    input: Config | ParameterSet, a_float: ar.ArgoFloat
+    input: Config | ParameterSet,
+    a_float: ar.ArgoFloat,
+    dsname: Literal["Sprof"] = "Sprof",
 ) -> list[int]:
     """Convert a cycle range to a list of cycle numbers, handle semantic like 'first' and 'last'
 
     Parameters
     ----------
-    input
-    a_float
+    input: Config | ParameterSet
+        Object to read a `cycles` setting from.
+    a_float: ar.ArgoFloat
+        The :class:`ar.ArgoFloat` object to read cycle numbers from.
+    dsname: str, default='Sprof'
+        Name of the :class:`ar.ArgoFloat` dataset to read cycle numbers from.
 
     Returns
     -------
     list[int]
     """
-    Sprof: xr.Dataset = a_float.dataset("Sprof")
+    ds: xr.Dataset = a_float.dataset(dsname)
+    if "CYCLE_NUMBER" not in ds.data_vars:
+        raise ValueError(
+            f"'CYCLE_NUMBER' is a mandatory dataset variable for this function, and it cannot be found in '{dsname}'."
+        )
 
     try:
         semantic_cycles: tuple = do.get_params(
@@ -398,8 +617,8 @@ def semantic_cycle2values(
             raise e
 
     if semantic_cycles[0] == "first":
-        cycle_first = Sprof["CYCLE_NUMBER"].min().item()
-    elif semantic_cycles[0] in Sprof["CYCLE_NUMBER"]:
+        cycle_first = ds["CYCLE_NUMBER"].min().item()
+    elif semantic_cycles[0] in ds["CYCLE_NUMBER"]:
         cycle_first = semantic_cycles[0]
     else:
         raise NotImplementedError(
@@ -407,8 +626,8 @@ def semantic_cycle2values(
         )
 
     if semantic_cycles[-1] == "last":
-        cycle_last = Sprof["CYCLE_NUMBER"].max().item()
-    elif semantic_cycles[-1] in Sprof["CYCLE_NUMBER"]:
+        cycle_last = ds["CYCLE_NUMBER"].max().item()
+    elif semantic_cycles[-1] in ds["CYCLE_NUMBER"]:
         cycle_last = semantic_cycles[-1]
     else:
         raise NotImplementedError(
@@ -420,6 +639,6 @@ def semantic_cycle2values(
             f"'calibration_parameters.cycles' is poorly set to un-ordered or equal values ({semantic_cycles})!"
         )
 
-    values = Sprof["CYCLE_NUMBER"].values
+    values = ds["CYCLE_NUMBER"].values
     cycles = values[np.logical_and(values >= cycle_first, values <= cycle_last)]
     return [int(c) for c in cycles]

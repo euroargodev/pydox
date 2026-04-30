@@ -1,16 +1,13 @@
 from copy import deepcopy
 from typing import Any, Self, Optional
 from collections import OrderedDict
-import numpy as np
 
 import pydox as do
 from pydox._config.utils import list_methods
-from pydox.utils.compute import ExecutionMethods
 from pydox.commodities import ConfigsDict
-from pydox.calibration.utils import params2cycs
 from pydox.calibration.spec import Workflow
 from pydox.calibration.method import Method
-from pydox.calibration.methods.in_air import MethodInAir
+from pydox.calibration.methods.in_air.spec import MethodInAir
 from pydox.calibration.methods.climatology import MethodClimatology
 
 

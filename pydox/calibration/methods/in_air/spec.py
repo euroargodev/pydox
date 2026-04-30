@@ -1,13 +1,9 @@
 from typing import Any, Self
 from collections import OrderedDict
 import logging
-from copy import deepcopy
 
 import argopy as ar
-import xarray as xr
 
-import pydox as do
-from pydox._config.config import Config
 from pydox._config.utils import format_value_txt
 from pydox.utils.casting import to_list
 from pydox.utils.compute import compute_fits, ExecutionMethods
@@ -21,36 +17,12 @@ from pydox.commodities import (
 )
 from pydox.core.in_air import inair_fit
 from pydox.calibration.method import Method
-from pydox.calibration.methods.utils import (
+from pydox.calibration.methods.in_air.utils import (
     get_data_for_one_parameterset_for_in_air_method,
 )
 
 
 log = logging.getLogger("pydox.calibration.methods.in_air")
-
-
-class ArgoData:
-
-    def __init__(self, wmo: int, **kwargs) -> None:
-        self._cfg: Config = deepcopy(kwargs.get("config", do.params))
-        self.a_float: ar.ArgoFloat = ar.ArgoFloat(
-            wmo, host=do.get_params("argo.src", config=self._cfg), cache=True
-        )
-        self.cast = kwargs.get("cast", True)
-        self._sprof = None
-        self._rtraj = None
-
-    @property
-    def Sprof(self) -> xr.Dataset:
-        if self._sprof is None:
-            self._sprof = self.a_float.open_dataset("Sprof", cast=self.cast)
-        return self._sprof
-
-    @property
-    def Rtraj(self) -> xr.Dataset:
-        if self._rtraj is None:
-            self._rtraj = self.a_float.open_dataset("Rtraj", cast=self.cast)
-        return self._rtraj
 
 
 class MethodInAir(Method):
@@ -110,6 +82,7 @@ class MethodInAir(Method):
         - Loading/preprocessing Argo Float data,
         - Loading/preprocessing Reference data (eg: from NCEP),
         - Executing all possible computations, sequentially or in parallel
+        - Fill in internal placeholder for coeffcients and fit data
 
         All of these steps are delegated to external functions taking `argofloat_obj` and a :class:`ParameterSet` (ie one value from `self.configs`) as input.
 
@@ -135,14 +108,14 @@ class MethodInAir(Method):
 
         ############### Load data
         # We first need to load data that will be used to fit for each configuration
-        input_data: dict[int, Any] = {}
+        input_data_for_fit: dict[int, Any] = {}
 
         # todo Collect input data in parallel ?
         for iset, params in self.configs.items():
-            iset, data = get_data_for_one_parameterset_for_in_air_method(
-                a_float, self._cfg, params, iset, debug_plot=debug_plot
+            data = get_data_for_one_parameterset_for_in_air_method(
+                a_float, self._cfg, params, debug_plot=debug_plot
             )
-            input_data[iset] = data
+            input_data_for_fit[iset] = data
 
         ############### Execute all computations
         # argument 'method' determines how to do it:
@@ -156,7 +129,8 @@ class MethodInAir(Method):
 
         # Now we have as many input_data as unique configuration:
         items = [
-            (iset, params, input_data[iset]) for iset, params in self.configs.items()
+            (iset, params, input_data_for_fit[iset])
+            for iset, params in self.configs.items()
         ]
         results: FitResults = compute_fits(items, inair_fit, method=method)
 

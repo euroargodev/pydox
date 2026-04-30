@@ -70,6 +70,20 @@ class MethodInAir(Method):
                     icfg += 1
         return configs
 
+    def _load_input_data(self, a_float: ar.ArgoFloat, debug_plot: bool = False):
+
+        # We first need to load data that will be used to fit for each configuration
+        input_data_for_fit: dict[int, Any] = {}
+
+        # todo Collect input data in parallel ?
+        for iset, params in self.configs.items():
+            data = get_data_for_one_parameterset_for_in_air_method(
+                a_float, self._cfg, params, debug_plot=debug_plot
+            )
+            input_data_for_fit[iset] = data
+
+        return input_data_for_fit
+
     def fit(
         self,
         a_float: ar.ArgoFloat,
@@ -108,14 +122,14 @@ class MethodInAir(Method):
 
         ############### Load data
         # We first need to load data that will be used to fit for each configuration
-        input_data_for_fit: dict[int, Any] = {}
+        input_data_for_fit: dict[int, Any] = self._load_input_data(a_float, debug_plot)
 
-        # todo Collect input data in parallel ?
-        for iset, params in self.configs.items():
-            data = get_data_for_one_parameterset_for_in_air_method(
-                a_float, self._cfg, params, debug_plot=debug_plot
-            )
-            input_data_for_fit[iset] = data
+        # Read and store the list of cycle numbers for each configuration
+        input_cycs_for_fit = {}
+        [
+            input_cycs_for_fit.update({iset: data["CYCLE_NUMBER"]})
+            for iset, data in input_data_for_fit.items()
+        ]
 
         ############### Execute all computations
         # argument 'method' determines how to do it:
@@ -146,7 +160,6 @@ class MethodInAir(Method):
 
         # Update fitted status:
         self._fitted = True
-        self._fitted_float = {
-            "WMO": a_float.WMO,
-        }
+        self._fitted_float["WMO"] = a_float.WMO
+        self._fitted_float["CYCLE_NUMBER"] = input_cycs_for_fit
         return self

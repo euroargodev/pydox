@@ -1,5 +1,6 @@
 from typing import Any, Optional
 from copy import deepcopy
+import logging
 
 import argopy as ar
 import xarray as xr
@@ -16,6 +17,9 @@ from pydox.io.argo.utils import (
 )
 from pydox.io.argo.facade import get_argo_data_for_in_air_method
 from pydox.io.ncep.facade import get_ncep_data_for_in_air_method
+
+
+log = logging.getLogger("pydox.calibration.methods.in_air.utils")
 
 
 # class ArgoData:
@@ -40,7 +44,6 @@ from pydox.io.ncep.facade import get_ncep_data_for_in_air_method
 #         if self._rtraj is None:
 #             self._rtraj = self.a_float.open_dataset("Rtraj", cast=self.cast)
 #         return self._rtraj
-#
 
 
 def get_argo_data(
@@ -63,6 +66,19 @@ def get_argo_data(
     in_water_codes: list[int] = do.get_params("argo.codes.in_water", config=config)
     which_psal: int = do.get_params("argo.use", config=config)
 
+    # Pre-load Argo data
+    # (we also check that the ArgoFloat instance is indeed using the same Argo data source as the configuration)
+    src = do.get_params("argo.src", config=config)
+    src = ar.utils.lists.shortcut2gdac(src)
+    if src != a_float.host:
+        raise ValueError(
+            f"You are trying to load Argo data with an ArgoFloat instance that is not pointing to the same GDAC ('{a_float.host}') as the current Pydox configuration  ('{src}').\nYou must provide an ArgoFloat instance with the appropriate 'host' argument, eg: ArgoFloat(host=do.get_params('argo.src'))."
+        )
+
+    # GDAC Argo data are loaded from file (local or remote) when accessing 'Sprof' and 'Rtraj' from the ArgoFloat dataset method:
+    Sprof: xr.Dataset = a_float.dataset("Sprof")
+    Rtraj: xr.Dataset = a_float.dataset("Rtraj")
+
     # Read other parameters from the ParameterSet object:
     if params is None:
         cycles: list[int] = semantic_cycle2values(input=config, a_float=a_float)
@@ -72,13 +88,8 @@ def get_argo_data(
     # Read parameters from the ArgoFloat instance:
     # optode_height: float = a_float.launchconfig["OptodeVerticalPressureOffset_dbar"]
 
-    # Now we can load data and select variables:
-
-    # GDAC Argo data are loaded from file (local or remote) when accessing 'Sprof' and 'Rtraj' from the ArgoFloat dataset method:
-    Sprof: xr.Dataset = a_float.dataset("Sprof")
-    Rtraj: xr.Dataset = a_float.dataset("Rtraj")
-
-    # From raw GDAC xr.DataSet objects, we sub-select only variables that we really need to work with:
+    # Pre-process raw GDAC xr.DataSet objects
+    # We sub-select only variables that we really need to work with:
     # (this makes data processing by specification method easier)
     Sprof: MultiProfData = preprocess_raw_sprof(Sprof)
     Rtraj: TrajData = preprocess_raw_rtraj(Rtraj)
@@ -156,6 +167,7 @@ def get_data_for_one_parameterset_for_in_air_method(
         "PPOX1": None,
         "PPOX2": None,
         "REF_PPOX": None,
+        "CYCLE_NUMBER": None,
     }  # Collect obj for output
     # todo Consider using a dataclass instead of a dictionary
 
@@ -165,6 +177,7 @@ def get_data_for_one_parameterset_for_in_air_method(
     )
     data["PPOX1"] = this_argo.in_air["PPOX_DOXY"].values
     data["PPOX2"] = this_argo.in_water["PPOX_DOXY"].values
+    data["CYCLE_NUMBER"] = [int(v) for v in this_argo.Sprof["CYCLE_NUMBER"].values]
 
     # Load Atmospheric data:
     this_atm = get_atmospheric_data(this_argo, config, params, debug_plot=debug_plot)

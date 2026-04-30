@@ -48,7 +48,7 @@ This will install Pydox in the active Conda environment and make it _importable_
 All submodules are tentatively listed below in the "Structure by design" section, according to user-level exposition: ``calibration`` is the primary object to work with, while ``tests`` is surely for devs. only.
 
 In short:
-- The class ``Calibration`` purpose is to explore the parameter space of a given method (eg: in-air). Input data can be shared throughout this sub-parameter space if needed, to improve performances.
+- The class ``Calibration`` purpose is to explore the parameter space of a given method (eg: in-air). Some input data can be cached to be re-used rapidly throughout this sub-parameter space if needed, to improve performances.
 
 - The class ``CalibrationSet`` main purpose is to explore the full configuration space, i.e. all parameters for all methods. An _un-ordered set_ can be computed in parallel to improve performances, while _ordered set_ define a calibration sequence of misc. methods, to allow operator to fully customize a calibration workflow. 
 
@@ -75,19 +75,29 @@ pydox/
 ├── calibration/           # High-level user interface to running calibrations
 │   ├── facade.py          # Provides `Calibration` and `CalibrationSet`
 │   ├── spec.py            # The inner machinery: `Workflow`, one base class to rule them all
-│   ├── method.py          # `Method` base class for method implementations, could be merge with spec.py
-│   ├── utils.py           # Specific utilities, possibly relying on high-level objects
+│   ├── method.py          # `Method` base class for method implementations
 │   └── methods/           # Submodules for each method implementation
-│       ├── in_air.py      # In-air calibration
+│       ├── in_air/        # In-air calibration
+│       │   ├── spec.py    # `MethodInAir` implementation
+│       │   └── utils.py   # Specific high-level utilities, eg wrapper for Argo/NCEP data loading 
 │       └── climatology.py # Climatology-based calibration
 │
 ├── core/                 # Core Maths and Chemistry functions
 │   ├── models.py         # Curve fitting models (functions passed to scipy.optimize.curve_fit)
 │   └── in_air.py         # Functions for in-air methodology fit computations of G/D/C
 │
+├── io/                  # Low-level Data Input/Output handling
+│   ├── argo/            # IO tools for Argo data
+│   │   ├── facade.py    # Facade functions used by calibration method implementations
+│   │   ├── types.py     # Document object exchanged by functions
+│   │   └── utils.py     # All functions used to load/process Argo data in facade functions
+│   └── ncep/            # IO tools for NCEP data
+│       └── facade.py    # Facade functions used by calibration method implementations
+│
 ├── utils/                # Non-specific utilities (low-level/limited-scope/autonomous functions)
 │   ├── casting.py        # Enforce object types
-│   └── compute.py        # Handle serial or parallel low-level fit functions execution 
+│   ├── compute.py        # Handle serial or parallel low-level fit functions execution 
+│   └── xarray.py         # Utilities for xarray objects, specific to Pydox 
 │
 ├── static/               # Static data files required internally
 │   ├── style.css         # A CSS stylesheet to be used in HTML rendering of pydox object

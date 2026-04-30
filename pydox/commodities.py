@@ -3,7 +3,6 @@ Commodity classes
 
 These are objects used as interface between high-level APIs (eg: `Calibration`) and low-level computational functions (eg: `inair_fit`).
 
-
 All Commodity classes have a _frozen_ state:
 
 Frozen == attributes must be set at instanciation, not later, ie instances are read-only

@@ -47,9 +47,10 @@ class Workflow(ABC):
         # Init private placeholders:
         self._cfg: Config = deepcopy(config)
         self._fitted: bool = False
-        self._fitted_float: Dict = (
-            None  # Used to register float WMO/CYCLES used for fit
-        )
+        self._fitted_float: dict = {
+            "WMO": None,
+            "CYCLE_NUMBER": {},
+        }  # Used to register float WMO/CYCLE_NUMBER used for fit
         self._coefs: CoefsDict = OrderedDict()
         self._fit_data = OrderedDict()
 
@@ -132,15 +133,17 @@ class Workflow(ABC):
             # summary += [
             #     f"fitted: {self.fitted} (WMO={self._fitted_float.get('WMO', '?')}"
             # ]
-            cycs = [c.cycles for c in self.configs.values()]
-            if is_ctelist(cycs):
+
+            cycs_per_config = [c for c in self._fitted_float["CYCLE_NUMBER"].values()]
+            if is_ctelist(cycs_per_config):
                 summary += [
-                    f"fitted: {self.fitted} (WMO={self._fitted_float.get('WMO', '?')}, CYCLES {cycs[0]})"
+                    f"fitted: {self.fitted} (WMO={self._fitted_float.get('WMO', '?')}, CYCLES {cycs_per_config[0]})"
                 ]
             else:
                 summary += [
                     f"fitted: {self.fitted} (WMO={self._fitted_float.get('WMO', '?')}, CYCLES range depend on configurations, see below)"
                 ]
+
         else:
             summary += [f"fitted: {self.fitted}"]
         return summary

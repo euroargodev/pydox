@@ -25,6 +25,7 @@ output:
 # ============================================= Argo Float data
 argo:
   src: https://data-argo.ifremer.fr  # Anything :class:`argopy.ArgoFloat` argument 'host' can support
+#  src: ftp
   use: 3  # 1: raw, 2: adjusted, 3: adjusted if available else raw
   qcflags: # Which QC to use data for
     pres: [1, 2, 8]

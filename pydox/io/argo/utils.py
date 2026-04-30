@@ -62,7 +62,7 @@ def preprocess_raw_sprof(ds_sprof: xr.Dataset) -> MultiProfData:
     pkeep = [v for v in ds_sprof.data_vars if "OXY" in v]
     pkeep.remove("PROFILE_DOXY_QC")
     for p in ["PSAL", "TEMP", "PRES"]:
-        pkeep.append(f"{p}")
+        pkeep.append(p)
         for e in ["QC", "ADJUSTED", "ADJUSTED_QC"]:
             pkeep.append(f"{p}_{e}")
 
@@ -75,7 +75,7 @@ def preprocess_raw_sprof(ds_sprof: xr.Dataset) -> MultiProfData:
         "LONGITUDE",
         "POSITION_QC",
     ]:
-        pkeep.append(f"{p}")
+        pkeep.append(p)
 
     # Ensure that "N_PROF" and "N_LEVELS" are dataset variables and coordinates that can be used with drop_sel.
     for d in ["N_PROF", "N_LEVELS"]:
@@ -108,7 +108,7 @@ def preprocess_raw_rtraj(ds_rtraj: xr.Dataset) -> TrajData:
     """
     pkeep = [v for v in ds_rtraj.data_vars if "OXY" in v]
     for p in ["PSAL", "TEMP", "PRES"]:
-        pkeep.append(f"{p}")
+        pkeep.append(p)
         for e in ["QC", "ADJUSTED", "ADJUSTED_QC"]:
             pkeep.append(f"{p}_{e}")
 
@@ -121,7 +121,7 @@ def preprocess_raw_rtraj(ds_rtraj: xr.Dataset) -> TrajData:
         "LONGITUDE",
         "POSITION_QC",
     ]:
-        pkeep.append(f"{p}")
+        pkeep.append(p)
 
     for p in [
         "MEASUREMENT_CODE",

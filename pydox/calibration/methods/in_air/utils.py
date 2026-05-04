@@ -3,6 +3,7 @@ from copy import deepcopy
 import logging
 
 import argopy as ar
+import numpy as np
 import xarray as xr
 
 import pydox as do
@@ -148,7 +149,7 @@ def get_data_for_one_parameterset_for_in_air_method(
     """Load and process all data (Argo and atmosphere) required for a single fit
 
     All downstream methods should rely on values from the `params` argument first, and then on values from `config`.
-    We use both because some settings may not be available in `params` attributes.
+    We use both because some settings may not be available in `params` attributes (this is not satisfactory and should change in the future).
 
     Parameters
     ----------
@@ -175,13 +176,15 @@ def get_data_for_one_parameterset_for_in_air_method(
     this_argo: ArgoDataForInAir = get_argo_data(
         a_float, config, params, debug_plot=debug_plot
     )
-    data["PPOX1"] = this_argo.in_air["PPOX_DOXY"].values
-    data["PPOX2"] = this_argo.in_water["PPOX_DOXY"].values
-    data["CYCLE_NUMBER"] = [int(v) for v in this_argo.Sprof["CYCLE_NUMBER"].values]
+    data["PPOX1"]: np.ndarray = this_argo.in_air["PPOX_DOXY"].values
+    data["PPOX2"]: np.ndarray = this_argo.in_water["PPOX_DOXY"].values
+    data["CYCLE_NUMBER"]: list[int] = [
+        int(v) for v in this_argo.Sprof["CYCLE_NUMBER"].values
+    ]
 
     # Load Atmospheric data:
     this_atm = get_atmospheric_data(this_argo, config, params, debug_plot=debug_plot)
-    data["REF_PPOX"] = this_atm["REF_PPOX"]
+    data["REF_PPOX"]: np.ndarray = this_atm["REF_PPOX"]
 
     # Return
     if iset is None:

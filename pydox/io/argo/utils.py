@@ -599,6 +599,8 @@ def semantic_cycle2values(
     Returns
     -------
     list[int]
+
+    #todo I'm note sure this function should be here rather than under a `calibration.utils` module. This is because it relies on a Config instance and I'm not sure io.argo.utils should have function relying on such high-level objects.
     """
     ds: xr.Dataset = a_float.dataset(dsname)
     if "CYCLE_NUMBER" not in ds.data_vars:

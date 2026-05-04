@@ -93,13 +93,18 @@ class CalibrationSet(Workflow):
 
         return True
 
-    def fit(self, argofloat_obj, cumulative: Optional[bool] = False) -> Self:
+    def fit(
+        self,
+        argofloat_obj,
+        cumulative: Optional[bool] = False,
+        debug_plot: bool = False,
+    ) -> Self:
         self._fitted_float["WMO"] = argofloat_obj.WMO
 
         if not cumulative:
             icfg: int = 0
             for im, this_method in self._methods.items():
-                this_method.fit(argofloat_obj)
+                this_method.fit(argofloat_obj, debug_plot=debug_plot)
 
                 # Gather more detailed results in dedicated placeholders of the instance:
                 for iset, coefs in this_method._coefs.items():
@@ -116,7 +121,7 @@ class CalibrationSet(Workflow):
 
             icfg: int = 0
             for im, this_method in self._methods.items():
-                this_method.fit(argofloat_obj)
+                this_method.fit(argofloat_obj, debug_plot=debug_plot)
                 coefs = this_method.coefs[0]
 
                 # Gather more detailed results in dedicated placeholders of the instance:

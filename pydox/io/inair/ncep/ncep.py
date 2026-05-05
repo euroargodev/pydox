@@ -61,7 +61,10 @@ def interp_NCEP_on_ARGO(ds_ncep: xr.Dataset, coord_argo: dict[str,xr.DataArray])
     The associated values are  DataArray.
 
     Returns a xarray Dataset with the NCEP variables interpolated on ARGO lon/lat/time.
-
+    The longitudes have been converted to [-180 180] if necessary.
+    Slp values, which should be expressed in Pascals, are converted to HPa/Millibar.
+    Air values, which should be expressed in kelvins, are converted to degrees Celsius.
+    Unit conversions are required to calculate NCEP_PPOX
     """
     # Force NCEP lon to be in [-180 180] as the ARGO longitude
     ds_ncep['lon'] = xr.where(ds_ncep['lon'] > 180, ds_ncep['lon'] - 360, ds_ncep['lon'])

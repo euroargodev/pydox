@@ -29,8 +29,6 @@ def osenv_constructor(loader, node) -> str:
     value = node.value
     match = _osenv_matcher.match(value)
     env_var = match.group()[2:-1]
-    #print(f"Current environnment variable with {env_var} : '{os.environ.get(env_var)}'")
-    #print(match.group())
     return os.environ.get(env_var) + value[match.end() :]
 
 

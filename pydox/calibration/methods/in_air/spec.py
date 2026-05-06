@@ -70,12 +70,16 @@ class MethodInAir(Method):
                     icfg += 1
         return configs
 
-    def _load_input_data(self, a_float: ar.ArgoFloat, debug_plot: bool = False):
+    def _load_input_data(
+        self, a_float: ar.ArgoFloat, debug_plot: bool = False
+    ) -> dict[int, Any]:
+        """Load input data for the flatten list of configurations"""
 
         # We first need to load data that will be used to fit for each configuration
         input_data_for_fit: dict[int, Any] = {}
 
         # todo Collect input data in parallel ?
+        # todo Cache input data for performances ?
         for iset, params in self.configs.items():
             data = get_data_for_one_parameterset_for_in_air_method(
                 a_float, self._cfg, params, debug_plot=debug_plot

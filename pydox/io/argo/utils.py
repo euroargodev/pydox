@@ -5,13 +5,9 @@ from copy import deepcopy
 import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
-import argopy as ar
 
-import pydox as do
-from pydox._config.config import Config
 from pydox.utils.compute import mth_run
 from pydox.utils.xarray import xr_append_history
-from pydox.commodities import ParameterSet
 from pydox.io.argo.types import MultiProfData, TrajData
 
 
@@ -578,69 +574,3 @@ def psal_rtraj_substitute_sprof(
         f"Replaced Rtraj PSAL data with Sprof PSAL for 'CYCLE_NUMBER'= {cyc_txt}",
     )
     return da
-
-
-def semantic_cycle2values(
-    input: Config | ParameterSet,
-    a_float: ar.ArgoFloat,
-    dsname: Literal["Sprof"] = "Sprof",
-) -> list[int]:
-    """Convert a cycle range to a list of cycle numbers, handle semantic like 'first' and 'last'
-
-    Parameters
-    ----------
-    input: Config | ParameterSet
-        Object to read a `cycles` setting from.
-    a_float: ar.ArgoFloat
-        The :class:`ar.ArgoFloat` object to read cycle numbers from.
-    dsname: str, default='Sprof'
-        Name of the :class:`ar.ArgoFloat` dataset to read cycle numbers from.
-
-    Returns
-    -------
-    list[int]
-
-    #todo I'm note sure this function should be here rather than under a `calibration.utils` module. This is because it relies on a Config instance and I'm not sure io.argo.utils should have function relying on such high-level objects.
-    """
-    ds: xr.Dataset = a_float.dataset(dsname)
-    if "CYCLE_NUMBER" not in ds.data_vars:
-        raise ValueError(
-            f"'CYCLE_NUMBER' is a mandatory dataset variable for this function, and it cannot be found in '{dsname}'."
-        )
-
-    try:
-        semantic_cycles: tuple = do.get_params(
-            "calibration_parameters.cycles", config=input
-        )
-    except Exception as e:
-        if isinstance(input, ParameterSet):
-            semantic_cycles: tuple = input.cycles
-        else:
-            raise e
-
-    if semantic_cycles[0] == "first":
-        cycle_first = ds["CYCLE_NUMBER"].min().item()
-    elif semantic_cycles[0] in ds["CYCLE_NUMBER"]:
-        cycle_first = semantic_cycles[0]
-    else:
-        raise NotImplementedError(
-            f"Unsupported value for calibration_parameters.cycles[0]: '{semantic_cycles[0]}'"
-        )
-
-    if semantic_cycles[-1] == "last":
-        cycle_last = ds["CYCLE_NUMBER"].max().item()
-    elif semantic_cycles[-1] in ds["CYCLE_NUMBER"]:
-        cycle_last = semantic_cycles[-1]
-    else:
-        raise NotImplementedError(
-            f"Unsupported value for calibration_parameters.cycles[-1]: '{semantic_cycles[-1]}'"
-        )
-
-    if cycle_last <= cycle_first:
-        raise ValueError(
-            f"'calibration_parameters.cycles' is poorly set to un-ordered or equal values ({semantic_cycles})!"
-        )
-
-    values = ds["CYCLE_NUMBER"].values
-    cycles = values[np.logical_and(values >= cycle_first, values <= cycle_last)]
-    return [int(c) for c in cycles]

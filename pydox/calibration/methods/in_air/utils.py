@@ -12,11 +12,10 @@ from pydox.commodities import ParameterSet, ParamsInAir
 
 from pydox.io.argo.types import MultiProfData, TrajData, ArgoDataForInAir
 from pydox.io.argo.utils import (
-    semantic_cycle2values,
     preprocess_raw_rtraj,
     preprocess_raw_sprof,
 )
-from pydox.io.argo.facade import get_argo_data_for_in_air_method
+from pydox.io.argo.facade import get_argo_data_for_in_air_method, semantic_cycle2values
 from pydox.io.ncep.facade import get_ncep_data_for_in_air_method
 
 
@@ -81,10 +80,7 @@ def get_argo_data(
     Rtraj: xr.Dataset = a_float.dataset("Rtraj")
 
     # Read other parameters from the ParameterSet object:
-    if params is None:
-        cycles: list[int] = semantic_cycle2values(input=config, a_float=a_float)
-    else:
-        cycles: list[int] = semantic_cycle2values(input=params, a_float=a_float)
+    cycles: list[int] = semantic_cycle2values(a_float=a_float, settings=config if params is None else params)
 
     # Read parameters from the ArgoFloat instance:
     # optode_height: float = a_float.launchconfig["OptodeVerticalPressureOffset_dbar"]

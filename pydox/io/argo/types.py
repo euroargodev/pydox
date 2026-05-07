@@ -15,6 +15,12 @@ TrajData = Annotated[
     {"dims": ("N_MEASUREMENT",)},  # Metadata (not enforced by mypy)
 ]
 
+# Type for a xarray object with dimensions CYCLE_NUMBER
+CycData = Annotated[
+    xr.Dataset | xr.DataArray,
+    {"dims": ("CYCLE_NUMBER",)},  # Metadata (not enforced by mypy)
+]
+
 
 @dataclass
 class ArgoDataForInAir:
@@ -25,14 +31,14 @@ class ArgoDataForInAir:
     This is cleaner and easier to discover/document than a dictionary
     """
 
-    in_air: xr.Dataset
+    in_air: CycData | xr.Dataset
     """A xr.Dataset with in-air trajectory data, grouped by cycle numbers"""
 
-    in_water: xr.Dataset
+    in_water: CycData | xr.Dataset
     """A xr.Dataset with in-water trajectory data, grouped by cycle numbers"""
 
-    Sprof: xr.Dataset
+    Sprof: MultiProfData | xr.Dataset
     """A xr.Dataset with multi-profile data from the Sprof file"""
 
-    Rtraj: xr.Dataset
+    Rtraj: TrajData | xr.Dataset
     """A xr.Dataset with measurements data from the Rtraj file"""

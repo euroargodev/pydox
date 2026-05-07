@@ -16,7 +16,7 @@ import argopy as ar
 import pydox as do
 from pydox._config.config import Config
 from pydox.commodities import ParameterSet
-from pydox.io.argo.types import MultiProfData, TrajData, ArgoDataForInAir
+from pydox.io.argo.types import MultiProfData, TrajData, CycData, ArgoDataForInAir
 from pydox.io.argo.utils import (
     preprocess_raw_rtraj,
     preprocess_raw_sprof,
@@ -84,13 +84,13 @@ def get_argo_data_for_in_air_method(
     # Get In-air and In-water data
 
     #############
-    Rtraj_inair = code_select(Rtraj, in_air_codes)
-    Rtraj_inwater = code_select(Rtraj, in_water_codes)
+    Rtraj_inair: TrajData = code_select(Rtraj, in_air_codes)
+    Rtraj_inwater: TrajData = code_select(Rtraj, in_water_codes)
 
     # Check NaN:
     for ds, dsname in [(Rtraj_inair, "in-air"), (Rtraj_inwater, "in-water")]:
         for pname in ["PSAL", "TEMP"]:
-            if ~ds[pname].isnull().all():
+            if ds[pname].isnull().all():
                 log.debug(
                     f"{dsname.title()} trajectory {pname} DataArray is full of NaNs !"
                 )
@@ -100,8 +100,8 @@ def get_argo_data_for_in_air_method(
     shared_cycles = np.intersect1d(
         Rtraj_inair["CYCLE_NUMBER"], Rtraj_inwater["CYCLE_NUMBER"]
     ).tolist()
-    Rtraj_inair = cycle_select(Rtraj_inair, shared_cycles)
-    Rtraj_inwater = cycle_select(Rtraj_inwater, shared_cycles)
+    Rtraj_inair: TrajData = cycle_select(Rtraj_inair, shared_cycles)
+    Rtraj_inwater: TrajData = cycle_select(Rtraj_inwater, shared_cycles)
 
     assert np.all(
         np.unique(Rtraj_inair["CYCLE_NUMBER"])
@@ -127,14 +127,14 @@ def get_argo_data_for_in_air_method(
     #############
     # Then we reduce measurements by cycle numbers :
     # (we take the median value of all measurements from a cycle)
-    Rtraj_inair = traj_groupby_cycles(Rtraj_inair)
-    Rtraj_inwater = traj_groupby_cycles(Rtraj_inwater)
+    Rtraj_inair: CycData = traj_groupby_cycles(Rtraj_inair)
+    Rtraj_inwater: CycData = traj_groupby_cycles(Rtraj_inwater)
 
     # Check NaN:
     # todo Should we fall back on using TEMP from Sprof if Rtraj['TEMP'] is full of NaNs ?
     for ds, dsname in [(Rtraj_inair, "in-air"), (Rtraj_inwater, "in-water")]:
         for pname in ["PSAL", "TEMP"]:
-            if ~ds[pname].isnull().all():
+            if ds[pname].isnull().all():
                 log.debug(
                     f"{dsname.title()} trajectory {pname} DataArray is full of NaNs after group by cycles !"
                 )
@@ -197,6 +197,8 @@ def get_argo_data_for_in_air_method(
     #############
     # Then we replace Rtraj PSAL data with Sprof PSAL
     # todo: because ... ?
+    # (Here we substitute salinity from Sprof, but it could be possible to extend this to use salinity
+    # from a climatology)
 
     # Lookup table to match with `which_psal` configuration parameter
     lut = {
@@ -206,18 +208,14 @@ def get_argo_data_for_in_air_method(
     }
 
     # We create new datasets to avoid any confusion, since we now mix Sprof and Rtraj data:
-    # (Here we substitute salinity from Sprof, but it could be possible to extend this to use salinity
-    # from a climatology)
-    ds_inair = deepcopy(Rtraj_inair)
-    ds_inwater = deepcopy(Rtraj_inwater)
+    ds_inair: CycData = deepcopy(Rtraj_inair)
+    ds_inwater: CycData = deepcopy(Rtraj_inwater)
 
-    ds_inair["PSAL"] = psal_rtraj_substitute_sprof(ds_inair["PSAL"], lut[which_psal])
-    ds_inwater["PSAL"] = psal_rtraj_substitute_sprof(
-        ds_inwater["PSAL"], lut[which_psal]
-    )
-
-    # Update dataset title to keep track of processing:
     for ds in [ds_inair, ds_inwater]:
+        # Execute substitution:
+        ds["PSAL"] = psal_rtraj_substitute_sprof(ds["PSAL"], lut[which_psal])
+
+        # Update dataset title to keep track of processing:
         ds.attrs["title"] = (
             f"{ds.attrs['title']} merged with some Sprof multi-profile data"
         )
@@ -281,7 +279,7 @@ def get_argo_data_for_in_air_method(
     #############
     # Then we affect a correct position to each cycle
     # Because for some ARGOS float (with Iridium Position, not GPS), the position are recalculated.
-    # So, it's better to take the position from the Sprof file, where the position ar OK.
+    # So, it's better to take the position from the Sprof file, where the position are OK.
 
     for cyc in ds_inair["CYCLE_NUMBER"]:
 

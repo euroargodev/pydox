@@ -9,6 +9,7 @@ from dataclasses import dataclass, asdict
 import pydox as do
 from pydox._config.config import check_config, Config
 from pydox.commodities import ConfigsDict, CoefsDict
+from pydox.utils.casting import is_ctelist
 
 
 class Workflow(ABC):
@@ -46,9 +47,10 @@ class Workflow(ABC):
         # Init private placeholders:
         self._cfg: Config = deepcopy(config)
         self._fitted: bool = False
-        self._fitted_float: Dict = (
-            None  # Used to register float WMO/CYCLES used for fit
-        )
+        self._fitted_float: dict = {
+            "WMO": None,
+            "CYCLE_NUMBER": {},
+        }  # Used to register float WMO/CYCLE_NUMBER used for fit
         self._coefs: CoefsDict = OrderedDict()
         self._fit_data = OrderedDict()
 
@@ -78,16 +80,22 @@ class Workflow(ABC):
         summary = []
 
         # Piecewise subgroup:
-        summary += [f"  piecewise: {json.dumps(self._sparam('piecewise'))}"]
+        summary += [f"  piecewise (not used): {json.dumps(self._sparam('piecewise'))}"]
 
         # Initial condition subgroup:
         summary += [f"  initial_guess: {json.dumps(self._sparam('initial_guess'))}"]
 
         # Cycle numbers subgroup:
-        summary += [f"  cycles: {json.dumps(self._sparam('cycles'))}"]
+        if is_ctelist([c.cycles for c in self.configs.values()]):
+            summary += [f"  cycles: {json.dumps(self._sparam('cycles'))}"]
+        else:
+            summary += [f"  cycles: <Values depend on configurations, see below>"]
 
         # Fit drift:
-        summary += [f"  fit_drift: {json.dumps(self._sparam('fit_drift'))}"]
+        if is_ctelist([c.fit_drift for c in self.configs.values()]):
+            summary += [f"  fit_drift: {json.dumps(self._sparam('fit_drift'))}"]
+        else:
+            summary += [f"  fit_drift: <Values depend on configurations, see below>"]
 
         return summary
 
@@ -122,9 +130,20 @@ class Workflow(ABC):
         """
         summary = []
         if self.fitted:
-            summary += [
-                f"fitted: {self.fitted} (WMO={self._fitted_float.get('WMO', '?')}, CYCLES {self._fitted_float.get('CYCLE_NUMBER', '?')})"
-            ]
+            # summary += [
+            #     f"fitted: {self.fitted} (WMO={self._fitted_float.get('WMO', '?')}"
+            # ]
+
+            cycs_per_config = [c for c in self._fitted_float["CYCLE_NUMBER"].values()]
+            if is_ctelist(cycs_per_config):
+                summary += [
+                    f"fitted: {self.fitted} (WMO={self._fitted_float.get('WMO', '?')}, CYCLES {cycs_per_config[0]})"
+                ]
+            else:
+                summary += [
+                    f"fitted: {self.fitted} (WMO={self._fitted_float.get('WMO', '?')}, CYCLES range depend on configurations, see below)"
+                ]
+
         else:
             summary += [f"fitted: {self.fitted}"]
         return summary
@@ -150,7 +169,7 @@ class Workflow(ABC):
 
         summary += [""]  # Blank line
 
-        summary += ["parameters (shared by all methods):"]
+        summary += ["default parameters shared by all methods:"]
         [summary.append(line) for line in self._repr_params_shared()]
 
         summary += [""]  # Blank line

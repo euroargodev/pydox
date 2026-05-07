@@ -40,7 +40,7 @@ class MethodClimatology(Method):
                         p: ParameterSet = ParamsClimatology(
                             fit_drift=fit_drift,
                             cycles=self._sparam("cycles"),
-                            initial_gain=Data(self._sparam("initial_guess.gain"), 0.0),
+                            initial_gain=Data(self._sparam("initial_guess.gain"), 1.0),
                             initial_drift=Data(
                                 self._sparam("initial_guess.drift"), 0.0
                             ),

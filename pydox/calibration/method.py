@@ -66,7 +66,7 @@ class Method(Workflow, ABC):
         """Return a description of dataset parameters
 
         This method is in the `Method` base class because we assume that the
-        'dataset' and 'data' subgroups in the configuration is organised
+        'dataset' and 'data' subgroups in the configuration are organized
         similarly for all methods group, typically:
         ```yaml
           dataset: 'some_ds'  # Define the default dataset to use
@@ -128,7 +128,7 @@ class Method(Workflow, ABC):
 
         summary += [""]  # Blank line
 
-        summary += ["parameters (shared by all methods):"]
+        summary += ["default parameters shared by all methods:"]
         [summary.append(line) for line in self._repr_params_shared()]
 
         summary += [""]  # Blank line

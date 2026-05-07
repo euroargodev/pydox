@@ -15,9 +15,14 @@ import shutil
 import atexit
 import logging
 from IPython.display import HTML
+import argopy as ar
 
 
-from pydox._config import _valid_config_version, _read_only_dotted_params, _not_overloaded_dotted_params
+from pydox._config import (
+    _valid_config_version,
+    _read_only_dotted_params,
+    _not_overloaded_dotted_params,
+)
 from pydox._config.utils import runner, config_repr_txt, config_repr_html
 from pydox._config.yaml import load_config_from_file
 
@@ -25,7 +30,10 @@ from pydox._config.yaml import load_config_from_file
 log = logging.getLogger("pydox.config")
 Config: TypeAlias = Dict[str, Any]
 
-_path2static = Path(importlib.util.find_spec("pydox.static").submodule_search_locations[0])
+_path2static = Path(
+    importlib.util.find_spec("pydox.static").submodule_search_locations[0]
+)
+
 
 def _get_xdg_config_dir() -> str:
     """Return the XDG configuration directory
@@ -146,9 +154,7 @@ def config_files() -> list[Path]:
     ]
 
 
-def flatten_config_keys(
-    d: Config, parent_key: str = "", sep: str = "."
-) -> list[str]:
+def flatten_config_keys(d: Config, parent_key: str = "", sep: str = ".") -> list[str]:
     """Flatten a nested dictionary into a list of dotted strings representing all possible keys.
 
     Parameters
@@ -294,7 +300,7 @@ def set_by_path(config: Dict | List, key: str, value: Any) -> Dict | List:
     return config
 
 
-def hint_params(key: str, **kwargs)->list[str]|None:
+def hint_params(key: str, **kwargs) -> list[str] | None:
     """Return striong-dotted parameter hints for a given key"""
 
     # Which configuration to work with:
@@ -305,7 +311,7 @@ def hint_params(key: str, **kwargs)->list[str]|None:
 
     key_hint = []
     for k in flat_keys:
-        if key in k.split('.'):
+        if key in k.split("."):
             key_hint.append(k)
 
     return key_hint
@@ -561,7 +567,7 @@ def check_config(obj: Any) -> Config:
     ValueError
     """
     try:
-        'version' in obj
+        "version" in obj
         return obj
     except:
         raise ValueError("This is not a valid configuration object")
@@ -590,3 +596,7 @@ def is_config(obj: Any) -> bool:
 
 # Load the default configuration to be used globally as `do.params`:
 rcParams = load_configs()
+
+# Also update Argopy options accordingly:
+ar.set_options(gdac=get_params("argo.src"))
+log.info(f"Pydox has set the Argopy option 'gdac' to '{get_params('argo.src')}'")

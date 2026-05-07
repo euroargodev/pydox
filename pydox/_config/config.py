@@ -599,3 +599,4 @@ rcParams = load_configs()
 
 # Also update Argopy options accordingly:
 ar.set_options(gdac=get_params("argo.src"))
+log.info(f"Pydox has set the Argopy option 'gdac' to '{get_params('argo.src')}'")

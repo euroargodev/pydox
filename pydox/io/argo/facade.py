@@ -18,6 +18,8 @@ from pydox._config.config import Config
 from pydox.commodities import ParameterSet
 from pydox.io.argo.types import MultiProfData, TrajData, ArgoDataForInAir
 from pydox.io.argo.utils import (
+    preprocess_raw_rtraj,
+    preprocess_raw_sprof,
     cycle_select,
     get_ts_near_surface,
     code_select,
@@ -35,11 +37,11 @@ def get_argo_data_for_in_air_method(
     in_water_codes: tuple[int, ...],
     which_psal: int,
     cycles: tuple[int, ...],
-    Sprof: MultiProfData,
-    Rtraj: TrajData,
+    Sprof: xr.Dataset,
+    Rtraj: xr.Dataset,
     debug_plot: bool = False,
 ) -> ArgoDataForInAir | dict[str, xr.Dataset]:
-    """Load Argo float data to correct oxygen with atmospheric data (in-air method)
+    """Load Argo float data to calibrate oxygen with atmospheric data (in-air method)
 
     Adapted from `m_argo_data.get_argo_data_for_NCEP()`
 
@@ -60,6 +62,12 @@ def get_argo_data_for_in_air_method(
     dict[str, xr.Dataset | list[int]]
         A dictionary
     """
+    ############################################################################################
+    # Pre-process raw GDAC xr.DataSet objects
+    # We sub-select only variables that we really need to work with:
+    # (this makes data processing easier)
+    Sprof: MultiProfData = preprocess_raw_sprof(Sprof)
+    Rtraj: TrajData = preprocess_raw_rtraj(Rtraj)
 
     ############################################################################################
     # Select cycles to be used:

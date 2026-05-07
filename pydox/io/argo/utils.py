@@ -45,6 +45,7 @@ def preprocess_raw_sprof(ds_sprof: xr.Dataset) -> MultiProfData:
     Processing steps:
     - select only xr.DataArray(s) that we really need
     - convert "N_PROF" and "N_LEVELS" dimensions to variables and coordinates (to be usable with xarray drop_sel)
+    - select only Ascending profiles.
 
     Parameters
     ----------
@@ -55,7 +56,7 @@ def preprocess_raw_sprof(ds_sprof: xr.Dataset) -> MultiProfData:
     MultiProfData | xr.Dataset
         This is a multi-profil :class:`xr.Dataset`, i.e. with `N_PROF` and `N_LEVELS` as dimensions and coordinates
     """
-    pkeep = [v for v in ds_sprof.data_vars if "OXY" in v]
+    pkeep : list[str] = [v for v in ds_sprof.data_vars if "OXY" in v]
     pkeep.remove("PROFILE_DOXY_QC")
     for p in ["PSAL", "TEMP", "PRES"]:
         pkeep.append(p)
@@ -70,13 +71,21 @@ def preprocess_raw_sprof(ds_sprof: xr.Dataset) -> MultiProfData:
         "LATITUDE",
         "LONGITUDE",
         "POSITION_QC",
+        # "DIRECTION", # for debug
     ]:
         pkeep.append(p)
+    pkeep = sorted(pkeep)
 
     # Ensure that "N_PROF" and "N_LEVELS" are dataset variables and coordinates that can be used with drop_sel.
     for d in ["N_PROF", "N_LEVELS"]:
         ds_sprof[d] = ds_sprof[d]
     ds_sprof = ds_sprof.set_coords("CYCLE_NUMBER")  # Also for CYCLE_NUMBER
+
+    # We will only work with Ascending profiles:
+    # ds_sprof = ds_sprof.drop_sel(
+    #     {"N_PROF": ds_sprof["N_PROF"][~ds_sprof["DIRECTION"].isin("A")]}
+    # )
+    # ds_sprof["N_PROF"].values = np.arange(0, len(ds_sprof["N_PROF"]))
 
     # Log and return
     xr_logging(ds_sprof, "Pre-process raw Sprof")
@@ -102,7 +111,7 @@ def preprocess_raw_rtraj(ds_rtraj: xr.Dataset) -> TrajData:
     TrajData | xr.Dataset
         This is a trajectory :class:`xr.Dataset`, with `N_MEASUREMENT` as dimension and `CYCLE_NUMBER` as coordinates
     """
-    pkeep = [v for v in ds_rtraj.data_vars if "OXY" in v]
+    pkeep : list[str] = [v for v in ds_rtraj.data_vars if "OXY" in v]
     for p in ["PSAL", "TEMP", "PRES"]:
         pkeep.append(p)
         for e in ["QC", "ADJUSTED", "ADJUSTED_QC"]:
@@ -127,6 +136,7 @@ def preprocess_raw_rtraj(ds_rtraj: xr.Dataset) -> TrajData:
         "POSITION_QC",
     ]:  # , 'CYCLE_NUMBER_INDEX', 'CYCLE_NUMBER_INDEX_ADJUSTED']:
         pkeep.append(p)
+    pkeep = sorted(pkeep)
 
     # todo: we should be careful in using CYCLE_NUMBER_ADJUSTED when available ...
 
@@ -165,9 +175,9 @@ def code_select(
     if "MEASUREMENT_CODE" not in ds_rtraj:
         raise ValueError("'MEASUREMENT_CODE' is a mandatory variable for this function")
 
-    this = deepcopy(
-        ds_rtraj
-    )  # Make sure we do not modify the input data and return a modified deep copy
+    # Make sure we do not modify the input data and return a modified deep copy:
+    this = deepcopy(ds_rtraj)
+
     this = this.drop_sel(
         {
             "N_MEASUREMENT": ds_rtraj["N_MEASUREMENT"][
@@ -493,9 +503,10 @@ def psal_rtraj_substitute_sprof(
         raise ValueError  # todo Error message to be completed
     if "CYCLE_NUMBER" not in Rtraj_psal.coords:
         raise ValueError  # todo Error message to be completed
-    if "N_PROF" not in Rtraj_psal.dims:
+
+    if "N_PROF" not in Sprof_psal.dims:
         raise ValueError  # todo Error message to be completed
-    if "CYCLE_NUMBER" not in Rtraj_psal.coords:
+    if "CYCLE_NUMBER" not in Sprof_psal.coords:
         raise ValueError  # todo Error message to be completed
 
     # Make sure we don't modify the input array and work/return a deepcopy:

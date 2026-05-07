@@ -1,5 +1,4 @@
 from typing import Any, Optional
-from copy import deepcopy
 import logging
 
 import argopy as ar
@@ -10,11 +9,8 @@ import pydox as do
 from pydox._config.config import Config
 from pydox.commodities import ParameterSet, ParamsInAir
 
-from pydox.io.argo.types import MultiProfData, TrajData, ArgoDataForInAir
-from pydox.io.argo.utils import (
-    preprocess_raw_rtraj,
-    preprocess_raw_sprof,
-)
+from pydox.io.argo.types import ArgoDataForInAir
+
 from pydox.io.argo.facade import get_argo_data_for_in_air_method, semantic_cycle2values
 from pydox.io.ncep.facade import get_ncep_data_for_in_air_method
 
@@ -80,17 +76,14 @@ def get_argo_data(
     Rtraj: xr.Dataset = a_float.dataset("Rtraj")
 
     # Read other parameters from the ParameterSet object:
-    cycles: list[int] = semantic_cycle2values(a_float=a_float, settings=config if params is None else params)
+    cycles: list[int] = semantic_cycle2values(
+        a_float=a_float, settings=config if params is None else params
+    )
 
-    # Read parameters from the ArgoFloat instance:
+    # Read misc parameters from the ArgoFloat instance:
     # optode_height: float = a_float.launchconfig["OptodeVerticalPressureOffset_dbar"]
 
-    # Pre-process raw GDAC xr.DataSet objects
-    # We sub-select only variables that we really need to work with:
-    # (this makes data processing by specification method easier)
-    Sprof: MultiProfData = preprocess_raw_sprof(Sprof)
-    Rtraj: TrajData = preprocess_raw_rtraj(Rtraj)
-
+    # Call low-level/internal function:
     return get_argo_data_for_in_air_method(
         min_pres=min_pres,
         max_pres=max_pres,

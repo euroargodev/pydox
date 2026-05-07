@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 from pydox.utils.compute import mth_run
 from pydox.utils.xarray import xr_append_history
-from pydox.io.argo.types import MultiProfData, TrajData
+from pydox.io.argo.types import MultiProfData, TrajData, CycData
 
 
 log = logging.getLogger("pydox.io.argo.utils")
@@ -56,7 +56,7 @@ def preprocess_raw_sprof(ds_sprof: xr.Dataset) -> MultiProfData:
     MultiProfData | xr.Dataset
         This is a multi-profil :class:`xr.Dataset`, i.e. with `N_PROF` and `N_LEVELS` as dimensions and coordinates
     """
-    pkeep : list[str] = [v for v in ds_sprof.data_vars if "OXY" in v]
+    pkeep: list[str] = [v for v in ds_sprof.data_vars if "OXY" in v]
     pkeep.remove("PROFILE_DOXY_QC")
     for p in ["PSAL", "TEMP", "PRES"]:
         pkeep.append(p)
@@ -111,7 +111,7 @@ def preprocess_raw_rtraj(ds_rtraj: xr.Dataset) -> TrajData:
     TrajData | xr.Dataset
         This is a trajectory :class:`xr.Dataset`, with `N_MEASUREMENT` as dimension and `CYCLE_NUMBER` as coordinates
     """
-    pkeep : list[str] = [v for v in ds_rtraj.data_vars if "OXY" in v]
+    pkeep: list[str] = [v for v in ds_rtraj.data_vars if "OXY" in v]
     for p in ["PSAL", "TEMP", "PRES"]:
         pkeep.append(p)
         for e in ["QC", "ADJUSTED", "ADJUSTED_QC"]:
@@ -441,7 +441,7 @@ def get_ts_near_surface(
     }
 
 
-def traj_groupby_cycles(ds: xr.Dataset) -> xr.Dataset:
+def traj_groupby_cycles(ds: TrajData | xr.Dataset) -> CycData | xr.Dataset:
     """A custom group-by CYCLE_NUMBER for a trajectory dataset that is able to handle data types correctly
 
     Data types supported: int, float and datetime64
@@ -449,11 +449,12 @@ def traj_groupby_cycles(ds: xr.Dataset) -> xr.Dataset:
     Parameters
     ----------
     ds: xr.Dataset
-        The dataset to work with. This must be a trajectory dataset, i.e. with `N_MEASUREMENT`
+        The dataset to work with. This must be a trajectory dataset, i.e. with `N_MEASUREMENT` as dimension
 
     Returns
     -------
     xr.Dataset
+        The dataset grouped by cycle number, i.e. with `CYCLE_NUMBER` as dimension.
 
     """
     # Read data type of input variables:

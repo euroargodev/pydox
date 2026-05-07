@@ -470,42 +470,40 @@ def traj_groupby_cycles(ds: xr.Dataset) -> xr.Dataset:
     return this
 
 
-def traj_da_substitute_with_mprof(
-    traj_array: xr.DataArray, mprof_array: xr.DataArray, return_cycs: bool = False
-) -> xr.DataArray | tuple[xr.DataArray, list[int]]:
-    """Substitute values from a trajectory :class:`xr.DataArray` with values from a multi-prof :class:`xr.DataArray`, using cycle numbers
+def psal_rtraj_substitute_sprof(
+    Rtraj_psal: xr.DataArray, Sprof_psal: xr.DataArray
+) -> xr.DataArray:
+    """Substitute salinity from Rtraj data with those from Sprof data
 
-    This is done by cycle numbers, i.e. 'CYCLE_NUMBER' must be a coordinate in both arrays.
+    It could be possible to extend this to use salinity from a climatology, not Sprof
 
     Parameters
     ----------
-    traj_array: xr.DataArray
+    Rtraj_psal: xr.DataArray
         Trajectory array with `CYCLE_NUMBER` as dimension and `CYCLE_NUMBER` as coordinates.
-    mprof_array: xr.DataArray
-        multi-profil array with `N_PROF` as dimension and `CYCLE_NUMBER` as coordinates.
-    return_cycs: bool, default=False
-        Also return the list of cycle number effectively substituted.
+    Sprof_psal: xr.DataArray
+        Synthetic multi-profil array with `N_PROF` as dimension and `CYCLE_NUMBER` as coordinates.
 
     Returns
     -------
-    xr.DataArray | (xr.DataArray, list[int])
-        A deepcopy of the input `traj_array` but with values substituted, on a cycle basis.
-        Possibly a tuple with the list of cycle numbers if `return_cycs` was set to True.
+    xr.DataArray
+        A deepcopy of Rtraj_psal but with values from Sprof_psal
     """
-    if "CYCLE_NUMBER" not in traj_array.dims:
-        raise ValueError
-    if "CYCLE_NUMBER" not in traj_array.coords:
-        raise ValueError
-    if "N_PROF" not in mprof_array.dims:
-        raise ValueError
-    if "CYCLE_NUMBER" not in mprof_array.coords:
-        raise ValueError
+    if "CYCLE_NUMBER" not in Rtraj_psal.dims:
+        raise ValueError  # todo Error message to be completed
+    if "CYCLE_NUMBER" not in Rtraj_psal.coords:
+        raise ValueError  # todo Error message to be completed
+    if "N_PROF" not in Rtraj_psal.dims:
+        raise ValueError  # todo Error message to be completed
+    if "CYCLE_NUMBER" not in Rtraj_psal.coords:
+        raise ValueError  # todo Error message to be completed
 
     # Make sure we don't modify the input array and work/return a deepcopy:
-    da = deepcopy(traj_array)
+    da = deepcopy(Rtraj_psal)
 
     # Read values to substitute from the multi-prof xr.DataArray:
     # (we use a parallel implementation with multi-threading, faster than a naive sequential):
+    # The parallelization is done over cycle numbers.
     cyc_substituted: list[int] = []  # A placeholder to keep track of cycle numbers
 
     def read_new_values(
@@ -527,41 +525,13 @@ def traj_da_substitute_with_mprof(
         return trajcyc.item(), new_value
 
     new_values: list[tuple[int, float]] = mth_run(
-        read_new_values, da["CYCLE_NUMBER"], mprof_array, cyc_substituted
+        read_new_values, da["CYCLE_NUMBER"], Sprof_psal, cyc_substituted
     )
 
-    # Then replace traj data with substitute data, for each cycle:
+    # Then replace traj data with sprof data, for each cycle:
     for trajcyc, new_value in new_values:
         i_measurements = da["CYCLE_NUMBER"] == trajcyc
         da.loc[{"CYCLE_NUMBER": i_measurements}] = new_value
-
-    #
-    if return_cycs:
-        return da, cyc_substituted
-    else:
-        return da
-
-
-def psal_rtraj_substitute_sprof(
-    Rtraj_psal: xr.DataArray, Sprof_psal: xr.DataArray
-) -> xr.DataArray:
-    """Substitute salinity from Rtraj with those from Sprof data
-
-    It could be possible to extend this to use salinity from a climatology, not Sprof
-
-    Parameters
-    ----------
-    Rtraj_psal: xr.DataArray
-    Sprof_psal: xr.DataArray
-
-    Returns
-    -------
-    xr.DataArray
-        A deepcopy of Rtraj_psal with new values from Sprof_psal
-    """
-    da, cyc_substituted = traj_da_substitute_with_mprof(
-        Rtraj_psal, Sprof_psal, return_cycs=True
-    )
 
     # Log and return
     if (np.diff(cyc_substituted) == 1).all() and len(cyc_substituted) > 5:
@@ -571,6 +541,6 @@ def psal_rtraj_substitute_sprof(
 
     xr_logging(
         da,
-        f"Replaced Rtraj PSAL data with Sprof PSAL for 'CYCLE_NUMBER'= {cyc_txt}",
+        f"Replaced salinity data from Rtraj with those from Sprof, for 'CYCLE_NUMBER'= {cyc_txt}",
     )
     return da

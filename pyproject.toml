@@ -1,6 +1,6 @@
 [project]
 name = "pydox"
-authors = [{ name = "Guillaume Maze", email = "gmaze@ifremer.fr"}, {name = "Catherine Kermabon", email = "ckermabon@ifremer.fr"}]
+authors = [{ name = "Guillaume Maze", email = "gmaze@ifremer.fr"}, {name = "Catherine Kermabon", email = "catherine.kermabon@ifremer.fr"}]
 #maintainers = [{ name = "", email = ""}]
 description = "Argo Oxygen data Calibration and Adjustment"
 keywords = [ "argofloat", "argo-data", "oxygen", "quality-control", "delayed-mode", "calibration", "adjustment", "ArgoBGC"]

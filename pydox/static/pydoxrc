@@ -10,7 +10,7 @@ version: '0.1' # Pydox configuration file format version (must be in any configu
 
 # ============================================= Operator Designation
 operator:
-  name: ${USER} ('factory' value)
+  name: # e.g. = ${USER} ('factory' value)
   email:
   orcid:
   affiliation:
@@ -20,7 +20,7 @@ operator:
 # Any file saved by pydox will be under "<output.root>/<WMO>"
 # where <WMO> will be filled automatically by pydox
 output:
-  root: ${HOME}/ARGO/DMQC/OXYGEN/PYDOX
+  root: # e.g. : ${HOME}/ARGO/DMQC/OXYGEN/PYDOX
 
 # ============================================= Argo Float data
 argo:
@@ -53,7 +53,7 @@ calibration_methods:
     data:
       ncep:
         name: NCEP 2, real-time ?
-        src: ${HOME}/ARGO_NEW/NEW_LOCODOX/NCEP_DATA/
+        src: # e.g. : ${HOME}/ARGO_NEW/NEW_LOCODOX/NCEP_DATA/
       era5:
         name: ERA5, higher res ?
         src: null
@@ -65,7 +65,7 @@ calibration_methods:
      data:
         woa:
           name: WOA18
-          src: ${HOME}/ARGO_NEW/LOCODOX/DATA/LOCODOX_EXTERNAL_DATA/WOA/WOA2018_DECAV_monthly_5500_1deg.nc
+          src: # e.g. : ${HOME}/ARGO_NEW/LOCODOX/DATA/LOCODOX_EXTERNAL_DATA/WOA/WOA2018_DECAV_monthly_5500_1deg.nc
         isas:
           name: ISAS19
           comment: To be implemented !
@@ -82,8 +82,8 @@ calibration_methods:
          comment: | 
            LOPS-curated collection of oxygen reference profiles from ship-ctd.
            This version includes the last OVIDE 2024 data.
-         txt: ${HOME}/ARGO_NEW/NEW_LOCODOX/locodox_python/BDD_TR/bdd_REF_ARGO.txt
-         mat: ${HOME}/ARGO_NEW/NEW_LOCODOX/locodox_python/BDD_TR/bddo2ref_all_2025.mat
+         txt: # e.g. : ${HOME}/ARGO_NEW/NEW_LOCODOX/locodox_python/BDD_TR/bdd_REF_ARGO.txt
+         mat: # e.g. : ${HOME}/ARGO_NEW/NEW_LOCODOX/locodox_python/BDD_TR/bddo2ref_all_2025.mat
 
 # ============================================= Calibration Shared Parameters
 # These parameters are used by all methods
@@ -169,7 +169,7 @@ bathymetry:
   default: gebco
   etopo:
     long_name: ETOPO v2
-    src: ${HOME}/ARGO_NEW/LOCODOX/DATA/LOCODOX_EXTERNAL_DATA/TOPOGRAPHY/ETOPO2v2c_f4.nc
+    src: # e.g. : ${HOME}/ARGO_NEW/LOCODOX/DATA/LOCODOX_EXTERNAL_DATA/TOPOGRAPHY/ETOPO2v2c_f4.nc
   gebco:
     long_name: GEBCO 2020, a continuous terrain model for oceans and land at 15 arc-second intervals
     src: https://coastwatch.pfeg.noaa.gov/erddap/griddap/GEBCO_2020.html

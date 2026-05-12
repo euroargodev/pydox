@@ -77,3 +77,24 @@ jobs:
           name: Pydox-Tests-Core-${{matrix.python-version}}-${{matrix.os}}
           path: ${{env.LOG_FILE}}
           retention-days: 90
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v6
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./cov.xml
+          report_type: coverage
+          flags: pinned, py${{matrix.python-version}}, ${{matrix.os}}
+          name: codecov-github
+          fail_ci_if_error: false
+          env_vars: RUNNER_OS,PYTHON_VERSION
+
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@v6
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          report_type: test_results
+          flags: pinned, py${{matrix.python-version}}, ${{matrix.os}}
+          fail_ci_if_error: false
+          env_vars: RUNNER_OS,PYTHON_VERSION

@@ -86,7 +86,10 @@ def test_config_files():
         check=True,
     )
     cf = proc.stdout.strip()
-    assert "PosixPath" in cf
+    if sys.platform != "win32":
+        assert "PosixPath" in cf
+    else:
+        assert "WindowsPath" in cf
 
     # Restore PYDOXRC env
     if PYDOXRC != "9999":

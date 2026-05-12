@@ -67,8 +67,9 @@ def interp_NCEP_on_ARGO(ds_ncep: xr.Dataset, coord_argo: dict[str,xr.DataArray])
     Air values, which should be expressed in kelvins, are converted to degrees Celsius.
     Unit conversions are required to calculate NCEP_PPOX
     """
-    # Force NCEP lon to be in [-180 180] as the ARGO longitude
+    # We work with a deepcopy to do not modify the original NCEP dataset
     ds_ncep_dummy = deepcopy(ds_ncep)
+    # Force NCEP lon to be in [-180 180] as the ARGO longitude
     ds_ncep_dummy['lon'] = xr.where(ds_ncep_dummy['lon'] > 180, ds_ncep_dummy['lon'] - 360, ds_ncep_dummy['lon'])
     ds_ncep_interp = ds_ncep_dummy.interp(lat=coord_argo['lat'], lon=coord_argo['lon'], time=coord_argo['time'])
     #

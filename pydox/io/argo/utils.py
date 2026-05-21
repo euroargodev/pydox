@@ -87,7 +87,7 @@ def preprocess_raw_sprof(ds_sprof: xr.Dataset) -> MultiProfData:
     ds_sprof = ds_sprof.drop_sel(
         {"N_PROF": ds_sprof["N_PROF"][~ds_sprof["DIRECTION"].isin("A")]}
     )
-    #todo : Update N_PROF values/index : Not work : ds_sprof["N_PROF"].values = np.arange(0, len(ds_sprof["N_PROF"]))
+    #todo : Update N_PROF values/index : Not work :  ds_sprof["N_PROF"].values = np.arange(0, len(ds_sprof["N_PROF"]))
 
     # Log and return
     xr_logging(ds_sprof, "Pre-process raw Sprof")

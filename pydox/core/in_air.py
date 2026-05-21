@@ -2,7 +2,6 @@ from typing import Any
 
 import numpy as np
 from scipy.optimize import curve_fit
-from tornado.util import raise_exc_info
 
 from pydox.commodities import (
     Data,
@@ -51,7 +50,7 @@ def inair_fit(params: ParamsInAir, data=Any) -> FitResult:
     It is determined according to Bittig and al. 2018 [1]_ as:
 
     .. math::
-        - G * PPOX_{obs_surf} - PPOX_{air} = C * \left(G * PPOX_{obs_water} - PPOX_{air} \right)
+        - G * PPOX_{obs_surf} - PPOX_{air} = C * \\left(G * PPOX_{obs_water} - PPOX_{air} \\right)
 
     References
     ----------

@@ -123,16 +123,22 @@ def inair_fit(params: ParamsInAir, data=Any) -> FitResult:
 
     # And fill in results for output:
     c = {}
-    # c["gain"] = Data(fit_results[0], np.sqrt(np.diag(covariance))[0])
-    c["gain"] = Data(
-        fit_results[0], params.dummy
-    )  # Replace error with dummy var. to track stuff in dev.
-    c["gain"] = Data(
-        1.0 + params.initial_gain.value, params.dummy
-    )  # Use dummy value to check for cumulative gain feature and replace error with dummy var. to track stuff in dev.
+    c["gain"] = Data(fit_results[0], np.sqrt(np.diag(covariance))[0])
+   # c["gain"] = Data(
+   #     fit_results[0], params.dummy
+   # )  # Replace error with dummy var. to track stuff in dev.
+    #c["gain"] = Data(
+    #    1.0 + params.initial_gain.value, params.dummy
+    #)  # Use dummy value to check for cumulative gain feature and replace error with dummy var. to track stuff in dev.
 
-    if params.carryover:
+    if params.carryover :
         c["carryover"] = Data(fit_results[1], np.sqrt(np.diag(covariance))[1])
+
+    if params.fit_drift & params.carryover:
+        c["drift"] = Data(fit_results[2], np.sqrt(np.diag(covariance))[2])
+
+    if params.fit_drift & params.carryover=='False':
+        c["drift"] = Data(fit_results[1], np.sqrt(np.diag(covariance))[1])
 
     coefs = CoefficientsInAir(**c)
     # coefs = CoefficientsInAir(gain=Data(12., 3.), carryover=...)

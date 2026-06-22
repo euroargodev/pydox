@@ -47,8 +47,13 @@ def get_argo_data(
     config: Config,
     params: Optional[ParameterSet] = None,
     debug_plot: bool = False,
-) -> ArgoDataForInAir | dict[str, xr.Dataset]:
+) -> tuple[ArgoDataForInAir | dict[str, xr.Dataset], float]:
     """Load Argo float data to correct oxygen with atmospheric data (in-air method)"""
+
+    if 'CONFIG_OptodeVerticalPressureOffset_dbar' in a_float.launchconfig.parameters:
+        optode_height = a_float.launchconfig['OptodeVerticalPressureOffset_dbar']
+    else:
+        optode_height = -0.2
 
     # Read parameters from the configuration object:
 
@@ -94,11 +99,12 @@ def get_argo_data(
         Sprof=Sprof,
         Rtraj=Rtraj,
         debug_plot=debug_plot,
-    )
+    ), optode_height
 
 
 def get_atmospheric_data(
     argo_data: ArgoDataForInAir,
+    optode_height : float,
     config: Config,
     params: Optional[ParamsInAir] = None,
     debug_plot: bool = False,
@@ -120,7 +126,7 @@ def get_atmospheric_data(
             src: str = params.src
 
         data = get_ncep_data_for_in_air_method(
-            argo_data, name=name, src=src, debug_plot=debug_plot
+            argo_data, optode_height, name=name, debug_plot=debug_plot
         )
     else:
         raise NotImplementedError(f"No implementation to load dataset={dataset}")
@@ -162,7 +168,7 @@ def get_data_for_one_parameterset_for_in_air_method(
     # todo Consider using a dataclass instead of a dictionary
 
     # Load Argo float data:
-    this_argo: ArgoDataForInAir = get_argo_data(
+    this_argo, optode_height = get_argo_data(
         a_float, config, params, debug_plot=debug_plot
     )
     data["PPOX1"]: np.ndarray = this_argo.in_air["PPOX_DOXY"].values
@@ -172,7 +178,7 @@ def get_data_for_one_parameterset_for_in_air_method(
     ]
 
     # Load Atmospheric data:
-    this_atm = get_atmospheric_data(this_argo, config, params, debug_plot=debug_plot)
+    this_atm = get_atmospheric_data(this_argo, optode_height, config, params, debug_plot=debug_plot)
     data["REF_PPOX"]: np.ndarray = this_atm["REF_PPOX"]
 
     # Return

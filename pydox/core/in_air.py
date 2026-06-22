@@ -116,6 +116,7 @@ def inair_fit(params: ParamsInAir, data=Any) -> FitResult:
     #     initial values will all be 1 (if the number of parameters for the
     #     function can be determined using introspection, otherwise a
     #     ValueError is raised).
+    print(xdata,ydata)
     fit_results, covariance, info, mesg, ier = curve_fit(
         f, xdata, ydata, p0=p0, nan_policy="omit", full_output=True
     )

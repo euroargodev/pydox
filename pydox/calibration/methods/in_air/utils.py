@@ -47,7 +47,7 @@ def get_argo_data(
     config: Config,
     params: Optional[ParameterSet] = None,
     debug_plot: bool = False,
-) -> tuple[ArgoDataForInAir | dict[str, xr.Dataset], float]:
+) -> ArgoDataForInAir | dict[str, xr.Dataset]:
     """Load Argo float data to correct oxygen with atmospheric data (in-air method)"""
 
     if 'CONFIG_OptodeVerticalPressureOffset_dbar' in a_float.launchconfig.parameters:
@@ -89,7 +89,7 @@ def get_argo_data(
     # optode_height: float = a_float.launchconfig["OptodeVerticalPressureOffset_dbar"]
 
     # Call low-level/internal function:
-    return get_argo_data_for_in_air_method(
+    data = get_argo_data_for_in_air_method(
         min_pres=min_pres,
         max_pres=max_pres,
         in_air_codes=tuple(in_air_codes),
@@ -99,12 +99,15 @@ def get_argo_data(
         Sprof=Sprof,
         Rtraj=Rtraj,
         debug_plot=debug_plot,
-    ), optode_height
+    )
+    data.optode_height = optode_height
+    data.launch_date = a_float.dataset('meta')['LAUNCH_DATE'].values
+
+    return data
 
 
 def get_atmospheric_data(
     argo_data: ArgoDataForInAir,
-    optode_height : float,
     config: Config,
     params: Optional[ParamsInAir] = None,
     debug_plot: bool = False,
@@ -126,7 +129,7 @@ def get_atmospheric_data(
             src: str = params.src
 
         data = get_ncep_data_for_in_air_method(
-            argo_data, optode_height, name=name, debug_plot=debug_plot
+            argo_data, name=name, debug_plot=debug_plot
         )
     else:
         raise NotImplementedError(f"No implementation to load dataset={dataset}")
@@ -168,7 +171,7 @@ def get_data_for_one_parameterset_for_in_air_method(
     # todo Consider using a dataclass instead of a dictionary
 
     # Load Argo float data:
-    this_argo, optode_height = get_argo_data(
+    this_argo = get_argo_data(
         a_float, config, params, debug_plot=debug_plot
     )
     data["PPOX1"]: np.ndarray = this_argo.in_air["PPOX_DOXY"].values
@@ -176,9 +179,10 @@ def get_data_for_one_parameterset_for_in_air_method(
     data["CYCLE_NUMBER"]: list[int] = [
         int(v) for v in this_argo.Sprof["CYCLE_NUMBER"].values
     ]
+    data['Delta_T_REF']: np.ndarray = (this_argo.in_air['JULD']-this_argo.launch_date)/np.timedelta64(1, "D")
 
     # Load Atmospheric data:
-    this_atm = get_atmospheric_data(this_argo, optode_height, config, params, debug_plot=debug_plot)
+    this_atm = get_atmospheric_data(this_argo, config, params, debug_plot=debug_plot)
     data["REF_PPOX"]: np.ndarray = this_atm["REF_PPOX"]
 
     # Return

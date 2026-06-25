@@ -42,7 +42,6 @@ def calcul_NCEP_PPOX(argo_data_for_air : ArgoDataForInAir, ds_ncep_interp : xr.D
 
 def get_ncep_data_for_in_air_method(
     argo_data_for_air: ArgoDataForInAir,
-    optode_height : float,
     #src: str | Path,
     name: Optional[str] = None,
     debug_plot: bool = False,
@@ -71,7 +70,7 @@ def get_ncep_data_for_in_air_method(
     ds_ncep = open_ncep()
     coord_argo = {'lon' : argo_data_for_air.in_air['LONGITUDE'],'lat':argo_data_for_air.in_air['LATITUDE'],'time':argo_data_for_air.in_air['JULD']}
     ds_ncep_interp = interp_NCEP_on_ARGO(ds_ncep,coord_argo)    # todo Implement real NCEP data loading here
-    data["REF_PPOX"] = calcul_NCEP_PPOX(argo_data_for_air, ds_ncep_interp,optode_height)
+    data["REF_PPOX"] = calcul_NCEP_PPOX(argo_data_for_air, ds_ncep_interp,argo_data_for_air.optode_height)
     print(data['REF_PPOX'])
     #
     return data

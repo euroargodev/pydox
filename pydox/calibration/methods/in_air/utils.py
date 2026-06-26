@@ -4,6 +4,7 @@ import logging
 import argopy as ar
 import numpy as np
 import xarray as xr
+import matplotlib.pyplot as plt
 
 import pydox as do
 from pydox._config.config import Config
@@ -184,6 +185,18 @@ def get_data_for_one_parameterset_for_in_air_method(
     # Load Atmospheric data:
     this_atm = get_atmospheric_data(this_argo, config, params, debug_plot=debug_plot)
     data["REF_PPOX"]: np.ndarray = this_atm["REF_PPOX"]
+
+    if debug_plot:
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 4), dpi=90, sharex=True)
+        plt.plot(this_argo.in_air['CYCLE_NUMBER'],data['PPOX1'],'.-b',label='InAir')
+        plt.plot(this_argo.in_water['CYCLE_NUMBER'],data['PPOX2'],'.-r',label='InWater')
+        plt.plot(this_argo.in_air['CYCLE_NUMBER'],data['REF_PPOX'],'.-k',label='Ref')
+        plt.grid()
+        plt.xlabel('Float cycle number of the measurement')
+        plt.legend()
+        plt.title("PPOX used for fitting")
+        plt.tight_layout()
+        plt.show()
 
     # Return
     if iset is None:

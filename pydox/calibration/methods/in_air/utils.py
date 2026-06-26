@@ -197,6 +197,17 @@ def get_data_for_one_parameterset_for_in_air_method(
         plt.title("PPOX used for fitting")
         plt.tight_layout()
         plt.show()
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 4), dpi=90, sharex=True)
+        plt.plot(data['Delta_T_REF'],data['REF_PPOX']/data['PPOX1'],'.-')
+        plt.xlabel('Delta T')
+        plt.ylabel('PPOX : REF/Data')
+        plt.grid()
+        mask = np.isfinite(data['REF_PPOX']) & np.isfinite(data['PPOX1'])
+        poly_data = np.polyfit(data['Delta_T_REF'][mask], data['REF_PPOX'][mask] / data['PPOX1'][mask], 1)
+        ax.plot(data['Delta_T_REF'], np.polyval(poly_data, data['Delta_T_REF']),'*-r')
+
+        plt.show()
+
 
     # Return
     if iset is None:

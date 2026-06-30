@@ -124,6 +124,7 @@ def inair_fit(params: ParamsInAir, data=Any) -> FitResult:
 
     # And fill in results for output:
     c = {}
+    ## todo : force to have a gain and a drift in the result. Force drift to 0 if not params.fit_drift ?
     c["gain"] = Data(fit_results[0], np.sqrt(np.diag(covariance))[0])
    # c["gain"] = Data(
    #     fit_results[0], params.dummy

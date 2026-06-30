@@ -177,6 +177,7 @@ def get_data_for_one_parameterset_for_in_air_method(
     )
     data["PPOX1"]: np.ndarray = this_argo.in_air["PPOX_DOXY"].values
     data["PPOX2"]: np.ndarray = this_argo.in_water["PPOX_DOXY"].values
+    ##todo : CYCLE_NUMBER should come from this_argo.in_air['CYCLE_NUMBER'], not from Sprof
     data["CYCLE_NUMBER"]: list[int] = [
         int(v) for v in this_argo.Sprof["CYCLE_NUMBER"].values
     ]

@@ -4,6 +4,10 @@ import logging
 
 import argopy as ar
 
+import matplotlib.pyplot as plt
+import matplotlib.lines
+from twine.utils import input_func
+
 from pydox._config.utils import format_value_txt
 from pydox.utils.casting import to_list
 from pydox.utils.compute import compute_fits, ExecutionMethods
@@ -166,4 +170,31 @@ class MethodInAir(Method):
         self._fitted = True
         self._fitted_float["WMO"] = a_float.WMO
         self._fitted_float["CYCLE_NUMBER"] = input_cycs_for_fit
+
+        if debug_plot:
+            cmap = matplotlib.colormaps.get_cmap("jet").resampled(len(input_data_for_fit))  # Dégradé bleu -> rouge
+            fig, ax = plt.subplots(nrows=len(input_data_for_fit), ncols=1, figsize=(10, 4), dpi=90, sharex=True)
+            for i in range(len(input_data_for_fit)):
+                xdata = input_data_for_fit[i]["CYCLE_NUMBER"]
+                if self._coefs[i].drift is None:
+                    ydata = input_data_for_fit[i]['PPOX1'] * self._coefs[i].gain.value
+                else:
+                    ydata = input_data_for_fit[i]['PPOX1'] * (self._coefs[i].gain.value * (
+                                    1 + self._coefs[i].drift.value / 100 * input_data_for_fit[i]['Delta_T_REF'] / 365))
+
+                plt.subplot(len(input_data_for_fit), 1, i+1)
+                plt1 = plt.plot(xdata,input_data_for_fit[i]['REF_PPOX'],'.-k')
+                plt2 = plt.plot(xdata,ydata, '.-',color=cmap(i))
+
+                plt.grid()
+                #plt.xlabel('Float Cycle number of the measurement')
+                plt.ylabel('Partial pressure of oxygen (millibar)')
+                plt.legend([plt1[0],plt2[0]],['REFERENCE','Adjusted ARGO PPOX'])
+                plt.tight_layout()
+                #plt.title(self.configs[i])
+                plt.title(f'Correction : {i}')
+
+            plt.xlabel('Float Cycle number of the measurement')
+            plt.show()
+
         return self

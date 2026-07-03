@@ -63,12 +63,17 @@ def inair_fit(params: ParamsInAir, data=Any) -> FitResult:
     REF_PPOX = data[
         "REF_PPOX"
     ]  # REF_PPOX is a generic term to replace NCEP_PPOX and ERA5_PPOX
+    delta_T_REF = data["Delta_T_REF"]
 
     if len(PPOX1) <= 2:
         raise ValueError(
             f"Not enough data for fit, may be you should increase the cycles range to use. {PPOX1}"
         )
-    if len(PPOX1) != len(PPOX2) or len(PPOX1) != len(REF_PPOX):
+    if (
+        len(PPOX1) != len(PPOX2)
+        or len(PPOX1) != len(REF_PPOX)
+        or len(PPOX1) != len(delta_T_REF)
+    ):
         raise ValueError("All PPOX data must have the same length")
 
     # Depending on parameters, we select a model and set arguments for curve_fit:
@@ -86,17 +91,24 @@ def inair_fit(params: ParamsInAir, data=Any) -> FitResult:
             ydata = REF_PPOX / PPOX1
             p0: models.Array = np.array(params.initial_gain.value)  # G
     else:
-        raise NotImplementedError(f"params.fit_drift = {params.fit_drift}")
-        # if params.carryover:
-        #     f = models.Gain_Derive_CarryOver
-        #     xdata = [PPOX1, PPOX2, delta_T_REF]
-        #     ydata = REF_PPOX
-        #     p0 = [params.initial_gain.value, params.initial_carryover.value, params.initial_drift.value] # G/C/D
-        # else:
-        #     f = models.Gain_Derive
-        #     xdata = [PPOX1 / PPOX1, delta_T_REF]
-        #     ydata = REF_PPOX / PPOX1
-        #     p0 = [params.initial_gain.value, params.initial_drift.value] # G/D
+        if params.carryover:
+            f = models.Gain_Derive_CarryOver
+            xdata = [PPOX1, PPOX2, delta_T_REF]
+            ydata = REF_PPOX
+            p0: models.Array = np.array(
+                [
+                    params.initial_gain.value,
+                    params.initial_carryover.value,
+                    params.initial_drift.value,
+                ]
+            )  # G/C/D
+        else:
+            f = models.Gain_Derive
+            xdata = [PPOX1 / PPOX1, delta_T_REF]
+            ydata = REF_PPOX / PPOX1
+            p0: models.Array = np.array(
+                [params.initial_gain.value, params.initial_drift.value]
+            )  # G/D
 
     # Then we can call curve_fit:
     # Assumes ``ydata = f(xdata, *params) + eps``.
@@ -116,22 +128,29 @@ def inair_fit(params: ParamsInAir, data=Any) -> FitResult:
     #     initial values will all be 1 (if the number of parameters for the
     #     function can be determined using introspection, otherwise a
     #     ValueError is raised).
+
     fit_results, covariance, info, mesg, ier = curve_fit(
         f, xdata, ydata, p0=p0, nan_policy="omit", full_output=True
     )
 
     # And fill in results for output:
     c = {}
-    # c["gain"] = Data(fit_results[0], np.sqrt(np.diag(covariance))[0])
-    c["gain"] = Data(
-        fit_results[0], params.dummy
-    )  # Replace error with dummy var. to track stuff in dev.
-    c["gain"] = Data(
-        1.0 + params.initial_gain.value, params.dummy
-    )  # Use dummy value to check for cumulative gain feature and replace error with dummy var. to track stuff in dev.
+    c["gain"] = Data(fit_results[0], np.sqrt(np.diag(covariance))[0])
+    # c["gain"] = Data(
+    #     fit_results[0], params.dummy
+    # )  # Replace error with dummy var. to track stuff in dev.
+    # c["gain"] = Data(
+    #    1.0 + params.initial_gain.value, params.dummy
+    # )  # Use dummy value to check for cumulative gain feature and replace error with dummy var. to track stuff in dev.
 
     if params.carryover:
         c["carryover"] = Data(fit_results[1], np.sqrt(np.diag(covariance))[1])
+
+    if params.fit_drift & params.carryover:
+        c["drift"] = Data(fit_results[2], np.sqrt(np.diag(covariance))[2])
+
+    if params.fit_drift and not params.carryover:
+        c["drift"] = Data(fit_results[1], np.sqrt(np.diag(covariance))[1])
 
     coefs = CoefficientsInAir(**c)
     # coefs = CoefficientsInAir(gain=Data(12., 3.), carryover=...)
@@ -141,7 +160,7 @@ def inair_fit(params: ParamsInAir, data=Any) -> FitResult:
         "uid": params.uid,
         "initial gain": params.initial_gain.value,
         "n_cycles": len(PPOX1),
-    }  # Dummy
+    }
 
     # Finally gather and return all results into a controlled object:
     return FitResult(coefs=coefs, fit_data=fit_data)

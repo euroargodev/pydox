@@ -4,6 +4,9 @@ import logging
 
 import argopy as ar
 
+import matplotlib.pyplot as plt
+from twine.utils import input_func
+
 from pydox._config.utils import format_value_txt
 from pydox.utils.casting import to_list
 from pydox.utils.compute import compute_fits, ExecutionMethods
@@ -166,4 +169,48 @@ class MethodInAir(Method):
         self._fitted = True
         self._fitted_float["WMO"] = a_float.WMO
         self._fitted_float["CYCLE_NUMBER"] = input_cycs_for_fit
+
+        if debug_plot:
+            # cmap = plt.colormaps.get_cmap("jet").resampled(len(input_data_for_fit))
+            fig, ax = plt.subplots(
+                nrows=len(input_data_for_fit),
+                ncols=1,
+                figsize=(10, 4),
+                dpi=90,
+                sharex=True,
+            )
+            for i in range(len(input_data_for_fit)):
+                xdata = input_data_for_fit[i]["CYCLE_NUMBER"]
+                ydata = input_data_for_fit[i]["PPOX1"] * self._coefs[i].gain.value
+                if self._coefs[i].drift is not None:
+                    ydata = ydata * (
+                        1
+                        + self._coefs[i].drift.value
+                        / 100
+                        * input_data_for_fit[i]["Delta_T_REF"]
+                        / 365
+                    )
+
+                ax = plt.subplot(len(input_data_for_fit), 1, i + 1)
+                plt1 = ax.plot(
+                    xdata, input_data_for_fit[i]["REF_PPOX"], ".-k", label="Ref"
+                )
+                plt1 = ax.plot(
+                    xdata,
+                    input_data_for_fit[i]["PPOX1"],
+                    ".-b",
+                    label="Non-adjusted (in-air)",
+                )
+                plt2 = ax.plot(xdata, ydata, ".-", label="Adjusted")
+                # plt2 = ax.plot(xdata, ydata, ".-", color=cmap(i))
+
+                ax.grid()
+                ax.set_ylabel("Partial pressure of oxygen [mb]")
+                plt.legend()  # ([plt1[0], plt2[0]], ["Ref", "Adjusted ARGO PPOX"])
+                plt.tight_layout()
+                plt.title(f"Correction : {i}")
+
+            plt.xlabel("Float Cycle number of the measurement")
+            plt.show()
+
         return self

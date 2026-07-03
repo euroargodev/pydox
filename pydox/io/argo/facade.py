@@ -313,6 +313,8 @@ def get_argo_data_for_in_air_method(
         in_water=ds_inwater,
         Sprof=Sprof,
         Rtraj=Rtraj,
+        optode_height=None,
+        launch_date=None,
     )
 
 

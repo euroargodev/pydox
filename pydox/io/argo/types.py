@@ -1,6 +1,7 @@
 from typing import Annotated
 import xarray as xr
 from dataclasses import dataclass
+import numpy as np
 
 
 # Type for a xarray object with dimensions N_PROF and N_LEVELS
@@ -26,7 +27,7 @@ CycData = Annotated[
 class ArgoDataForInAir:
     """A placeholder to organize output from :func:`pydox.io.argo.facade.get_argo_data_for_in_air_method`
 
-    Provides: in_air, in_water, Sprof and Rtraj xr.Dataset.
+    Provides: in_air, in_water, Sprof and Rtraj xr.Dataset, optode_height and launch_date.
 
     This is cleaner and easier to discover/document than a dictionary
     """
@@ -42,3 +43,8 @@ class ArgoDataForInAir:
 
     Rtraj: TrajData | xr.Dataset
     """A xr.Dataset with measurements data from the Rtraj file"""
+
+    optode_height: float
+    """The optode height in meters"""
+
+    launch_date: np.datetime64

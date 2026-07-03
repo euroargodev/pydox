@@ -56,6 +56,7 @@ def preprocess_raw_sprof(ds_sprof: xr.Dataset) -> MultiProfData:
     MultiProfData | xr.Dataset
         This is a multi-profil :class:`xr.Dataset`, i.e. with `N_PROF` and `N_LEVELS` as dimensions and coordinates
     """
+    # todo : We need to check if deepcopy for Sprof is needed or not.
     pkeep: list[str] = [v for v in ds_sprof.data_vars if "OXY" in v]
     pkeep.remove("PROFILE_DOXY_QC")
     for p in ["PSAL", "TEMP", "PRES"]:
@@ -82,10 +83,11 @@ def preprocess_raw_sprof(ds_sprof: xr.Dataset) -> MultiProfData:
     ds_sprof = ds_sprof.set_coords("CYCLE_NUMBER")  # Also for CYCLE_NUMBER
 
     # We will only work with Ascending profiles:
-    # ds_sprof = ds_sprof.drop_sel(
-    #     {"N_PROF": ds_sprof["N_PROF"][~ds_sprof["DIRECTION"].isin("A")]}
-    # )
-    # ds_sprof["N_PROF"].values = np.arange(0, len(ds_sprof["N_PROF"]))
+    log.info('Keep only Ascending profiles in Sprof')
+    ds_sprof = ds_sprof.drop_sel(
+        {"N_PROF": ds_sprof["N_PROF"][~ds_sprof["DIRECTION"].isin("A")]}
+    )
+    #todo : Update N_PROF values/index : Not work :  ds_sprof["N_PROF"].values = np.arange(0, len(ds_sprof["N_PROF"]))
 
     # Log and return
     xr_logging(ds_sprof, "Pre-process raw Sprof")

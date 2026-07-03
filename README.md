@@ -92,10 +92,12 @@ pydox/
 │   │   ├── types.py     # Document object exchanged by functions
 │   │   └── utils.py     # All functions used to load/process Argo data in facade functions
 │   └── ncep/            # IO tools for NCEP data
-│       └── facade.py    # Facade functions used by calibration method implementations
+│       ├── facade.py    # Facade functions used by calibration method implementations
+│       └── utils.py     # Utilities for NCEP data manipulation
 │
 ├── utils/                # Non-specific utilities (low-level/limited-scope/autonomous functions)
 │   ├── casting.py        # Enforce object types
+│   ├── chemistry.py      # Chemistry variables computation/manipulation 
 │   ├── compute.py        # Handle serial or parallel low-level fit functions execution 
 │   └── xarray.py         # Utilities for xarray objects, specific to Pydox 
 │
@@ -104,7 +106,8 @@ pydox/
 │   └── pydoxrc           # Factory configuration file
 │
 └── tests/                # Unit and integration tests
-    ├── test_config.py    # Tests for pydox._config
+    ├── test_config.py    # Tests for pydox._config module
+    ├── test_io_ncep.py   # Tests for io.ncep module
     ├── conftest.py       # Pytest configuration
     └── pytest.ini        # Pytest parameters
 ```

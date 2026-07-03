@@ -16,6 +16,7 @@ Notes
 https://medium.com/the-pythonworld/why-i-stopped-using-python-dataclass-everywhere-3d0cc5457e01
 """
 
+import hashlib
 from dataclasses import dataclass, field, asdict
 from typing import (
     Any,
@@ -25,7 +26,9 @@ from typing import (
     OrderedDict,
     Protocol,
     runtime_checkable,
+    Callable,
 )
+import matplotlib as mpl
 
 
 @dataclass(frozen=True)
@@ -247,3 +250,20 @@ class FitResult:
 
 
 FitResults: TypeAlias = OrderedDict[int, FitResult]
+
+
+@dataclass
+class Figure:
+
+    fig: mpl.figure.Figure
+    name: str
+    axes: mpl.axes._axes.Axes | list[mpl.axes._axes.Axes] = None
+    caller: Callable | str = None
+
+    @property
+    def uid(self):
+        m = hashlib.sha256()
+        m.update(bytes(str(self.name), "utf-8"))
+        if self.caller is not None:
+            m.update(bytes(str(self.caller), "utf-8"))
+        return m.hexdigest()

@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import pydox as do
 from pydox._config.config import Config
 from pydox.commodities import ParameterSet, ParamsInAir
-
+from pydox.reporting.utils import fig_commit
 from pydox.io.argo.types import ArgoDataForInAir
 
 from pydox.io.argo.facade import get_argo_data_for_in_air_method, semantic_cycle2values
@@ -141,6 +141,7 @@ def get_data_for_one_parameterset_for_in_air_method(
     params: ParamsInAir,
     iset: Optional[int] = None,
     debug_plot: bool = False,
+    uid: str = "",
 ) -> dict[str, Any] | tuple[dict[str, Any], int]:
     """Load and process all data (Argo and atmosphere) required for a single fit
 
@@ -155,6 +156,8 @@ def get_data_for_one_parameterset_for_in_air_method(
     iset: int, optional, default=None
         Untouched, this argument is simply return to keep track of this configuration set in the procedure when performed in parallel.
     debug_plot: bool, optional, default=False
+    uid: str, default = ""
+        Unique string identifier of the caller object. This is used for reporting to track who's calling this function and with which configuration.
 
     Returns
     -------
@@ -186,6 +189,7 @@ def get_data_for_one_parameterset_for_in_air_method(
 
     if debug_plot:
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 4), dpi=90, sharex=True)
+        title = "PPOX (Partial pressure of oxygen) used for fitting"
         ax.plot(this_argo.in_air["CYCLE_NUMBER"], data["PPOX1"], ".-b", label="InAir")
         ax.plot(
             this_argo.in_water["CYCLE_NUMBER"], data["PPOX2"], ".-r", label="InWater"
@@ -194,12 +198,14 @@ def get_data_for_one_parameterset_for_in_air_method(
         ax.grid()
         ax.set_xlabel("Float cycle number of the measurement")
         ax.set_ylabel("[mb]")
-        ax.set_title("PPOX (Partial pressure of oxygen) used for fitting")
+        ax.set_title(title)
         plt.legend()
         plt.tight_layout()
         plt.show()
+        fig_commit(fig, name=title, caller_uid=uid)
 
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 4), dpi=90, sharex=True)
+        title = "Ratio of 'Ref' vs 'InWater' partial pressure of oxygen"
         ax.plot(data["Delta_T_REF"], data["REF_PPOX"] / data["PPOX1"], ".-")
         ax.set_xlabel("Delta Time (Days)")
         ax.set_ylabel("REFERENCE_DATA/INAIR_ARGO_DATA [no unit]")
@@ -209,8 +215,9 @@ def get_data_for_one_parameterset_for_in_air_method(
             data["Delta_T_REF"][mask], data["REF_PPOX"][mask] / data["PPOX1"][mask], 1
         )
         ax.plot(data["Delta_T_REF"], np.polyval(poly_data, data["Delta_T_REF"]), "*-r")
-        ax.set_title("Ratio of 'Ref' vs 'InWater' partial pressure of oxygen")
+        ax.set_title(title)
         plt.show()
+        fig_commit(fig, name=title, caller_uid=uid)
 
     # Return
     if iset is None:

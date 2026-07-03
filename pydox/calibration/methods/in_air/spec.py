@@ -1,11 +1,13 @@
 from typing import Any, Self
 from collections import OrderedDict
 import logging
+from pathlib import Path
 
 import argopy as ar
 
 import matplotlib.pyplot as plt
-from twine.utils import input_func
+import pydox as do
+from pydox.reporting.utils import tmp_setup
 
 from pydox._config.utils import format_value_txt
 from pydox.utils.casting import to_list
@@ -18,6 +20,7 @@ from pydox.commodities import (
     CoefficientsInAir,
     FitResults,
 )
+from pydox.reporting.utils import fig_commit
 from pydox.core.in_air import inair_fit
 from pydox.calibration.method import Method
 from pydox.calibration.methods.in_air.utils import (
@@ -85,7 +88,7 @@ class MethodInAir(Method):
         # todo Cache input data for performances ?
         for iset, params in self.configs.items():
             data = get_data_for_one_parameterset_for_in_air_method(
-                a_float, self._cfg, params, debug_plot=debug_plot
+                a_float, self._cfg, params, debug_plot=debug_plot, uid=self.uid(iset)
             )
             input_data_for_fit[iset] = data
 
@@ -179,6 +182,7 @@ class MethodInAir(Method):
                 dpi=90,
                 sharex=True,
             )
+            suptitle = "Final results for this calibration"
             for i in range(len(input_data_for_fit)):
                 xdata = input_data_for_fit[i]["CYCLE_NUMBER"]
                 ydata = input_data_for_fit[i]["PPOX1"] * self._coefs[i].gain.value
@@ -195,14 +199,14 @@ class MethodInAir(Method):
                 plt1 = ax.plot(
                     xdata, input_data_for_fit[i]["REF_PPOX"], ".-k", label="Ref"
                 )
-                plt1 = ax.plot(
+                plt2 = ax.plot(
                     xdata,
                     input_data_for_fit[i]["PPOX1"],
                     ".-b",
                     label="Non-adjusted (in-air)",
                 )
-                plt2 = ax.plot(xdata, ydata, ".-", label="Adjusted")
-                # plt2 = ax.plot(xdata, ydata, ".-", color=cmap(i))
+                plt3 = ax.plot(xdata, ydata, ".-", label="Adjusted")
+                # plt3 = ax.plot(xdata, ydata, ".-", color=cmap(i))
 
                 ax.grid()
                 ax.set_ylabel("Partial pressure of oxygen [mb]")
@@ -211,6 +215,9 @@ class MethodInAir(Method):
                 plt.title(f"Correction : {i}")
 
             plt.xlabel("Float Cycle number of the measurement")
+            plt.suptitle(suptitle)
             plt.show()
+
+            fig_commit(fig, name=suptitle, caller_uid=self.uid())
 
         return self

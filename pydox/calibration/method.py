@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Optional
+import hashlib
+import argopy as ar
 
 from pydox._config.utils import dict_to_string
 from pydox.utils.casting import to_list
@@ -147,3 +149,14 @@ class Method(Workflow, ABC):
             [summary.append(line) for line in self._repr_coefs()]
 
         return "\n".join(summary)
+
+    def uid(self, icfg: int = None) -> str:
+        """UID for this object and configuration"""
+        m = hashlib.sha256()
+        m.update(bytes(str(self._cfg), "utf-8"))
+        configs = (
+            self.configs.keys() if icfg is None else ar.utils.checkers.to_list(icfg)
+        )
+        for c in configs:
+            m.update(bytes(str(self.configs[c]), "utf-8"))
+        return m.hexdigest()

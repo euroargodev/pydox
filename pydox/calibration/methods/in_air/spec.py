@@ -5,7 +5,6 @@ import logging
 import argopy as ar
 
 import matplotlib.pyplot as plt
-import matplotlib.lines
 from twine.utils import input_func
 
 from pydox._config.utils import format_value_txt
@@ -172,15 +171,13 @@ class MethodInAir(Method):
         self._fitted_float["CYCLE_NUMBER"] = input_cycs_for_fit
 
         if debug_plot:
-            cmap = matplotlib.colormaps.get_cmap("jet").resampled(len(input_data_for_fit))  # Dégradé bleu -> rouge
+            cmap = plt.colormaps.get_cmap("jet").resampled(len(input_data_for_fit))  # Dégradé bleu -> rouge
             fig, ax = plt.subplots(nrows=len(input_data_for_fit), ncols=1, figsize=(10, 4), dpi=90, sharex=True)
             for i in range(len(input_data_for_fit)):
                 xdata = input_data_for_fit[i]["CYCLE_NUMBER"]
-                if self._coefs[i].drift is None:
-                    ydata = input_data_for_fit[i]['PPOX1'] * self._coefs[i].gain.value
-                else:
-                    ydata = input_data_for_fit[i]['PPOX1'] * (self._coefs[i].gain.value * (
-                                    1 + self._coefs[i].drift.value / 100 * input_data_for_fit[i]['Delta_T_REF'] / 365))
+                ydata = input_data_for_fit[i]['PPOX1'] * self._coefs[i].gain.value
+                if self._coefs[i].drift is not None:
+                    ydata = ydata * (1 + self._coefs[i].drift.value / 100 * input_data_for_fit[i]['Delta_T_REF'] / 365)
 
                 plt.subplot(len(input_data_for_fit), 1, i+1)
                 plt1 = plt.plot(xdata,input_data_for_fit[i]['REF_PPOX'],'.-k')

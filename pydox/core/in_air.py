@@ -87,7 +87,6 @@ def inair_fit(params: ParamsInAir, data=Any) -> FitResult:
             ydata = REF_PPOX / PPOX1
             p0: models.Array = np.array(params.initial_gain.value)  # G
     else:
-        #raise NotImplementedError(f"params.fit_drift = {params.fit_drift}")
         if params.carryover:
             f = models.Gain_Derive_CarryOver
             xdata = [PPOX1, PPOX2, delta_T_REF]

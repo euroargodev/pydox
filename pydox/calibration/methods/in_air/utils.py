@@ -51,12 +51,11 @@ def get_argo_data(
 ) -> ArgoDataForInAir | dict[str, xr.Dataset]:
     """Load Argo float data to correct oxygen with atmospheric data (in-air method)"""
 
-    if 'CONFIG_OptodeVerticalPressureOffset_dbar' in a_float.launchconfig.parameters:
-        optode_height = a_float.launchconfig['OptodeVerticalPressureOffset_dbar']
-    else:
-        optode_height = -0.2
 
     # Read parameters from the configuration object:
+    optode_height = do.get_params("argo.optode_height", config=config)
+    if 'CONFIG_OptodeVerticalPressureOffset_dbar' in a_float.launchconfig.parameters:
+        optode_height = a_float.launchconfig['OptodeVerticalPressureOffset_dbar']
 
     min_pres: float = do.get_params(
         "argo.in_water_salinity.min_pressure", config=config
@@ -86,8 +85,6 @@ def get_argo_data(
         a_float=a_float, settings=config if params is None else params
     )
 
-    # Read misc parameters from the ArgoFloat instance:
-    # optode_height: float = a_float.launchconfig["OptodeVerticalPressureOffset_dbar"]
 
     # Call low-level/internal function:
     data = get_argo_data_for_in_air_method(
@@ -168,6 +165,7 @@ def get_data_for_one_parameterset_for_in_air_method(
         "PPOX2": None,
         "REF_PPOX": None,
         "CYCLE_NUMBER": None,
+        "Delta_T_REF": None
     }  # Collect obj for output
     # todo Consider using a dataclass instead of a dictionary
 
@@ -177,7 +175,6 @@ def get_data_for_one_parameterset_for_in_air_method(
     )
     data["PPOX1"]: np.ndarray = this_argo.in_air["PPOX_DOXY"].values
     data["PPOX2"]: np.ndarray = this_argo.in_water["PPOX_DOXY"].values
-    ##todo : CYCLE_NUMBER should come from this_argo.in_air['CYCLE_NUMBER'], not from Sprof
     data["CYCLE_NUMBER"]: list[int] = [
         int(v) for v in this_argo.in_air["CYCLE_NUMBER"].values
     ]

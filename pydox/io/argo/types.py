@@ -48,4 +48,3 @@ class ArgoDataForInAir:
     """The optode height in meters"""
 
     launch_date: np.datetime64
-

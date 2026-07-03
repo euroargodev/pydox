@@ -171,27 +171,46 @@ class MethodInAir(Method):
         self._fitted_float["CYCLE_NUMBER"] = input_cycs_for_fit
 
         if debug_plot:
-            cmap = plt.colormaps.get_cmap("jet").resampled(len(input_data_for_fit))  # Dégradé bleu -> rouge
-            fig, ax = plt.subplots(nrows=len(input_data_for_fit), ncols=1, figsize=(10, 4), dpi=90, sharex=True)
+            # cmap = plt.colormaps.get_cmap("jet").resampled(len(input_data_for_fit))
+            fig, ax = plt.subplots(
+                nrows=len(input_data_for_fit),
+                ncols=1,
+                figsize=(10, 4),
+                dpi=90,
+                sharex=True,
+            )
             for i in range(len(input_data_for_fit)):
                 xdata = input_data_for_fit[i]["CYCLE_NUMBER"]
-                ydata = input_data_for_fit[i]['PPOX1'] * self._coefs[i].gain.value
+                ydata = input_data_for_fit[i]["PPOX1"] * self._coefs[i].gain.value
                 if self._coefs[i].drift is not None:
-                    ydata = ydata * (1 + self._coefs[i].drift.value / 100 * input_data_for_fit[i]['Delta_T_REF'] / 365)
+                    ydata = ydata * (
+                        1
+                        + self._coefs[i].drift.value
+                        / 100
+                        * input_data_for_fit[i]["Delta_T_REF"]
+                        / 365
+                    )
 
-                plt.subplot(len(input_data_for_fit), 1, i+1)
-                plt1 = plt.plot(xdata,input_data_for_fit[i]['REF_PPOX'],'.-k')
-                plt2 = plt.plot(xdata,ydata, '.-',color=cmap(i))
+                ax = plt.subplot(len(input_data_for_fit), 1, i + 1)
+                plt1 = ax.plot(
+                    xdata, input_data_for_fit[i]["REF_PPOX"], ".-k", label="Ref"
+                )
+                plt1 = ax.plot(
+                    xdata,
+                    input_data_for_fit[i]["PPOX1"],
+                    ".-b",
+                    label="Non-adjusted (in-air)",
+                )
+                plt2 = ax.plot(xdata, ydata, ".-", label="Adjusted")
+                # plt2 = ax.plot(xdata, ydata, ".-", color=cmap(i))
 
-                plt.grid()
-                #plt.xlabel('Float Cycle number of the measurement')
-                plt.ylabel('Partial pressure of oxygen (millibar)')
-                plt.legend([plt1[0],plt2[0]],['REFERENCE','Adjusted ARGO PPOX'])
+                ax.grid()
+                ax.set_ylabel("Partial pressure of oxygen [mb]")
+                plt.legend()  # ([plt1[0], plt2[0]], ["Ref", "Adjusted ARGO PPOX"])
                 plt.tight_layout()
-                #plt.title(self.configs[i])
-                plt.title(f'Correction : {i}')
+                plt.title(f"Correction : {i}")
 
-            plt.xlabel('Float Cycle number of the measurement')
+            plt.xlabel("Float Cycle number of the measurement")
             plt.show()
 
         return self

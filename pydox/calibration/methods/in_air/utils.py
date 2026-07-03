@@ -51,11 +51,10 @@ def get_argo_data(
 ) -> ArgoDataForInAir | dict[str, xr.Dataset]:
     """Load Argo float data to correct oxygen with atmospheric data (in-air method)"""
 
-
     # Read parameters from the configuration object:
     optode_height = do.get_params("argo.optode_height", config=config)
-    if 'CONFIG_OptodeVerticalPressureOffset_dbar' in a_float.launchconfig.parameters:
-        optode_height = a_float.launchconfig['OptodeVerticalPressureOffset_dbar']
+    if "CONFIG_OptodeVerticalPressureOffset_dbar" in a_float.launchconfig.parameters:
+        optode_height = a_float.launchconfig["OptodeVerticalPressureOffset_dbar"]
 
     min_pres: float = do.get_params(
         "argo.in_water_salinity.min_pressure", config=config
@@ -63,8 +62,8 @@ def get_argo_data(
     max_pres: float = do.get_params(
         "argo.in_water_salinity.max_pressure", config=config
     )
-    in_air_codes: list[int] = do.get_params("argo.codes.in_air", config=config)
-    in_water_codes: list[int] = do.get_params("argo.codes.in_water", config=config)
+    in_air_codes: tuple[int] = do.get_params("argo.codes.in_air", config=config)
+    in_water_codes: tuple[int] = do.get_params("argo.codes.in_water", config=config)
     which_psal: int = do.get_params("argo.use", config=config)
 
     # Pre-load Argo data
@@ -81,25 +80,26 @@ def get_argo_data(
     Rtraj: xr.Dataset = a_float.dataset("Rtraj")
 
     # Read other parameters from the ParameterSet object:
-    cycles: list[int] = semantic_cycle2values(
-        a_float=a_float, settings=config if params is None else params
+    cycles: tuple[int] = tuple(
+        semantic_cycle2values(
+            a_float=a_float, settings=config if params is None else params
+        )
     )
-
 
     # Call low-level/internal function:
     data = get_argo_data_for_in_air_method(
         min_pres=min_pres,
         max_pres=max_pres,
-        in_air_codes=tuple(in_air_codes),
-        in_water_codes=tuple(in_water_codes),
+        in_air_codes=in_air_codes,
+        in_water_codes=in_water_codes,
         which_psal=which_psal,
-        cycles=tuple(cycles),
+        cycles=cycles,
         Sprof=Sprof,
         Rtraj=Rtraj,
         debug_plot=debug_plot,
     )
     data.optode_height = optode_height
-    data.launch_date = a_float.dataset('meta')['LAUNCH_DATE'].values
+    data.launch_date = a_float.dataset("meta")["LAUNCH_DATE"].values
 
     return data
 
@@ -165,20 +165,20 @@ def get_data_for_one_parameterset_for_in_air_method(
         "PPOX2": None,
         "REF_PPOX": None,
         "CYCLE_NUMBER": None,
-        "Delta_T_REF": None
+        "Delta_T_REF": None,
     }  # Collect obj for output
     # todo Consider using a dataclass instead of a dictionary
 
     # Load Argo float data:
-    this_argo = get_argo_data(
-        a_float, config, params, debug_plot=debug_plot
-    )
+    this_argo = get_argo_data(a_float, config, params, debug_plot=debug_plot)
     data["PPOX1"]: np.ndarray = this_argo.in_air["PPOX_DOXY"].values
     data["PPOX2"]: np.ndarray = this_argo.in_water["PPOX_DOXY"].values
     data["CYCLE_NUMBER"]: list[int] = [
         int(v) for v in this_argo.in_air["CYCLE_NUMBER"].values
     ]
-    data['Delta_T_REF']: np.ndarray = (this_argo.in_air['JULD']-this_argo.launch_date)/np.timedelta64(1, "D")
+    data["Delta_T_REF"]: np.ndarray = (
+        this_argo.in_air["JULD"] - this_argo.launch_date
+    ) / np.timedelta64(1, "D")
 
     # Load Atmospheric data:
     this_atm = get_atmospheric_data(this_argo, config, params, debug_plot=debug_plot)
@@ -186,27 +186,31 @@ def get_data_for_one_parameterset_for_in_air_method(
 
     if debug_plot:
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 4), dpi=90, sharex=True)
-        plt.plot(this_argo.in_air['CYCLE_NUMBER'],data['PPOX1'],'.-b',label='InAir')
-        plt.plot(this_argo.in_water['CYCLE_NUMBER'],data['PPOX2'],'.-r',label='InWater')
-        plt.plot(this_argo.in_air['CYCLE_NUMBER'],data['REF_PPOX'],'.-k',label='Ref')
-        plt.grid()
-        plt.xlabel('Float cycle number of the measurement')
-        plt.ylabel('Partial pressure of oxygen (millibar)')
+        ax.plot(this_argo.in_air["CYCLE_NUMBER"], data["PPOX1"], ".-b", label="InAir")
+        ax.plot(
+            this_argo.in_water["CYCLE_NUMBER"], data["PPOX2"], ".-r", label="InWater"
+        )
+        ax.plot(this_argo.in_air["CYCLE_NUMBER"], data["REF_PPOX"], ".-k", label="Ref")
+        ax.grid()
+        ax.set_xlabel("Float cycle number of the measurement")
+        ax.set_ylabel("[mb]")
+        ax.set_title("PPOX (Partial pressure of oxygen) used for fitting")
         plt.legend()
-        plt.title("PPOX used for fitting")
         plt.tight_layout()
         plt.show()
+
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 4), dpi=90, sharex=True)
-        plt.plot(data['Delta_T_REF'],data['REF_PPOX']/data['PPOX1'],'.-')
-        plt.xlabel('Delta Time (Days)')
-        plt.ylabel(' partial pressure of oxygen  ratio (millibar) : REFERENCE_DATA divided by  ARGO_DATA')
-        plt.grid()
-        mask = np.isfinite(data['REF_PPOX']) & np.isfinite(data['PPOX1'])
-        poly_data = np.polyfit(data['Delta_T_REF'][mask], data['REF_PPOX'][mask] / data['PPOX1'][mask], 1)
-        ax.plot(data['Delta_T_REF'], np.polyval(poly_data, data['Delta_T_REF']),'*-r')
-
+        ax.plot(data["Delta_T_REF"], data["REF_PPOX"] / data["PPOX1"], ".-")
+        ax.set_xlabel("Delta Time (Days)")
+        ax.set_ylabel("REFERENCE_DATA/INAIR_ARGO_DATA [no unit]")
+        ax.grid()
+        mask = np.isfinite(data["REF_PPOX"]) & np.isfinite(data["PPOX1"])
+        poly_data = np.polyfit(
+            data["Delta_T_REF"][mask], data["REF_PPOX"][mask] / data["PPOX1"][mask], 1
+        )
+        ax.plot(data["Delta_T_REF"], np.polyval(poly_data, data["Delta_T_REF"]), "*-r")
+        ax.set_title("Ratio of 'Ref' vs 'InWater' partial pressure of oxygen")
         plt.show()
-
 
     # Return
     if iset is None:

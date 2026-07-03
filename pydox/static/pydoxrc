@@ -27,7 +27,6 @@ argo:
   src: https://data-argo.ifremer.fr  # Anything :class:`argopy.ArgoFloat` argument 'host' can support
 #  src: ftp
   use: 3  # 1: raw, 2: adjusted, 3: adjusted if available else raw
-  optode_height : -0.2 # [m] Default value if CONFIG_OptodeVerticalPressureOffset_dbar not available.
   qcflags: # Which QC to use data for
     pres: [1, 2, 8]
     temp: [1, 2, 8]
@@ -41,6 +40,7 @@ argo:
   codes:
     in_air: [699, 711, 799] # Argo Code associated to InAir Data in the Rtraj Argo file
     in_water: [690, 710] # Argo Code associated to InWater Data in the Rtraj Argo file
+  optode_height : -0.2 # [m] Default value to use if the CONFIG_OptodeVerticalPressureOffset_dbar parameter is not available
 
 # ============================================= Calibration Methods Parameters
 calibration_methods:

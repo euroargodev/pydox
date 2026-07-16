@@ -1,5 +1,7 @@
 from pathlib import Path
 
+# import tempfile
+
 # Import facades for configuration management:
 from pydox._config.config import (
     get_params,
@@ -12,7 +14,7 @@ from pydox._config.config import (
 from pydox._config.config import rcParams as params
 
 from pydox.calibration.facade import Calibration, CalibrationSet
-from pydox.commodities import Figure
+from pydox.commodities import PydoxFigure
 
 #
 from importlib.metadata import version as _version
@@ -24,10 +26,12 @@ except Exception:
     # Disable minimum version checks on downstream libraries.
     __version__ = "9999"
 
-# Define module level placeholder for figures
-__figures: list[Figure] = []
+# Define module level placeholder for the list of figure objects:
+__figures: list[PydoxFigure] = []
 
+# Auto-creation of output folders:
 root = Path(get_params("output.root"))
 root.mkdir(parents=True, exist_ok=True)
+
 tmp_root = root.joinpath("tmp")
 tmp_root.mkdir(parents=True, exist_ok=True)

@@ -48,6 +48,7 @@ def get_argo_data(
     config: Config,
     params: Optional[ParameterSet] = None,
     debug_plot: bool = False,
+    uid: Optional[str] = None,
 ) -> ArgoDataForInAir | dict[str, xr.Dataset]:
     """Load Argo float data to correct oxygen with atmospheric data (in-air method)"""
 
@@ -80,14 +81,12 @@ def get_argo_data(
     Rtraj: xr.Dataset = a_float.dataset("Rtraj")
 
     # Read other parameters from the ParameterSet object:
-    cycles: tuple[int] = tuple(
-        semantic_cycle2values(
-            a_float=a_float, settings=config if params is None else params
-        )
+    cycles: tuple[int] = semantic_cycle2values(
+        a_float=a_float, settings=config if params is None else params
     )
 
     # Call low-level/internal function:
-    data = get_argo_data_for_in_air_method(
+    data: ArgoDataForInAir = get_argo_data_for_in_air_method(
         min_pres=min_pres,
         max_pres=max_pres,
         in_air_codes=in_air_codes,
@@ -97,6 +96,7 @@ def get_argo_data(
         Sprof=Sprof,
         Rtraj=Rtraj,
         debug_plot=debug_plot,
+        uid=uid,
     )
     data.optode_height = optode_height
     data.launch_date = a_float.dataset("meta")["LAUNCH_DATE"].values
@@ -109,6 +109,7 @@ def get_atmospheric_data(
     config: Config,
     params: Optional[ParamsInAir] = None,
     debug_plot: bool = False,
+    uid: Optional[str] = None,
 ) -> dict[str, Any]:
     """Load reference data to correct oxygen with atmospheric data (in-air method)"""
 
@@ -141,7 +142,7 @@ def get_data_for_one_parameterset_for_in_air_method(
     params: ParamsInAir,
     iset: Optional[int] = None,
     debug_plot: bool = False,
-    uid: str = "",
+    uid: Optional[str] = None,
 ) -> dict[str, Any] | tuple[dict[str, Any], int]:
     """Load and process all data (Argo and atmosphere) required for a single fit
 
@@ -156,8 +157,8 @@ def get_data_for_one_parameterset_for_in_air_method(
     iset: int, optional, default=None
         Untouched, this argument is simply return to keep track of this configuration set in the procedure when performed in parallel.
     debug_plot: bool, optional, default=False
-    uid: str, default = ""
-        Unique string identifier of the caller object. This is used for reporting to track who's calling this function and with which configuration.
+    uid: str, optional, default=None
+        Unique string identifier of the caller object. This is used for reports, to track the configuration set calling this function.
 
     Returns
     -------
@@ -173,7 +174,7 @@ def get_data_for_one_parameterset_for_in_air_method(
     # todo Consider using a dataclass instead of a dictionary
 
     # Load Argo float data:
-    this_argo = get_argo_data(a_float, config, params, debug_plot=debug_plot)
+    this_argo = get_argo_data(a_float, config, params, debug_plot=debug_plot, uid=uid)
     data["PPOX1"]: np.ndarray = this_argo.in_air["PPOX_DOXY"].values
     data["PPOX2"]: np.ndarray = this_argo.in_water["PPOX_DOXY"].values
     data["CYCLE_NUMBER"]: list[int] = [
@@ -184,7 +185,9 @@ def get_data_for_one_parameterset_for_in_air_method(
     ) / np.timedelta64(1, "D")
 
     # Load Atmospheric data:
-    this_atm = get_atmospheric_data(this_argo, config, params, debug_plot=debug_plot)
+    this_atm = get_atmospheric_data(
+        this_argo, config, params, debug_plot=debug_plot, uid=uid
+    )
     data["REF_PPOX"]: np.ndarray = this_atm["REF_PPOX"]
 
     if debug_plot:
@@ -201,8 +204,7 @@ def get_data_for_one_parameterset_for_in_air_method(
         ax.set_title(title)
         plt.legend()
         plt.tight_layout()
-        plt.show()
-        fig_commit(fig, name=title, caller_uid=uid)
+        fig_commit(fig, name=title, config_uid=uid)
 
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 4), dpi=90, sharex=True)
         title = "Ratio of 'Ref' vs 'InWater' partial pressure of oxygen"
@@ -216,8 +218,7 @@ def get_data_for_one_parameterset_for_in_air_method(
         )
         ax.plot(data["Delta_T_REF"], np.polyval(poly_data, data["Delta_T_REF"]), "*-r")
         ax.set_title(title)
-        plt.show()
-        fig_commit(fig, name=title, caller_uid=uid)
+        fig_commit(fig, name=title, config_uid=uid)
 
     # Return
     if iset is None:

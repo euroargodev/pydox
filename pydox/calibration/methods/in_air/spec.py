@@ -1,13 +1,10 @@
 from typing import Any, Self
 from collections import OrderedDict
 import logging
-from pathlib import Path
 
 import argopy as ar
 
 import matplotlib.pyplot as plt
-import pydox as do
-from pydox.reporting.utils import tmp_setup
 
 from pydox._config.utils import format_value_txt
 from pydox.utils.casting import to_list
@@ -216,8 +213,6 @@ class MethodInAir(Method):
 
             plt.xlabel("Float Cycle number of the measurement")
             plt.suptitle(suptitle)
-            plt.show()
-
-            fig_commit(fig, name=suptitle, caller_uid=self.uid())
+            fig_commit(fig, name=suptitle, config_uid=self.uid())
 
         return self

@@ -17,6 +17,7 @@ https://medium.com/the-pythonworld/why-i-stopped-using-python-dataclass-everywhe
 """
 
 import hashlib
+from pathlib import Path
 from dataclasses import dataclass, field, asdict
 from typing import (
     Any,
@@ -29,6 +30,7 @@ from typing import (
     Callable,
 )
 import matplotlib as mpl
+import pickle
 
 
 @dataclass(frozen=True)
@@ -253,17 +255,25 @@ FitResults: TypeAlias = OrderedDict[int, FitResult]
 
 
 @dataclass
-class Figure:
+class PydoxFigure:
 
     fig: mpl.figure.Figure
     name: str
-    axes: mpl.axes._axes.Axes | list[mpl.axes._axes.Axes] = None
+    config_uid: str = None
     caller: Callable | str = None
+    pickle: Path = None
+    # axes: mpl.axes._axes.Axes | list[mpl.axes._axes.Axes] = None
 
     @property
-    def uid(self):
+    def uid(self) -> str:
         m = hashlib.sha256()
         m.update(bytes(str(self.name), "utf-8"))
+        if self.config_uid is not None:
+            m.update(bytes(str(self.config_uid), "utf-8"))
         if self.caller is not None:
             m.update(bytes(str(self.caller), "utf-8"))
         return m.hexdigest()
+
+    def reopen(self):
+        with open(self.pickle, "rb") as fid:
+            return pickle.load(fid)

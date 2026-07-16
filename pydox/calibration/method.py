@@ -1,11 +1,14 @@
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any, Optional, List
+from collections import OrderedDict
 import hashlib
 import argopy as ar
 
+from pydox.commodities import PydoxFigure
 from pydox._config.utils import dict_to_string
 from pydox.utils.casting import to_list
 from pydox.calibration.spec import Workflow
+from pydox.reporting.utils import configs_figure_list
 
 
 class Method(Workflow, ABC):
@@ -160,3 +163,7 @@ class Method(Workflow, ABC):
         for c in configs:
             m.update(bytes(str(self.configs[c]), "utf-8"))
         return m.hexdigest()
+
+    @property
+    def configs_figures(self):
+        return configs_figure_list(self)

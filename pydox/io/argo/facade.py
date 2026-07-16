@@ -6,7 +6,7 @@ These functions are expected to receive low-level setting values (no high-level 
 
 import logging
 from copy import deepcopy
-from typing import Literal
+from typing import Literal, Optional
 
 import numpy as np
 import xarray as xr
@@ -25,7 +25,10 @@ from pydox.io.argo.utils import (
     code_select,
     traj_groupby_cycles,
     psal_rtraj_substitute_sprof,
+    get_uid_for_in_air_method_parameters,
 )
+from pydox.reporting.utils import fig_commit
+
 
 log = logging.getLogger("pydox.io.argo.facade")
 
@@ -40,6 +43,7 @@ def get_argo_data_for_in_air_method(
     Sprof: xr.Dataset,
     Rtraj: xr.Dataset,
     debug_plot: bool = False,
+    uid: Optional[str] = None,
 ) -> ArgoDataForInAir | dict[str, xr.Dataset]:
     """Load Argo float data to calibrate oxygen with atmospheric data (in-air method)
 
@@ -62,6 +66,20 @@ def get_argo_data_for_in_air_method(
     dict[str, xr.Dataset | list[int]]
         A dictionary
     """
+    # Get UID for this set of parameters:
+    uid_suff = get_uid_for_in_air_method_parameters(
+        min_pres=min_pres,
+        max_pres=max_pres,
+        in_air_codes=in_air_codes,
+        in_water_codes=in_water_codes,
+        which_psal=which_psal,
+        cycles=cycles,
+        Sprof=Sprof,
+        Rtraj=Rtraj,
+    )
+    uid = f"{uid}-{uid_suff}" if uid is not None else uid_suff
+    # Appending the uid_suff will allow to identify similar plots created with higher level different configs.
+
     ############################################################################################
     # Pre-process raw GDAC xr.DataSet objects
     # We sub-select only variables that we really need to work with:
@@ -77,7 +95,7 @@ def get_argo_data_for_in_air_method(
     ############################################################################################
     # Get T,S near surface from Sprof
     sprof_near_surf = get_ts_near_surface(
-        Sprof, min_pres, max_pres, debug_plot=debug_plot
+        Sprof, min_pres, max_pres, debug_plot=debug_plot, uid=uid
     )
 
     ############################################################################################
@@ -109,6 +127,7 @@ def get_argo_data_for_in_air_method(
     )
 
     if debug_plot:
+        suptitle = "Rtraj data after code selection and cycle matching"
         v2plot = ["PSAL", "TEMP", "PPOX_DOXY"]
         fig, ax = plt.subplots(
             nrows=len(v2plot), ncols=1, figsize=(10, 10), dpi=90, sharex=True
@@ -120,9 +139,9 @@ def get_argo_data_for_in_air_method(
             ax[ii].legend()
             ax[ii].grid()
             ax[ii].set_title(f"{v}")
-        plt.suptitle(f"Rtraj data after code selection and cycle matching")
+        plt.suptitle(suptitle)
         plt.tight_layout()
-        plt.show()
+        fig_commit(fig, name=suptitle, config_uid=uid)
 
     #############
     # Then we reduce measurements by cycle numbers :
@@ -140,6 +159,7 @@ def get_argo_data_for_in_air_method(
                 )
 
     if debug_plot:
+        suptitle = "In-air and in-water Rtraj data after median-per-cycle grouping"
         v2plot = ["PSAL", "TEMP", "PPOX_DOXY"]
         fig, ax = plt.subplots(
             nrows=len(v2plot), ncols=1, figsize=(10, 10), dpi=90, sharex=True
@@ -151,12 +171,13 @@ def get_argo_data_for_in_air_method(
             ax[ii].legend()
             ax[ii].grid()
             ax[ii].set_title(f"{v}")
-        plt.suptitle(f"In-air and in-water Rtraj data after median-per-cycle grouping")
+        plt.suptitle(suptitle)
         plt.tight_layout()
-        plt.show()
+        fig_commit(fig, name=suptitle, config_uid=uid)
 
     if debug_plot:
         # Super-impose Sprof data:
+        suptitle = "Sprof vs in-air and in-water Rtraj data"
         v2plot = ["PSAL", "TEMP", "PPOX_DOXY"]
         fig, ax = plt.subplots(
             nrows=len(v2plot), ncols=1, figsize=(10, 10), dpi=90, sharex=True
@@ -190,9 +211,9 @@ def get_argo_data_for_in_air_method(
             ax[ii].legend()
             ax[ii].grid()
             ax[ii].set_title(f"{v}")
-        plt.suptitle(f"Sprof vs in-air and in-water Rtraj data")
+        plt.suptitle(suptitle)
         plt.tight_layout()
-        plt.show()
+        fig_commit(fig, name=suptitle, config_uid=uid)
 
     #############
     # Then we replace Rtraj PSAL data with Sprof PSAL
@@ -221,6 +242,7 @@ def get_argo_data_for_in_air_method(
         )
 
     if debug_plot:
+        suptitle = "Sprof vs in-air and in-water Rtraj data after substitution"
         v2plot = ["PSAL", "TEMP"]
         fig, ax = plt.subplots(
             nrows=len(v2plot), ncols=1, figsize=(10, 10), dpi=90, sharex=True
@@ -250,9 +272,9 @@ def get_argo_data_for_in_air_method(
             ax[ii].legend()
             ax[ii].grid()
             ax[ii].set_title(f"{v}")
-        plt.suptitle(f"Sprof vs in-air and in-water Rtraj data after substitution")
+        plt.suptitle(suptitle)
         plt.tight_layout()
-        plt.show()
+        fig_commit(fig, name=suptitle, config_uid=uid)
 
     #############
     # Then we check for diff in temperature between Rtraj and Sprof:
@@ -322,7 +344,7 @@ def semantic_cycle2values(
     a_float: ar.ArgoFloat,
     settings: Config | ParameterSet,
     dsname: Literal["Sprof"] = "Sprof",
-) -> list[int]:
+) -> tuple[int, ...]:
     """Convert a cycle range to a list of cycle numbers, handle semantic like 'first' and 'last'
 
     Parameters
@@ -336,7 +358,7 @@ def semantic_cycle2values(
 
     Returns
     -------
-    list[int]
+    tuple[int]
     """
     ds: xr.Dataset = a_float.dataset(dsname)
     if "CYCLE_NUMBER" not in ds.data_vars:
@@ -379,4 +401,4 @@ def semantic_cycle2values(
 
     values = ds["CYCLE_NUMBER"].values
     cycles = values[np.logical_and(values >= cycle_first, values <= cycle_last)]
-    return [int(c) for c in cycles]
+    return tuple([int(c) for c in cycles])

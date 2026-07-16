@@ -13,6 +13,47 @@
 📚 The user API design proposal (i.e. how **pydox** shall be used by DMQC operators) is available here: https://archimer-intranet.ifremer.fr/doc/01015/112667
 
 
+## Usage
+
+This is the current state of the **pydox** API and expected use case:
+
+```python
+import pydox as do
+import argopy as ar
+
+# Print the configuration:
+do.config_print()
+
+# Connect to an Argo float to process:
+a_float = ar.ArgoFloat(6902882, cache=True)
+print(a_float)
+
+# Setup a calibration:
+c = do.Calibration('in_air')
+# Set generic parameters:
+c.set_params('calibration_parameters', cycles=[1, 100])
+c.set_params('calibration_parameters', fit_drift=[False, True])
+# Set in-sir method specific parameters:
+c.set_params('calibration_methods.in_air', carryover=[False, True])
+
+print(c)
+
+# Compute calibrations coefficients for all possible configurations:
+c.fit(a_float)
+# c.fit(a_float, debug_plot=True) # Can also display a bunch of figures
+
+# Access attributes with configurations and corresponding coefficients:
+c.configs
+c.coefs
+```
+
+### Tips
+
+```python
+# Access to private input data: 
+input_data_for_fit = c._load_input_data(a_float)
+```
+
 ## Development of the library
 
 ### Unit tests

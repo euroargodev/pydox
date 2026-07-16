@@ -156,7 +156,7 @@ def inair_fit(params: ParamsInAir, data=Any) -> FitResult:
     # coefs = CoefficientsInAir(gain=Data(12., 3.), carryover=...)
 
     fit_data: dict[str, Any] = {
-        "R2": float(np.random.random_sample(1)[0]),
+        "R2": None,
         "uid": params.uid,
         "initial gain": params.initial_gain.value,
         "n_cycles": len(PPOX1),

@@ -177,7 +177,7 @@ def get_data_for_one_parameterset_for_in_air_method(
         int(v) for v in this_argo.in_air["CYCLE_NUMBER"].values
     ]
     data["Delta_T_REF"]: np.ndarray = (
-        this_argo.in_air["JULD"] - this_argo.launch_date
+        this_argo.in_air["JULD"].values - this_argo.launch_date
     ) / np.timedelta64(1, "D")
 
     # Load Atmospheric data:

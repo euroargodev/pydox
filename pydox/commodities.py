@@ -19,8 +19,10 @@ https://medium.com/the-pythonworld/why-i-stopped-using-python-dataclass-everywhe
 import hashlib
 from pathlib import Path
 from dataclasses import dataclass, field, asdict
+import numpy as np
 from typing import (
     Any,
+    Union,
     Dict,
     Optional,
     TypeAlias,
@@ -33,16 +35,21 @@ import matplotlib as mpl
 import pickle
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=1)
 class Data:
-    """A placeholder for a numerical item: store a value and an error"""
+    """A placeholder for a numerical item: store a value and an error, as float32"""
 
-    value: float
-    error: float = field(default_factory=lambda: 0.0)
+    value: Union[float, int, np.number]
+    error: Union[float, int, np.number] = field(default_factory=lambda: 0.0)
+
+    def __post_init__(self):
+        # Re-enforce data types
+        object.__setattr__(self, "value", np.float32(self.value))
+        object.__setattr__(self, "error", np.float32(self.error))
 
     def __str__(self) -> str:
-        # Shorter version for some prints
-        return f"{self.value} (err={self.error})"
+        # The machine precision for float32 is about 7 digits
+        return f"{self.value:.7} (err={self.error:.7})"
 
 
 @runtime_checkable

@@ -18,7 +18,7 @@ from pydox.commodities import (
     FitResults,
 )
 from pydox.reporting.utils import fig_commit
-from pydox.core.in_air import inair_fit
+from pydox.core import in_air
 from pydox.calibration.method import Method
 from pydox.calibration.methods.in_air.utils import (
     get_data_for_one_parameterset_for_in_air_method,
@@ -156,7 +156,7 @@ class MethodInAir(Method):
             (iset, params, input_data_for_fit[iset])
             for iset, params in self.configs.items()
         ]
-        results: FitResults = compute_fits(items, inair_fit, method=method)
+        results: FitResults = compute_fits(items, in_air.fit, method=method)
 
         ############### Finalize
         # Gather more detailed results in dedicated placeholders of the instance:
@@ -223,6 +223,8 @@ class MethodInAir(Method):
 
             plt.xlabel("Float Cycle number of the measurement")
             plt.suptitle(suptitle)
-            fig_commit(fig, name=suptitle, config_uid=self.uid())
+            fig_commit(
+                fig, name=suptitle, category="fit_results", config_uid=self.uid()
+            )
 
         return self

@@ -12,7 +12,7 @@ from pydox.commodities import (
 from pydox.core import models
 
 
-def inair_fit(params: ParamsInAir, data=Any) -> FitResult:
+def fit(params: ParamsInAir, data=Any) -> FitResult:
     """Generic in-air calibration computation method
 
     This method is low level and should not be called by users.

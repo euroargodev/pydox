@@ -19,6 +19,9 @@ def fig_commit(
     The :mpl:`Figure` object is automatically pickled (in a tmp folder) for later re-open or re-use in the session.
     The :mpl:`Figure` object is also closed upon commit.
     """
+    if name.strip() == "" or name is None:
+        raise ValueError("A figure must have a name to be commited")
+
     new_f = PydoxFigure(fig=fig, name=name, config_uid=config_uid)
 
     found = False
@@ -27,7 +30,7 @@ def fig_commit(
             found = True
 
     if not found:
-        dest = do.tmp_root if dest is None else Path(dest)
+        dest = do.tmp_root() if dest is None else Path(dest)
         dest.mkdir(parents=True, exist_ok=True)
         pkl = dest.joinpath(f"{new_f.uid}.pkl")
         with open(pkl, "wb") as fid:
@@ -47,29 +50,3 @@ def configs_figure_list(obj) -> OrderedDict[int, List[PydoxFigure]]:
             if f.config_uid.startswith(obj.uid(iset)):
                 results[iset].append(f)
     return results
-
-
-def tmp_setup(root: Path | str, wmo: Optional[int | str] = None) -> Path:
-    """
-
-    tmp_setup(do.get_params('output.root'), af.WMO)
-
-    Parameters
-    ----------
-    af
-    cfg
-
-    Returns
-    -------
-
-    """
-    if wmo is None:
-        root = Path(root)
-    else:
-        root = Path(root).joinpath(f"{wmo}")
-    root.mkdir(parents=True, exist_ok=True)
-
-    tmp_root = root.joinpath("tmp")
-    tmp_root.mkdir(parents=True, exist_ok=True)
-
-    return tmp_root

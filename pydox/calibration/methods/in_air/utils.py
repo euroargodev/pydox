@@ -191,13 +191,25 @@ def get_data_for_one_parameterset_for_in_air_method(
     data["REF_PPOX"]: np.ndarray = this_atm["REF_PPOX"]
 
     if debug_plot:
+        refname = do.get_params("calibration_methods.in_air.dataset", config=config)
+        title = "Partial pressure of oxygen (PPOX) used for fitting"
+
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 4), dpi=90, sharex=True)
-        title = "PPOX (Partial pressure of oxygen) used for fitting"
-        ax.plot(this_argo.in_air["CYCLE_NUMBER"], data["PPOX1"], ".-b", label="InAir")
         ax.plot(
-            this_argo.in_water["CYCLE_NUMBER"], data["PPOX2"], ".-r", label="InWater"
+            this_argo.in_air["CYCLE_NUMBER"], data["PPOX1"], ".-b", label="Float In-Air"
         )
-        ax.plot(this_argo.in_air["CYCLE_NUMBER"], data["REF_PPOX"], ".-k", label="Ref")
+        ax.plot(
+            this_argo.in_water["CYCLE_NUMBER"],
+            data["PPOX2"],
+            ".-r",
+            label="Float In-Water",
+        )
+        ax.plot(
+            this_argo.in_air["CYCLE_NUMBER"],
+            data["REF_PPOX"],
+            ".-k",
+            label=f"Ref-{refname}",
+        )
         ax.grid()
         ax.set_xlabel("Float cycle number of the measurement")
         ax.set_ylabel("[mb]")
@@ -206,17 +218,26 @@ def get_data_for_one_parameterset_for_in_air_method(
         plt.tight_layout()
         fig_commit(fig, name=title, config_uid=uid)
 
+    if debug_plot:
+        refname = do.get_params("calibration_methods.in_air.dataset", config=config)
+        title = f"Ratio of 'Ref-{refname}' vs 'In-Air' partial pressure of oxygen"
+
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 4), dpi=90, sharex=True)
-        title = "Ratio of 'Ref' vs 'InWater' partial pressure of oxygen"
         ax.plot(data["Delta_T_REF"], data["REF_PPOX"] / data["PPOX1"], ".-")
-        ax.set_xlabel("Delta Time (Days)")
-        ax.set_ylabel("REFERENCE_DATA/INAIR_ARGO_DATA [no unit]")
+
+        ax.set_xlabel("Delta Time [Days]")
+        ax.set_ylabel("[no unit]")
         ax.grid()
         mask = np.isfinite(data["REF_PPOX"]) & np.isfinite(data["PPOX1"])
         poly_data = np.polyfit(
             data["Delta_T_REF"][mask], data["REF_PPOX"][mask] / data["PPOX1"][mask], 1
         )
-        ax.plot(data["Delta_T_REF"], np.polyval(poly_data, data["Delta_T_REF"]), "*-r")
+        ax.plot(
+            data["Delta_T_REF"],
+            np.polyval(poly_data, data["Delta_T_REF"]),
+            "*-r",
+            label="Linear fit",
+        )
         ax.set_title(title)
         fig_commit(fig, name=title, config_uid=uid)
 

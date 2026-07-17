@@ -258,14 +258,15 @@ def list_methods() -> list[str]:
     return methods
 
 
-def tmp_root(config: Optional[object] = None, new: bool = False) -> Path:
+def tmp_root(new: bool = False, config: Optional[object] = None) -> Path:
     """Return a temporary folder
 
-    The temporary folder is named after the exact creation datetime stamp, hence following the general format:
+    The temporary folder is named after the exact creation datetime stamp, following the general format:
 
     <output.root>/tmp/<%Y%m%d%H%M%S%f>
 
     Eg:
+
     If ``output.root`` is set to: ``/Users/johndoe/pydox``
     then the temporary folder is something like: ``/Users/johndoe/pydox/tmp/20260717100903168376``.
 
@@ -277,11 +278,11 @@ def tmp_root(config: Optional[object] = None, new: bool = False) -> Path:
 
     Parameters
     ----------
+    new: bool, default = False
+        Force create a new temporary folder on each call.
     config: Config, default = None
         The configuration object to read the ``output.root`` parameter from.
         If set to None (default), we use the runtime configuration object.
-    new: bool, default = False
-        Force create a new temporary folder on each call.
 
     Returns
     -------
@@ -315,6 +316,7 @@ def tmp_root(config: Optional[object] = None, new: bool = False) -> Path:
         # Register folder in the configuration, as a private parameter
         do.set_params("output._tmp", str(tmp), config=config)
 
+    # Read the corresponding parameter:
     tmp = Path(do.get_params("output._tmp", config))
 
     # Make sure the folder exists even if it was deleted between the creation time and call to this function:

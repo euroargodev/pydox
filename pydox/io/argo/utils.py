@@ -1,4 +1,4 @@
-from typing import Optional, Literal
+from typing import Optional, Literal, Callable
 import logging
 from copy import deepcopy
 import hashlib
@@ -372,6 +372,7 @@ def get_ts_near_surface(
     ds_sprof: MultiProfData,
     min_pres: float,
     max_pres: float,
+    pplot: Callable = None,
     debug_plot: bool = False,
     uid: Optional[str] = None,
 ) -> dict[str, xr.DataArray]:
@@ -419,15 +420,23 @@ def get_ts_near_surface(
 
     if debug_plot:
         title = "Near-surface salinity from Sprof"
-        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 4), dpi=90, sharex=True)
+        fig, ax = plt.subplots(
+            nrows=1, ncols=1, figsize=(10, 4), dpi=pplot().dpi, sharex=True
+        )
         markers = ["s", "*", "."]
         for ii, ds in enumerate([spsal, spsal_adj, spsal_merged]):
             ds.plot.line("-", linewidth=0.5, ax=ax, label=ds.name, marker=markers[ii])
-        plt.grid()
-        plt.legend()
-        plt.title(title)
+        ax.grid()
+        ax.legend()
+        ax.set_title(title)
         plt.tight_layout()
-        fig_commit(fig, name=title, config_uid=uid)
+        fig_commit(
+            fig,
+            name=title,
+            watermark=pplot().watermark,
+            category="debug",
+            config_uid=pplot().uid,
+        )
 
     # Then get values for temperature:
     stemp = get_temp_in_pres_range(ds_sprof, min_pres, max_pres, "TEMP")
@@ -436,11 +445,17 @@ def get_ts_near_surface(
         title = "Near-surface temperature from Sprof"
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 4), dpi=90, sharex=True)
         stemp.plot.line("s-", linewidth=0.5, ax=ax, label=stemp.name)
-        plt.grid()
-        plt.legend()
-        plt.title(title)
+        ax.grid()
+        ax.legend()
+        ax.set_title(title)
         plt.tight_layout()
-        fig_commit(fig, name=title, config_uid=uid)
+        fig_commit(
+            fig,
+            name=title,
+            watermark=pplot().watermark,
+            category="debug",
+            config_uid=pplot().uid,
+        )
 
     return {
         "psal": spsal,

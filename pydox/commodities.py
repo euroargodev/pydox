@@ -320,7 +320,13 @@ class PydoxFigure:
 class PlotParams:
     """A placeholder for plotting parameters to be communicated from high to low-level APIs"""
 
-    level: int = None
-    uid: str = None
-    watermark: str = None
-    dpi: int = 90
+    level: int = 0
+    uid: str = ""
+    watermark: str = ""
+    dpi: int = None
+
+    def __post_init__(self):
+        if self.dpi is None:
+            import pydox as do
+
+            object.__setattr__(self, "dpi", do.get_params("plots.dpi"))

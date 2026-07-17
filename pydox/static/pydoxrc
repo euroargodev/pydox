@@ -144,7 +144,7 @@ adjustment:
 
 # ============================================= Plotting
 plots:
-  dpi: 90
+  dpi: 100
   save:
     format: png
     path: docs/img

@@ -7,6 +7,7 @@ These functions are expected to receive low-level setting values (no high-level 
 import logging
 from copy import deepcopy
 from typing import Literal, Optional, Callable
+from functools import partial
 
 import numpy as np
 import xarray as xr
@@ -15,7 +16,7 @@ import argopy as ar
 
 import pydox as do
 from pydox._config.config import Config
-from pydox.commodities import ParameterSet
+from pydox.commodities import ParameterSet, PlotParams
 from pydox.io.argo.types import MultiProfData, TrajData, CycData, ArgoDataForInAir
 from pydox.io.argo.utils import (
     preprocess_raw_rtraj,
@@ -81,6 +82,9 @@ def get_argo_data_for_in_air_method(
     uid = f"{uid}-{uid_suff}" if uid is not None else uid_suff
     # Appending the uid_suff will allow to identify similar plots created with higher level different configs.
 
+    if pplot is None:
+        pplot = partial(PlotParams, uid=uid)
+
     ############################################################################################
     # Pre-process raw GDAC xr.DataSet objects
     # We sub-select only variables that we really need to work with:
@@ -96,7 +100,7 @@ def get_argo_data_for_in_air_method(
     ############################################################################################
     # Get T,S near surface from Sprof
     sprof_near_surf = get_ts_near_surface(
-        Sprof, min_pres, max_pres, debug_plot=debug_plot, uid=uid
+        Sprof, min_pres, max_pres, pplot=pplot, debug_plot=debug_plot, uid=uid
     )
 
     ############################################################################################

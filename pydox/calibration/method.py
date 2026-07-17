@@ -3,6 +3,7 @@ from typing import Any, Optional, List
 from collections import OrderedDict
 import hashlib
 import argopy as ar
+import numpy as np
 
 from pydox.commodities import PydoxFigure
 from pydox._config.utils import dict_to_string
@@ -167,3 +168,11 @@ class Method(Workflow, ABC):
     @property
     def configs_figures(self):
         return configs_figure_list(self)
+
+    def plot(self, icfg: Optional[int] = None, **kwargs):
+        """Show figures for all or a specific configuration"""
+        cfg_list = np.arange(0, self.n_configs) if icfg is None else to_list(icfg)
+
+        for icfg in cfg_list:
+            for fig in self.configs_figures[icfg]:
+                fig.reload().show()

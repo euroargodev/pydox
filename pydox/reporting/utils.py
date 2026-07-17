@@ -16,7 +16,8 @@ def fig_commit(
 ):
     """Commit a named :mpl:`Figure` object to the global registry
 
-    The :mpl:`Figure` object is automatically pickled (in a tmp folder) for later re-open or re-use in the session
+    The :mpl:`Figure` object is automatically pickled (in a tmp folder) for later re-open or re-use in the session.
+    The :mpl:`Figure` object is also closed upon commit.
     """
     new_f = PydoxFigure(fig=fig, name=name, config_uid=config_uid)
 
@@ -34,6 +35,7 @@ def fig_commit(
 
         new_f.pickle = pkl
         do.__figures.append(new_f)
+        mpl.pyplot.close(fig)
 
 
 def configs_figure_list(obj) -> OrderedDict[int, List[PydoxFigure]]:

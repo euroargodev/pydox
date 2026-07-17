@@ -11,6 +11,7 @@ from pydox.commodities import PydoxFigure
 def fig_commit(
     fig: mpl.figure.Figure,
     name: str,
+    category: Optional[str] = None,
     dest: Optional[Path] = None,
     config_uid: Optional[str] = None,
 ):
@@ -22,7 +23,7 @@ def fig_commit(
     if name.strip() == "" or name is None:
         raise ValueError("A figure must have a name to be commited")
 
-    new_f = PydoxFigure(fig=fig, name=name, config_uid=config_uid)
+    new_f = PydoxFigure(fig=fig, name=name, category=category, config_uid=config_uid)
 
     found = False
     for f in do.__figures:

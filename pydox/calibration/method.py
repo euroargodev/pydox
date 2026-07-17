@@ -166,13 +166,32 @@ class Method(Workflow, ABC):
         return m.hexdigest()
 
     @property
-    def configs_figures(self):
+    def configs_figures(self) -> OrderedDict[int, List[PydoxFigure]]:
         return configs_figure_list(self)
 
-    def plot(self, icfg: Optional[int] = None, **kwargs):
-        """Show figures for all or a specific configuration"""
-        cfg_list = np.arange(0, self.n_configs) if icfg is None else to_list(icfg)
+    def plot(
+        self,
+        icfg: Optional[int] = None,
+        categories: Optional[str | list[str]] = None,
+    ) -> None:
+        """Show figures
+
+        Parameters
+        ----------
+        icfg: int, optional, default = None
+           Configuration number to select plots for. Set to None to use all configurations.
+        """
+        cfg_list: list[int] = (
+            np.arange(0, self.n_configs) if icfg is None else to_list(icfg)
+        )
+        categories: list[str] = "all" if categories is None else to_list(categories)
+
+        if "all" in categories:
+            # Select what to display among commodities.VALID_FIGURE_CATEGORIES values:
+            categories: list[str] = ["input_data", "fit_results"]
 
         for icfg in cfg_list:
-            for fig in self.configs_figures[icfg]:
-                fig.reload().show()
+            for category in categories:
+                for fig in self.configs_figures[icfg]:
+                    if fig.category == category:
+                        fig.reload().show()

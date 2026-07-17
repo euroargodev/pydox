@@ -249,6 +249,7 @@ class CoefficientsInAir(Coefficients):
 
 
 CoefsDict: TypeAlias = OrderedDict[int, Coefficients | CoefficientsInAir]
+"""A type for a dictionary of fit coefficients"""
 
 
 @dataclass(frozen=True)
@@ -260,6 +261,9 @@ class FitResult:
 
 
 FitResults: TypeAlias = OrderedDict[int, FitResult]
+"""A type for a dictionary of a single fit result, e.g. from core.in_air.fit(). Holds and instance of Coefficients and input fit data"""
+
+VALID_FIGURE_CATEGORIES = ["debug", "input_data", "fit_results"]
 
 
 @dataclass
@@ -267,10 +271,31 @@ class PydoxFigure:
 
     fig: mpl.figure.Figure
     name: str
+    category: str = None
     config_uid: str = None
     caller: Callable | str = None
     pickle: Path = None
     # axes: mpl.axes._axes.Axes | list[mpl.axes._axes.Axes] = None
+
+    def __post_init__(self):
+        # Validate/set the category
+        if self.category is not None:
+            if self.category not in VALID_FIGURE_CATEGORIES:
+                raise ValueError(
+                    f"'{self.category}' is not a valid category. Must be one in: {VALID_FIGURE_CATEGORIES}"
+                )
+        else:
+            # Set to default category (lowest level):
+            object.__setattr__(self, "category", "debug")
+
+    @property
+    def level(self) -> int:
+        cat2level = {
+            "debug": 0,
+            "input_data": 1,
+            "fit_results": 2,
+        }
+        return cat2level[self.category]
 
     @property
     def uid(self) -> str:

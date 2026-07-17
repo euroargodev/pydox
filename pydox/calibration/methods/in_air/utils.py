@@ -216,7 +216,7 @@ def get_data_for_one_parameterset_for_in_air_method(
         ax.set_title(title)
         plt.legend()
         plt.tight_layout()
-        fig_commit(fig, name=title, config_uid=uid)
+        fig_commit(fig, name=title, category="input_data", config_uid=uid)
 
     if debug_plot:
         refname = do.get_params("calibration_methods.in_air.dataset", config=config)
@@ -239,7 +239,7 @@ def get_data_for_one_parameterset_for_in_air_method(
             label="Linear fit",
         )
         ax.set_title(title)
-        fig_commit(fig, name=title, config_uid=uid)
+        fig_commit(fig, name=title, category="input_data", config_uid=uid)
 
     # Return
     if iset is None:

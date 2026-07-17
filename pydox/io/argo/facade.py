@@ -134,8 +134,8 @@ def get_argo_data_for_in_air_method(
         )
         ax = ax.flatten()
         for ii, v in enumerate(v2plot):
-            Rtraj_inair[v].plot.line("s-", linewidth=0.5, label="In Air", ax=ax[ii])
-            Rtraj_inwater[v].plot.line(".-", linewidth=0.5, label="In Water", ax=ax[ii])
+            Rtraj_inair[v].plot.line("s-", linewidth=0.5, label="In-Air", ax=ax[ii])
+            Rtraj_inwater[v].plot.line(".-", linewidth=0.5, label="In-Water", ax=ax[ii])
             ax[ii].legend()
             ax[ii].grid()
             ax[ii].set_title(f"{v}")
@@ -159,7 +159,7 @@ def get_argo_data_for_in_air_method(
                 )
 
     if debug_plot:
-        suptitle = "In-air and in-water Rtraj data after median-per-cycle grouping"
+        suptitle = "In-air and In-Water Rtraj data after median-per-cycle grouping"
         v2plot = ["PSAL", "TEMP", "PPOX_DOXY"]
         fig, ax = plt.subplots(
             nrows=len(v2plot), ncols=1, figsize=(10, 10), dpi=90, sharex=True
@@ -177,7 +177,7 @@ def get_argo_data_for_in_air_method(
 
     if debug_plot:
         # Super-impose Sprof data:
-        suptitle = "Sprof vs in-air and in-water Rtraj data"
+        suptitle = "Sprof vs Rtraj In-Air and In-Water data"
         v2plot = ["PSAL", "TEMP", "PPOX_DOXY"]
         fig, ax = plt.subplots(
             nrows=len(v2plot), ncols=1, figsize=(10, 10), dpi=90, sharex=True
@@ -242,7 +242,7 @@ def get_argo_data_for_in_air_method(
         )
 
     if debug_plot:
-        suptitle = "Sprof vs in-air and in-water Rtraj data after substitution"
+        suptitle = "Sprof vs Rtraj In-Air and In-Water data - after substitution"
         v2plot = ["PSAL", "TEMP"]
         fig, ax = plt.subplots(
             nrows=len(v2plot), ncols=1, figsize=(10, 10), dpi=90, sharex=True

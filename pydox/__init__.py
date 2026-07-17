@@ -1,6 +1,7 @@
 from pathlib import Path
 
-# import tempfile
+# import uuid
+import datetime
 
 # Import facades for configuration management:
 from pydox._config.config import (
@@ -33,5 +34,9 @@ __figures: list[PydoxFigure] = []
 root = Path(get_params("output.root"))
 root.mkdir(parents=True, exist_ok=True)
 
-tmp_root = root.joinpath("tmp")
+# tmp_root = root.joinpath("tmp").joinpath(uuid.uuid4().hex)
+tmp_root = root.joinpath("tmp").joinpath(
+    datetime.datetime.now(datetime.timezone.utc).strftime("%d%m%y%H%M%S%f")
+)
 tmp_root.mkdir(parents=True, exist_ok=True)
+print(tmp_root)

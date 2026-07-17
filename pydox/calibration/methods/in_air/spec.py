@@ -84,6 +84,7 @@ class MethodInAir(Method):
         # todo Collect input data in parallel ?
         # todo Cache input data for performances ?
         for iset, params in self.configs.items():
+            print(f"Load input data for config #{iset}")
             data = get_data_for_one_parameterset_for_in_air_method(
                 a_float, self._cfg, params, debug_plot=debug_plot, uid=self.uid(iset)
             )
@@ -129,6 +130,7 @@ class MethodInAir(Method):
 
         ############### Load data
         # We first need to load data that will be used to fit for each configuration
+        print("Load input data")
         input_data_for_fit: dict[int, Any] = self._load_input_data(a_float, debug_plot)
 
         # Read and store the list of cycle numbers for each configuration
@@ -149,6 +151,7 @@ class MethodInAir(Method):
         # results: FitResults = compute_fits(items, fct, method=method)
 
         # Now we have as many input_data as unique configuration:
+        print("Compute coefficients")
         items = [
             (iset, params, input_data_for_fit[iset])
             for iset, params in self.configs.items()
@@ -171,7 +174,10 @@ class MethodInAir(Method):
         self._fitted_float["CYCLE_NUMBER"] = input_cycs_for_fit
 
         if debug_plot:
-            # cmap = plt.colormaps.get_cmap("jet").resampled(len(input_data_for_fit))
+            # One subplot for each config result (n_configs rows, 1 column)
+            suptitle = "Final results for this calibration"
+
+            cmap = plt.colormaps.get_cmap("jet").resampled(len(input_data_for_fit))
             fig, ax = plt.subplots(
                 nrows=len(input_data_for_fit),
                 ncols=1,
@@ -179,37 +185,41 @@ class MethodInAir(Method):
                 dpi=90,
                 sharex=True,
             )
-            suptitle = "Final results for this calibration"
-            for i in range(len(input_data_for_fit)):
-                xdata = input_data_for_fit[i]["CYCLE_NUMBER"]
-                ydata = input_data_for_fit[i]["PPOX1"] * self._coefs[i].gain.value
-                if self._coefs[i].drift is not None:
+            for iset in range(len(input_data_for_fit)):
+                xdata = input_data_for_fit[iset]["CYCLE_NUMBER"]
+                ydata = input_data_for_fit[iset]["PPOX1"] * self.coefs[iset].gain.value
+                if self.coefs[iset].drift is not None:
                     ydata = ydata * (
                         1
-                        + self._coefs[i].drift.value
+                        + self.coefs[iset].drift.value
                         / 100
-                        * input_data_for_fit[i]["Delta_T_REF"]
+                        * input_data_for_fit[iset]["Delta_T_REF"]
                         / 365
                     )
 
-                ax = plt.subplot(len(input_data_for_fit), 1, i + 1)
+                ax = plt.subplot(len(input_data_for_fit), 1, iset + 1)
                 plt1 = ax.plot(
-                    xdata, input_data_for_fit[i]["REF_PPOX"], ".-k", label="Ref"
+                    xdata, input_data_for_fit[iset]["REF_PPOX"], ".-k", label="Ref"
                 )
                 plt2 = ax.plot(
                     xdata,
-                    input_data_for_fit[i]["PPOX1"],
+                    input_data_for_fit[iset]["PPOX1"],
                     ".-b",
                     label="Non-adjusted (in-air)",
                 )
-                plt3 = ax.plot(xdata, ydata, ".-", label="Adjusted")
-                # plt3 = ax.plot(xdata, ydata, ".-", color=cmap(i))
+                plt3 = ax.plot(
+                    xdata,
+                    ydata,
+                    ".-",
+                    color=cmap(iset),
+                    label=f"Adjusted (config {iset})",
+                )
 
                 ax.grid()
                 ax.set_ylabel("Partial pressure of oxygen [mb]")
-                plt.legend()  # ([plt1[0], plt2[0]], ["Ref", "Adjusted ARGO PPOX"])
+                plt.legend([plt1, plt2, plt3], ["Ref", "Raw", "Adjusted"])
                 plt.tight_layout()
-                plt.title(f"Correction : {i}")
+                plt.title(f"Correction : {iset}")
 
             plt.xlabel("Float Cycle number of the measurement")
             plt.suptitle(suptitle)

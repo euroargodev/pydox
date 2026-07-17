@@ -595,6 +595,7 @@ def is_config(obj: Any) -> bool:
 
 
 # Load the default configuration to be used globally as `do.params`:
+# (because we load pydox._config.config.rcParams as params from pydox.__init__)
 rcParams = load_configs()
 
 # Also update Argopy options accordingly:

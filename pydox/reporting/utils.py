@@ -12,6 +12,7 @@ def fig_commit(
     fig: mpl.figure.Figure,
     name: str,
     category: Optional[str] = None,
+    watermark: Optional[str] = None,
     dest: Optional[Path] = None,
     config_uid: Optional[str] = None,
 ):
@@ -31,15 +32,44 @@ def fig_commit(
             found = True
 
     if not found:
+        # Add watermark:
+        if watermark:
+            for ax in fig.axes:
+                ax.text(
+                    0.5,
+                    0.5,
+                    watermark,
+                    transform=ax.transAxes,
+                    fontsize=40,
+                    color="gray",
+                    alpha=0.5,
+                    ha="center",
+                    va="center",
+                    rotation=30,
+                )
+
+        # Save figure object to a pickle file:
         dest = do.tmp_root() if dest is None else Path(dest)
         dest.mkdir(parents=True, exist_ok=True)
         pkl = dest.joinpath(f"{new_f.uid}.pkl")
         with open(pkl, "wb") as fid:
             pickle.dump(new_f.fig, fid)
 
+        # Add to internal global registry:
         new_f.pickle = pkl
         do.__figures.append(new_f)
+
+        # Close figure upon commit
+        # (.show() is controlled by higher-level methods .plot() methods)
         mpl.pyplot.close(fig)
+
+
+def method_figure_list(obj) -> List[PydoxFigure]:
+    results: List[PydoxFigure] = []
+    for f in do.__figures:
+        if f.config_uid.startswith(obj.uid()):
+            results.append(f)
+    return results
 
 
 def configs_figure_list(obj) -> OrderedDict[int, List[PydoxFigure]]:

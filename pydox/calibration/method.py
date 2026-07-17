@@ -9,7 +9,7 @@ from pydox.commodities import PydoxFigure
 from pydox._config.utils import dict_to_string
 from pydox.utils.casting import to_list
 from pydox.calibration.spec import Workflow
-from pydox.reporting.utils import configs_figure_list
+from pydox.reporting.utils import configs_figure_list, method_figure_list
 
 
 class Method(Workflow, ABC):
@@ -123,12 +123,10 @@ class Method(Workflow, ABC):
         """
         # summary : list[str] = super().__repr__().split("\n")
 
-        if self.method == self.rcgroup:
-            summary = [f"<pydox.Workflow.Calibration.{self.rcgroup}>"]
-        else:
-            summary = [
-                f"<pydox.Workflow.Calibration.{self.rcgroup}> '{self.method.title()}'"
-            ]
+        summary = [f"<pydox.Workflow.Calibration.{self.rcgroup}> {self.name}"]
+
+        if self.method != self.rcgroup:
+            summary.append(f"Method long name: {self.method.title()}")
 
         [summary.append(line) for line in self._repr_fitted()]
 
@@ -169,6 +167,10 @@ class Method(Workflow, ABC):
     def configs_figures(self) -> OrderedDict[int, List[PydoxFigure]]:
         return configs_figure_list(self)
 
+    @property
+    def figures(self) -> List[PydoxFigure]:
+        return method_figure_list(self)
+
     def plot(
         self,
         icfg: Optional[int] = None,
@@ -179,19 +181,36 @@ class Method(Workflow, ABC):
         Parameters
         ----------
         icfg: int, optional, default = None
-           Configuration number to select plots for. Set to None to use all configurations.
+           Configuration number to select plots for.
+           If set to None (default), consider only plots shared by all configurations.
         """
-        cfg_list: list[int] = (
-            np.arange(0, self.n_configs) if icfg is None else to_list(icfg)
-        )
+        cfg_list: list[int] = []
+        if icfg is not None:
+            # np.arange(0, self.n_configs)
+            cfg_list: list[int] = to_list(icfg)
+
         categories: list[str] = "all" if categories is None else to_list(categories)
 
         if "all" in categories:
             # Select what to display among commodities.VALID_FIGURE_CATEGORIES values:
             categories: list[str] = ["input_data", "fit_results"]
 
-        for icfg in cfg_list:
+        fig_list: List[PydoxFigure] = []
+        if len(cfg_list) == 0:
             for category in categories:
-                for fig in self.configs_figures[icfg]:
+                for fig in self.figures:
                     if fig.category == category:
-                        fig.reload().show()
+                        fig_list.append(fig)
+
+        else:
+            for icfg in cfg_list:
+                for category in categories:
+                    for fig in self.configs_figures[icfg]:
+                        if fig.category == category:
+                            fig_list.append(fig)
+
+        if len(fig_list) == 0:
+            raise ValueError("No figures correspond to your criteria ! ")
+
+        for fig in fig_list:
+            fig.reload().show()

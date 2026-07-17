@@ -1,5 +1,6 @@
-from typing import Any, Optional
+from typing import Any, Optional, Callable
 import logging
+from functools import partial
 
 import argopy as ar
 import numpy as np
@@ -47,6 +48,7 @@ def get_argo_data(
     a_float: ar.ArgoFloat,
     config: Config,
     params: Optional[ParameterSet] = None,
+    pplot: Callable = None,
     debug_plot: bool = False,
     uid: Optional[str] = None,
 ) -> ArgoDataForInAir | dict[str, xr.Dataset]:
@@ -95,6 +97,7 @@ def get_argo_data(
         cycles=cycles,
         Sprof=Sprof,
         Rtraj=Rtraj,
+        pplot=pplot,
         debug_plot=debug_plot,
         uid=uid,
     )
@@ -141,6 +144,7 @@ def get_data_for_one_parameterset_for_in_air_method(
     config: Config,
     params: ParamsInAir,
     iset: Optional[int] = None,
+    pplot: Callable = None,
     debug_plot: bool = False,
     uid: Optional[str] = None,
 ) -> dict[str, Any] | tuple[dict[str, Any], int]:
@@ -174,7 +178,9 @@ def get_data_for_one_parameterset_for_in_air_method(
     # todo Consider using a dataclass instead of a dictionary
 
     # Load Argo float data:
-    this_argo = get_argo_data(a_float, config, params, debug_plot=debug_plot, uid=uid)
+    this_argo = get_argo_data(
+        a_float, config, params, pplot=pplot, debug_plot=debug_plot, uid=uid
+    )
     data["PPOX1"]: np.ndarray = this_argo.in_air["PPOX_DOXY"].values
     data["PPOX2"]: np.ndarray = this_argo.in_water["PPOX_DOXY"].values
     data["CYCLE_NUMBER"]: list[int] = [
@@ -194,7 +200,13 @@ def get_data_for_one_parameterset_for_in_air_method(
         refname = do.get_params("calibration_methods.in_air.dataset", config=config)
         title = "Partial pressure of oxygen (PPOX) used for fitting"
 
-        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 4), dpi=90, sharex=True)
+        fig, ax = plt.subplots(
+            nrows=1,
+            ncols=1,
+            figsize=(10, 4),
+            dpi=pplot().dpi,
+            sharex=True,
+        )
         ax.plot(
             this_argo.in_air["CYCLE_NUMBER"], data["PPOX1"], ".-b", label="Float In-Air"
         )
@@ -214,15 +226,27 @@ def get_data_for_one_parameterset_for_in_air_method(
         ax.set_xlabel("Float cycle number of the measurement")
         ax.set_ylabel("[mb]")
         ax.set_title(title)
-        plt.legend()
+        ax.legend()
         plt.tight_layout()
-        fig_commit(fig, name=title, category="input_data", config_uid=uid)
+        fig_commit(
+            fig,
+            name=title,
+            watermark=pplot().watermark,
+            category="input_data",
+            config_uid=uid,
+        )
 
     if debug_plot:
         refname = do.get_params("calibration_methods.in_air.dataset", config=config)
         title = f"Ratio of 'Ref-{refname}' vs 'In-Air' partial pressure of oxygen"
 
-        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 4), dpi=90, sharex=True)
+        fig, ax = plt.subplots(
+            nrows=1,
+            ncols=1,
+            figsize=(10, 4),
+            dpi=pplot().dpi,
+            sharex=True,
+        )
         ax.plot(data["Delta_T_REF"], data["REF_PPOX"] / data["PPOX1"], ".-")
 
         ax.set_xlabel("Delta Time [Days]")
@@ -239,7 +263,13 @@ def get_data_for_one_parameterset_for_in_air_method(
             label="Linear fit",
         )
         ax.set_title(title)
-        fig_commit(fig, name=title, category="input_data", config_uid=uid)
+        fig_commit(
+            fig,
+            name=title,
+            watermark=pplot().watermark,
+            category="input_data",
+            config_uid=uid,
+        )
 
     # Return
     if iset is None:

@@ -37,6 +37,7 @@ class Workflow(ABC):
 
     def __init__(self, *args, **kwargs):
         config: Config = kwargs.get("config", do.params)
+        self.name: str = kwargs.get("name", "")
 
         # Implement some validation on this config argument:
         config = check_config(
@@ -163,7 +164,7 @@ class Workflow(ABC):
 
     def __repr__(self):
         """Repr data shared by any class inheriting from this based class"""
-        summary = ["<pydox.Workflow>"]
+        summary = [f"<pydox.Workflow> {self.name}"]
 
         [summary.append(line) for line in self._repr_fitted()]
 

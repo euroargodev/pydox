@@ -6,7 +6,7 @@ These functions are expected to receive low-level setting values (no high-level 
 
 import logging
 from copy import deepcopy
-from typing import Literal, Optional
+from typing import Literal, Optional, Callable
 
 import numpy as np
 import xarray as xr
@@ -42,6 +42,7 @@ def get_argo_data_for_in_air_method(
     cycles: tuple[int, ...],
     Sprof: xr.Dataset,
     Rtraj: xr.Dataset,
+    pplot: Callable = None,
     debug_plot: bool = False,
     uid: Optional[str] = None,
 ) -> ArgoDataForInAir | dict[str, xr.Dataset]:
@@ -130,7 +131,7 @@ def get_argo_data_for_in_air_method(
         suptitle = "Rtraj data after code selection and cycle matching"
         v2plot = ["PSAL", "TEMP", "PPOX_DOXY"]
         fig, ax = plt.subplots(
-            nrows=len(v2plot), ncols=1, figsize=(10, 10), dpi=90, sharex=True
+            nrows=len(v2plot), ncols=1, figsize=(10, 10), dpi=pplot().dpi, sharex=True
         )
         ax = ax.flatten()
         for ii, v in enumerate(v2plot):
@@ -141,7 +142,13 @@ def get_argo_data_for_in_air_method(
             ax[ii].set_title(f"{v}")
         plt.suptitle(suptitle)
         plt.tight_layout()
-        fig_commit(fig, name=suptitle, config_uid=uid)
+        fig_commit(
+            fig,
+            name=suptitle,
+            watermark=pplot().watermark,
+            category="debug",
+            config_uid=pplot().uid,
+        )
 
     #############
     # Then we reduce measurements by cycle numbers :
@@ -162,7 +169,7 @@ def get_argo_data_for_in_air_method(
         suptitle = "In-air and In-Water Rtraj data after median-per-cycle grouping"
         v2plot = ["PSAL", "TEMP", "PPOX_DOXY"]
         fig, ax = plt.subplots(
-            nrows=len(v2plot), ncols=1, figsize=(10, 10), dpi=90, sharex=True
+            nrows=len(v2plot), ncols=1, figsize=(10, 10), dpi=pplot().dpi, sharex=True
         )
         ax = ax.flatten()
         for ii, v in enumerate(v2plot):
@@ -173,14 +180,20 @@ def get_argo_data_for_in_air_method(
             ax[ii].set_title(f"{v}")
         plt.suptitle(suptitle)
         plt.tight_layout()
-        fig_commit(fig, name=suptitle, config_uid=uid)
+        fig_commit(
+            fig,
+            name=suptitle,
+            watermark=pplot().watermark,
+            category="debug",
+            config_uid=pplot().uid,
+        )
 
     if debug_plot:
         # Super-impose Sprof data:
         suptitle = "Sprof vs Rtraj In-Air and In-Water data"
         v2plot = ["PSAL", "TEMP", "PPOX_DOXY"]
         fig, ax = plt.subplots(
-            nrows=len(v2plot), ncols=1, figsize=(10, 10), dpi=90, sharex=True
+            nrows=len(v2plot), ncols=1, figsize=(10, 10), dpi=pplot().dpi, sharex=True
         )
         ax = ax.flatten()
         for ii, v in enumerate(v2plot):
@@ -213,7 +226,13 @@ def get_argo_data_for_in_air_method(
             ax[ii].set_title(f"{v}")
         plt.suptitle(suptitle)
         plt.tight_layout()
-        fig_commit(fig, name=suptitle, config_uid=uid)
+        fig_commit(
+            fig,
+            name=suptitle,
+            watermark=pplot().watermark,
+            category="debug",
+            config_uid=pplot().uid,
+        )
 
     #############
     # Then we replace Rtraj PSAL data with Sprof PSAL
@@ -245,7 +264,7 @@ def get_argo_data_for_in_air_method(
         suptitle = "Sprof vs Rtraj In-Air and In-Water data - after substitution"
         v2plot = ["PSAL", "TEMP"]
         fig, ax = plt.subplots(
-            nrows=len(v2plot), ncols=1, figsize=(10, 10), dpi=90, sharex=True
+            nrows=len(v2plot), ncols=1, figsize=(10, 10), dpi=pplot().dpi, sharex=True
         )
         ax = ax.flatten()
         for ii, v in enumerate(v2plot):
@@ -274,7 +293,13 @@ def get_argo_data_for_in_air_method(
             ax[ii].set_title(f"{v}")
         plt.suptitle(suptitle)
         plt.tight_layout()
-        fig_commit(fig, name=suptitle, config_uid=uid)
+        fig_commit(
+            fig,
+            name=suptitle,
+            watermark=pplot().watermark,
+            category="debug",
+            config_uid=pplot().uid,
+        )
 
     #############
     # Then we check for diff in temperature between Rtraj and Sprof:

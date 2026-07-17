@@ -3,7 +3,7 @@ Commodity classes
 
 These are objects used as interface between high-level APIs (eg: `Calibration`) and low-level computational functions (eg: `inair_fit`).
 
-All Commodity classes have a _frozen_ state:
+Most commodity classes have a _frozen_ state:
 
 Frozen == attributes must be set at instanciation, not later, ie instances are read-only
 
@@ -314,3 +314,13 @@ class PydoxFigure:
 
     def show(self):
         self.fig.show()
+
+
+@dataclass
+class PlotParams:
+    """A placeholder for plotting parameters to be communicated from high to low-level APIs"""
+
+    level: int = None
+    uid: str = None
+    watermark: str = None
+    dpi: int = 90

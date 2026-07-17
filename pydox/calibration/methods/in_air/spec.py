@@ -1,9 +1,10 @@
-from typing import Any, Self
+from typing import Any, Self, Callable
 from collections import OrderedDict
 import logging
+from functools import partial
 
+import numpy as np
 import argopy as ar
-
 import matplotlib.pyplot as plt
 
 from pydox._config.utils import format_value_txt
@@ -16,6 +17,7 @@ from pydox.commodities import (
     ParamsInAir,
     CoefficientsInAir,
     FitResults,
+    PlotParams,
 )
 from pydox.reporting.utils import fig_commit
 from pydox.core import in_air
@@ -74,7 +76,7 @@ class MethodInAir(Method):
         return configs
 
     def _load_input_data(
-        self, a_float: ar.ArgoFloat, debug_plot: bool = False
+        self, a_float: ar.ArgoFloat, pplot: Callable, debug_plot: bool = False
     ) -> dict[int, Any]:
         """Load input data for the flatten list of configurations"""
 
@@ -86,7 +88,14 @@ class MethodInAir(Method):
         for iset, params in self.configs.items():
             print(f"Load input data for config #{iset}")
             data = get_data_for_one_parameterset_for_in_air_method(
-                a_float, self._cfg, params, debug_plot=debug_plot, uid=self.uid(iset)
+                a_float,
+                self._cfg,
+                params,
+                pplot=partial(
+                    pplot, watermark=f"{self.name}\nConfig #{iset}", uid=self.uid(iset)
+                ),
+                debug_plot=debug_plot,
+                uid=self.uid(iset),
             )
             input_data_for_fit[iset] = data
 
@@ -96,7 +105,7 @@ class MethodInAir(Method):
         self,
         a_float: ar.ArgoFloat,
         method: ExecutionMethods = "thread",
-        debug_plot: bool = False,
+        debug_plot: bool = True,
     ) -> Self:
         """Compute calibration coefficients for all possible configuration set and one Argo float
 
@@ -127,11 +136,16 @@ class MethodInAir(Method):
         possibly required settings from the configuration (eg: argo QC
 
         """
+        pplot = partial(
+            PlotParams, watermark=self.name, dpi=self.get_params("plots.dpi")
+        )
 
         ############### Load data
         # We first need to load data that will be used to fit for each configuration
         print("Load input data")
-        input_data_for_fit: dict[int, Any] = self._load_input_data(a_float, debug_plot)
+        input_data_for_fit: dict[int, Any] = self._load_input_data(
+            a_float, pplot, debug_plot
+        )
 
         # Read and store the list of cycle numbers for each configuration
         input_cycs_for_fit = {}
@@ -181,10 +195,14 @@ class MethodInAir(Method):
             fig, ax = plt.subplots(
                 nrows=len(input_data_for_fit),
                 ncols=1,
-                figsize=(10, 4),
-                dpi=90,
+                figsize=(10, 5),
+                dpi=self.get_params("plots.dpi"),
                 sharex=True,
             )
+            ax = (
+                ax.flatten() if isinstance(ax, np.ndarray) else np.array(ax)[np.newaxis]
+            )
+
             for iset in range(len(input_data_for_fit)):
                 xdata = input_data_for_fit[iset]["CYCLE_NUMBER"]
                 ydata = input_data_for_fit[iset]["PPOX1"] * self.coefs[iset].gain.value
@@ -197,17 +215,16 @@ class MethodInAir(Method):
                         / 365
                     )
 
-                ax = plt.subplot(len(input_data_for_fit), 1, iset + 1)
-                plt1 = ax.plot(
+                ax[iset].plot(
                     xdata, input_data_for_fit[iset]["REF_PPOX"], ".-k", label="Ref"
                 )
-                plt2 = ax.plot(
+                ax[iset].plot(
                     xdata,
                     input_data_for_fit[iset]["PPOX1"],
                     ".-b",
                     label="Non-adjusted (in-air)",
                 )
-                plt3 = ax.plot(
+                ax[iset].plot(
                     xdata,
                     ydata,
                     ".-",
@@ -215,16 +232,21 @@ class MethodInAir(Method):
                     label=f"Adjusted (config {iset})",
                 )
 
-                ax.grid()
-                ax.set_ylabel("Partial pressure of oxygen [mb]")
-                plt.legend([plt1, plt2, plt3], ["Ref", "Raw", "Adjusted"])
-                plt.tight_layout()
-                plt.title(f"Correction : {iset}")
+                ax[iset].grid()
+                ax[iset].set_xlabel("Float Cycle number of the measurement")
+                ax[iset].set_ylabel("Partial pressure of oxygen [mb]")
+                ax[iset].legend()
+                ax[iset].set_title(f"Correction : {iset}")
 
-            plt.xlabel("Float Cycle number of the measurement")
+            # plt.tight_layout()
             plt.suptitle(suptitle)
+
             fig_commit(
-                fig, name=suptitle, category="fit_results", config_uid=self.uid()
+                fig,
+                name=suptitle,
+                category="fit_results",
+                watermark=self.name,
+                config_uid=self.uid(),
             )
 
         return self

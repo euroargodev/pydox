@@ -30,6 +30,7 @@ from typing import (
     Protocol,
     runtime_checkable,
     Callable,
+    Self,
 )
 import matplotlib as mpl
 import pickle
@@ -281,6 +282,10 @@ class PydoxFigure:
             m.update(bytes(str(self.caller), "utf-8"))
         return m.hexdigest()
 
-    def reopen(self):
+    def reload(self) -> Self:
         with open(self.pickle, "rb") as fid:
-            return pickle.load(fid)
+            self.fig = pickle.load(fid)
+        return self
+
+    def show(self):
+        self.fig.show()

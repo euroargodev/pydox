@@ -32,8 +32,8 @@ print(a_float)
 c = do.Calibration('in_air')
 # Set generic parameters:
 c.set_params('calibration_parameters', cycles=[1, 100])
-c.set_params('calibration_parameters', fit_drift=[False, True])
-# Set in-sir method specific parameters:
+# c.set_params('calibration_parameters', fit_drift=[False, True])
+# Set in-air method specific parameters:
 c.set_params('calibration_methods.in_air', carryover=[False, True])
 
 print(c)
@@ -52,6 +52,45 @@ c.coefs
 ```python
 # Access to private input data: 
 input_data_for_fit = c._load_input_data(a_float)
+```
+
+```python
+# Load and process Argo data, low-level with explicit list of parameters
+from pydox.io.argo.facade import get_argo_data_for_in_air_method
+import numpy as np
+
+get_argo_data_for_in_air_method(
+    cycles = a_float.CYCLE_NUMBERS,
+    Sprof = a_float.dataset('Sprof'),
+    Rtraj = a_float.dataset('Rtraj'),
+    debug_plot = 0,
+    
+    min_pres = do.get_params("argo.in_water_salinity.min_pressure"),
+    max_pres = do.get_params("argo.in_water_salinity.max_pressure"),
+    in_air_codes = do.get_params("argo.codes.in_air"),
+    in_water_codes = do.get_params("argo.codes.in_water"),
+    which_psal = do.get_params("argo.use"),
+);
+
+# Which is basically equivalent to:
+# d = get_argo_data_for_in_air_method(
+#     cycles = a_float.CYCLE_NUMBERS,
+#     Sprof = a_float.dataset('Sprof'),
+#     Rtraj = a_float.dataset('Rtraj'),
+#     debug_plot = True,
+#     
+#     min_pres = 0.,
+#     max_pres = 10.,
+#     in_air_codes = [699, 711, 799],
+#     in_water_codes = [690, 710],
+#     which_psal = 3,
+# )
+```
+
+```python
+# Load NCEP data:
+from pydox.io.ncep.facade import open_ncep
+ds = open_ncep()
 ```
 
 ## Development of the library

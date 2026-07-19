@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Any, Self, Optional
+from typing import Self, Optional
 from collections import OrderedDict
 
 import pydox as do
@@ -110,18 +110,13 @@ class CalibrationSet(Workflow):
 
         return True
 
-    def fit(
-        self,
-        argofloat_obj,
-        cumulative: Optional[bool] = False,
-        debug_plot: bool = False,
-    ) -> Self:
+    def fit(self, argofloat_obj, cumulative: Optional[bool] = False, **kwargs) -> Self:
         self._fitted_float["WMO"] = argofloat_obj.WMO
 
         if not cumulative:
             icfg: int = 0
             for im, this_method in self._methods.items():
-                this_method.fit(argofloat_obj, debug_plot=debug_plot)
+                this_method.fit(argofloat_obj, **kwargs)
 
                 # Gather more detailed results in dedicated placeholders of the instance:
                 for iset, coefs in this_method._coefs.items():
@@ -138,7 +133,7 @@ class CalibrationSet(Workflow):
 
             icfg: int = 0
             for im, this_method in self._methods.items():
-                this_method.fit(argofloat_obj, debug_plot=debug_plot)
+                this_method.fit(argofloat_obj, **kwargs)
                 coefs = this_method.coefs[0]
 
                 # Gather more detailed results in dedicated placeholders of the instance:

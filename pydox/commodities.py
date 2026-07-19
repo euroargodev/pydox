@@ -19,7 +19,9 @@ https://medium.com/the-pythonworld/why-i-stopped-using-python-dataclass-everywhe
 import hashlib
 from pathlib import Path
 from dataclasses import dataclass, field, asdict
+
 import numpy as np
+from functools import partial
 from typing import (
     Any,
     Union,
@@ -316,17 +318,95 @@ class PydoxFigure:
         self.fig.show()
 
 
+@runtime_checkable
+class TPlotParams(Protocol):
+    """A type for anything able to return a PlotParams class instance
+
+    This is used by functions with an argument that is either a partial of PlotParams or a PlotParams
+
+    We could also use a type like: Callable[[Any], PlotParams]
+
+    But a protocol will ensure the function will be able to use the argument as expected.
+
+    """
+
+    @property
+    def level(self) -> int: ...
+
+    @property
+    def uid(self) -> str: ...
+
+    @property
+    def watermark(self) -> str: ...
+
+    @property
+    def dpi(self) -> int: ...
+
+
 @dataclass
 class PlotParams:
-    """A placeholder for plotting parameters to be communicated from high to low-level APIs"""
+    """A placeholder for plotting parameters to be communicated from high to low-level APIs
 
-    level: int = 0
+    The `level` attribute is related to VALID_FIGURE_CATEGORIES. Categories are semantic for the end-user, `level` is for internal use.
+
+    The expected list of values for `level`:
+
+    - 0: debug, for plots related to low level data manipulation at load time
+    - 1: input data, for plots related to data used as input for a fit/computation (basically the final state of input data loading and pre-processing, to be used by a fit)
+    - 2: fit, for plots related to fit/computation results
+
+    """
+
+    level: int = (
+        0  # Since this is default, set to the minimal value so that any plot will be generated
+    )
     uid: str = ""
     watermark: str = ""
     dpi: int = None
 
     def __post_init__(self):
+        """Valid and assign default attributes from the runtime configuration"""
         if self.dpi is None:
-            import pydox as do
+            import pydox as do  # Avoid circularity
 
             object.__setattr__(self, "dpi", do.get_params("plots.dpi"))
+
+    @classmethod
+    def from_obj(cls, obj, **kwargs) -> "PlotParams":
+        """Return a :class:``PlotParams`` instance from an object
+
+        Behavior:
+
+        - If object is None, return a default :class:``PlotParams`` instance with **kwargs.
+        - If object is a partial of :class:``PlotParams``, return the called partial.
+        - If object is an instance of :class:``PlotParams``, return it untouched.
+
+        In any other case, a :class:`ValueError` is raised.
+
+        This class method can thus be used as an object validator, that will return an instance of :class:`PlotParams` or fails.
+
+        Parameters
+        ----------
+        obj: None | partial(:class:``PlotParams``) | :class:``PlotParams``
+
+        Returns
+        -------
+        :class:`PlotParams`
+            An instance of :class:`PlotParams`
+
+        Raises
+        ------
+        :class:`ValueError`
+        """
+        if obj is None:
+            ppar = cls(**kwargs)
+        elif callable(obj):
+            if isinstance(obj, partial) and obj.func == PlotParams:
+                ppar = obj()
+            else:
+                raise ValueError(f"A callable must be a partial of 'PlotParams'")
+        elif isinstance(obj, PlotParams):
+            return obj
+        else:
+            raise ValueError(f"This object cannot return a 'PlotParams' instance")
+        return ppar

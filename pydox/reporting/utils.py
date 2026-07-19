@@ -33,7 +33,16 @@ def fig_commit(
 
     if not found:
         # Add watermark:
-        if watermark:
+        default_watermark = do.get_params("plots.watermark")
+        show_watermark = watermark is not None or default_watermark is not None
+
+        if show_watermark:
+            if default_watermark is not None:
+                if watermark is None:
+                    watermark = default_watermark
+                else:
+                    watermark = "\n".join([watermark, default_watermark])
+
             for ax in fig.axes:
                 ax.text(
                     0.5,

@@ -16,7 +16,7 @@ import argopy as ar
 
 import pydox as do
 from pydox._config.config import Config
-from pydox.commodities import ParameterSet, PlotParams
+from pydox.commodities import ParameterSet, PlotParams, TPlotParams
 from pydox.io.argo.types import MultiProfData, TrajData, CycData, ArgoDataForInAir
 from pydox.io.argo.utils import (
     preprocess_raw_rtraj,
@@ -37,15 +37,14 @@ log = logging.getLogger("pydox.io.argo.facade")
 def get_argo_data_for_in_air_method(
     min_pres: float,
     max_pres: float,
-    in_air_codes: tuple[int, ...],
-    in_water_codes: tuple[int, ...],
+    in_air_codes: tuple[int, ...] | list[int, ...],
+    in_water_codes: tuple[int, ...] | list[int, ...],
     which_psal: int,
-    cycles: tuple[int, ...],
+    cycles: tuple[int, ...] | list[int, ...],
     Sprof: xr.Dataset,
     Rtraj: xr.Dataset,
-    pplot: Callable = None,
-    debug_plot: bool = False,
     uid: Optional[str] = None,
+    ppar: Optional[TPlotParams] = None,
 ) -> ArgoDataForInAir | dict[str, xr.Dataset]:
     """Load Argo float data to calibrate oxygen with atmospheric data (in-air method)
 
@@ -61,7 +60,7 @@ def get_argo_data_for_in_air_method(
     cycles: list[int]
     Sprof: xr.Dataset
     Rtraj: xr.Dataset
-    debug_plot: bool = False
+    ppar: TPlotParams
 
     Returns
     -------
@@ -80,10 +79,12 @@ def get_argo_data_for_in_air_method(
         Rtraj=Rtraj,
     )
     uid = f"{uid}-{uid_suff}" if uid is not None else uid_suff
-    # Appending the uid_suff will allow to identify similar plots created with higher level different configs.
+    # Appending the uid_suff will allow to identify similar plots but created with higher level different configs.
 
-    if pplot is None:
-        pplot = partial(PlotParams, uid=uid)
+    ppar: PlotParams = PlotParams.from_obj(ppar, uid=uid, level=0)
+    ppar.uid = (
+        uid if uid is not None else ppar.uid
+    )  # Ensure to use the last possible uid value
 
     ############################################################################################
     # Pre-process raw GDAC xr.DataSet objects
@@ -99,9 +100,7 @@ def get_argo_data_for_in_air_method(
 
     ############################################################################################
     # Get T,S near surface from Sprof
-    sprof_near_surf = get_ts_near_surface(
-        Sprof, min_pres, max_pres, pplot=pplot, debug_plot=debug_plot, uid=uid
-    )
+    sprof_near_surf = get_ts_near_surface(Sprof, min_pres, max_pres, ppar=ppar)
 
     ############################################################################################
     # Get In-air and In-water data
@@ -131,11 +130,11 @@ def get_argo_data_for_in_air_method(
         == np.unique(Rtraj_inwater["CYCLE_NUMBER"])
     )
 
-    if debug_plot:
+    if ppar.level <= 0:
         suptitle = "Rtraj data after code selection and cycle matching"
         v2plot = ["PSAL", "TEMP", "PPOX_DOXY"]
         fig, ax = plt.subplots(
-            nrows=len(v2plot), ncols=1, figsize=(10, 10), dpi=pplot().dpi, sharex=True
+            nrows=len(v2plot), ncols=1, figsize=(10, 10), dpi=ppar.dpi, sharex=True
         )
         ax = ax.flatten()
         for ii, v in enumerate(v2plot):
@@ -149,9 +148,9 @@ def get_argo_data_for_in_air_method(
         fig_commit(
             fig,
             name=suptitle,
-            watermark=pplot().watermark,
+            watermark=ppar.watermark,
             category="debug",
-            config_uid=pplot().uid,
+            config_uid=ppar.uid,
         )
 
     #############
@@ -169,11 +168,11 @@ def get_argo_data_for_in_air_method(
                     f"{dsname.title()} trajectory {pname} DataArray is full of NaNs after group by cycles !"
                 )
 
-    if debug_plot:
+    if ppar.level <= 0:
         suptitle = "In-air and In-Water Rtraj data after median-per-cycle grouping"
         v2plot = ["PSAL", "TEMP", "PPOX_DOXY"]
         fig, ax = plt.subplots(
-            nrows=len(v2plot), ncols=1, figsize=(10, 10), dpi=pplot().dpi, sharex=True
+            nrows=len(v2plot), ncols=1, figsize=(10, 10), dpi=ppar.dpi, sharex=True
         )
         ax = ax.flatten()
         for ii, v in enumerate(v2plot):
@@ -187,17 +186,17 @@ def get_argo_data_for_in_air_method(
         fig_commit(
             fig,
             name=suptitle,
-            watermark=pplot().watermark,
+            watermark=ppar.watermark,
             category="debug",
-            config_uid=pplot().uid,
+            config_uid=ppar.uid,
         )
 
-    if debug_plot:
+    if ppar.level <= 0:
         # Super-impose Sprof data:
         suptitle = "Sprof vs Rtraj In-Air and In-Water data"
         v2plot = ["PSAL", "TEMP", "PPOX_DOXY"]
         fig, ax = plt.subplots(
-            nrows=len(v2plot), ncols=1, figsize=(10, 10), dpi=pplot().dpi, sharex=True
+            nrows=len(v2plot), ncols=1, figsize=(10, 10), dpi=ppar.dpi, sharex=True
         )
         ax = ax.flatten()
         for ii, v in enumerate(v2plot):
@@ -233,9 +232,9 @@ def get_argo_data_for_in_air_method(
         fig_commit(
             fig,
             name=suptitle,
-            watermark=pplot().watermark,
+            watermark=ppar.watermark,
             category="debug",
-            config_uid=pplot().uid,
+            config_uid=ppar.uid,
         )
 
     #############
@@ -264,11 +263,11 @@ def get_argo_data_for_in_air_method(
             f"{ds.attrs['title']} merged with some Sprof multi-profile data"
         )
 
-    if debug_plot:
+    if ppar.level <= 0:
         suptitle = "Sprof vs Rtraj In-Air and In-Water data - after substitution"
         v2plot = ["PSAL", "TEMP"]
         fig, ax = plt.subplots(
-            nrows=len(v2plot), ncols=1, figsize=(10, 10), dpi=pplot().dpi, sharex=True
+            nrows=len(v2plot), ncols=1, figsize=(10, 10), dpi=ppar.dpi, sharex=True
         )
         ax = ax.flatten()
         for ii, v in enumerate(v2plot):
@@ -300,9 +299,9 @@ def get_argo_data_for_in_air_method(
         fig_commit(
             fig,
             name=suptitle,
-            watermark=pplot().watermark,
+            watermark=ppar.watermark,
             category="debug",
-            config_uid=pplot().uid,
+            config_uid=ppar.uid,
         )
 
     #############
@@ -425,7 +424,7 @@ def semantic_cycle2values(
 
     if cycle_last <= cycle_first:
         raise ValueError(
-            f"'calibration_parameters.cycles' is poorly set to un-ordered or equal values ({semantic_cycles})!"
+            f"'calibration_parameters.cycles' is poorly set to un-ordered or equal values ({semantic_cycles}). It must ordered and increasing"
         )
 
     values = ds["CYCLE_NUMBER"].values

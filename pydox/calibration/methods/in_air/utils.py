@@ -1,6 +1,5 @@
-from typing import Any, Optional, Callable
+from typing import Any, Optional
 import logging
-from functools import partial
 
 import argopy as ar
 import numpy as np
@@ -9,7 +8,7 @@ import matplotlib.pyplot as plt
 
 import pydox as do
 from pydox._config.config import Config
-from pydox.commodities import ParameterSet, ParamsInAir
+from pydox.commodities import ParameterSet, ParamsInAir, TPlotParams, PlotParams
 from pydox.reporting.utils import fig_commit
 from pydox.io.argo.types import ArgoDataForInAir
 
@@ -20,39 +19,15 @@ from pydox.io.ncep.facade import get_ncep_data_for_in_air_method
 log = logging.getLogger("pydox.calibration.methods.in_air.utils")
 
 
-# class ArgoData:
-#
-#     def __init__(self, wmo: int, **kwargs) -> None:
-#         self._cfg: Config = deepcopy(kwargs.get("config", do.params))
-#         self.a_float: ar.ArgoFloat = ar.ArgoFloat(
-#             wmo, host=do.get_params("argo.src", config=self._cfg), cache=True
-#         )
-#         self.cast = kwargs.get("cast", True)
-#         self._sprof = None
-#         self._rtraj = None
-#
-#     @property
-#     def Sprof(self) -> xr.Dataset:
-#         if self._sprof is None:
-#             self._sprof = self.a_float.open_dataset("Sprof", cast=self.cast)
-#         return self._sprof
-#
-#     @property
-#     def Rtraj(self) -> xr.Dataset:
-#         if self._rtraj is None:
-#             self._rtraj = self.a_float.open_dataset("Rtraj", cast=self.cast)
-#         return self._rtraj
-
-
 def get_argo_data(
     a_float: ar.ArgoFloat,
     config: Config,
     params: Optional[ParameterSet] = None,
-    pplot: Callable = None,
-    debug_plot: bool = False,
     uid: Optional[str] = None,
+    ppar: Optional[TPlotParams] = None,
 ) -> ArgoDataForInAir | dict[str, xr.Dataset]:
     """Load Argo float data to correct oxygen with atmospheric data (in-air method)"""
+    print(f"Load Argo data ({a_float.WMO})")
 
     # Read parameters from the configuration object:
     optode_height = do.get_params("argo.optode_height", config=config)
@@ -97,9 +72,8 @@ def get_argo_data(
         cycles=cycles,
         Sprof=Sprof,
         Rtraj=Rtraj,
-        pplot=pplot,
-        debug_plot=debug_plot,
         uid=uid,
+        ppar=ppar,
     )
     data.optode_height = optode_height
     data.launch_date = a_float.dataset("meta")["LAUNCH_DATE"].values
@@ -110,31 +84,31 @@ def get_argo_data(
 def get_atmospheric_data(
     argo_data: ArgoDataForInAir,
     config: Config,
-    params: Optional[ParamsInAir] = None,
-    debug_plot: bool = False,
+    # params: Optional[ParamsInAir] = None,
     uid: Optional[str] = None,
+    ppar: Optional[TPlotParams] = None,
 ) -> dict[str, Any]:
     """Load reference data to correct oxygen with atmospheric data (in-air method)"""
-
     dataset: str = do.get_params("calibration_methods.in_air.dataset", config=config)
+    print(f"Load atmospheric data ({dataset})")
 
     if dataset == "ncep":
-        name: str = do.get_params(
-            "calibration_methods.in_air.data.ncep.name", config=config
-        )
+        # name: str = do.get_params(
+        #     "calibration_methods.in_air.data.ncep.name", config=config
+        # )
+        #
+        # if params is None:
+        #     src: str = do.get_params(
+        #         "calibration_methods.in_air.data.ncep.src", config=config
+        #     )
+        # else:
+        #     src: str = params.src
 
-        if params is None:
-            src: str = do.get_params(
-                "calibration_methods.in_air.data.ncep.src", config=config
-            )
-        else:
-            src: str = params.src
-
-        data = get_ncep_data_for_in_air_method(
-            argo_data, name=name, debug_plot=debug_plot
-        )
+        data = get_ncep_data_for_in_air_method(argo_data, uid=uid, ppar=ppar)
     else:
-        raise NotImplementedError(f"No implementation to load dataset={dataset}")
+        raise NotImplementedError(
+            f"No implementation to load the atmospheric dataset={dataset}"
+        )
 
     return data
 
@@ -144,9 +118,8 @@ def get_data_for_one_parameterset_for_in_air_method(
     config: Config,
     params: ParamsInAir,
     iset: Optional[int] = None,
-    pplot: Callable = None,
-    debug_plot: bool = False,
     uid: Optional[str] = None,
+    ppar: Optional[TPlotParams] = None,
 ) -> dict[str, Any] | tuple[dict[str, Any], int]:
     """Load and process all data (Argo and atmosphere) required for a single fit
 
@@ -160,14 +133,25 @@ def get_data_for_one_parameterset_for_in_air_method(
     params: ParamsInAir
     iset: int, optional, default=None
         Untouched, this argument is simply return to keep track of this configuration set in the procedure when performed in parallel.
-    debug_plot: bool, optional, default=False
     uid: str, optional, default=None
         Unique string identifier of the caller object. This is used for reports, to track the configuration set calling this function.
+    ppar: optional, default=None
+        Plot parameters
 
     Returns
     -------
-    iset, data
+    data | [data, iset]
     """
+    # Get plotting parameters:
+    # Expected use-case: ppar is a partial of PlotParams inherited from high-level calibration methods.
+    # Otherwise, with a direct call to this method:
+    # - note that the below kwargs `uid` and `level` are used only if ppar is None,
+    # - the below kwargs `level` is set to 1 because this is the expected plotting level for input data related plots.
+    ppar: PlotParams = PlotParams.from_obj(ppar, uid=uid, level=1)
+    ppar.uid = (
+        uid if uid is not None else ppar.uid
+    )  # Ensure to use the last possible uid value
+
     data: dict[str, Any] = {
         "PPOX1": None,
         "PPOX2": None,
@@ -178,9 +162,7 @@ def get_data_for_one_parameterset_for_in_air_method(
     # todo Consider using a dataclass instead of a dictionary
 
     # Load Argo float data:
-    this_argo = get_argo_data(
-        a_float, config, params, pplot=pplot, debug_plot=debug_plot, uid=uid
-    )
+    this_argo = get_argo_data(a_float, config, params, uid=uid, ppar=ppar)
     data["PPOX1"]: np.ndarray = this_argo.in_air["PPOX_DOXY"].values
     data["PPOX2"]: np.ndarray = this_argo.in_water["PPOX_DOXY"].values
     data["CYCLE_NUMBER"]: list[int] = [
@@ -191,12 +173,10 @@ def get_data_for_one_parameterset_for_in_air_method(
     ) / np.timedelta64(1, "D")
 
     # Load Atmospheric data:
-    this_atm = get_atmospheric_data(
-        this_argo, config, params, debug_plot=debug_plot, uid=uid
-    )
+    this_atm = get_atmospheric_data(this_argo, config, uid=uid, ppar=ppar)
     data["REF_PPOX"]: np.ndarray = this_atm["REF_PPOX"]
 
-    if debug_plot:
+    if ppar.level <= 1:
         refname = do.get_params("calibration_methods.in_air.dataset", config=config)
         title = "Partial pressure of oxygen (PPOX) used for fitting"
 
@@ -204,16 +184,16 @@ def get_data_for_one_parameterset_for_in_air_method(
             nrows=1,
             ncols=1,
             figsize=(10, 4),
-            dpi=pplot().dpi,
+            dpi=ppar.dpi,
             sharex=True,
         )
         ax.plot(
-            this_argo.in_air["CYCLE_NUMBER"], data["PPOX1"], ".-b", label="Float In-Air"
+            this_argo.in_air["CYCLE_NUMBER"], data["PPOX1"], ".-r", label="Float In-Air"
         )
         ax.plot(
             this_argo.in_water["CYCLE_NUMBER"],
             data["PPOX2"],
-            ".-r",
+            ".-b",
             label="Float In-Water",
         )
         ax.plot(
@@ -231,12 +211,12 @@ def get_data_for_one_parameterset_for_in_air_method(
         fig_commit(
             fig,
             name=title,
-            watermark=pplot().watermark,
+            watermark=ppar.watermark,
             category="input_data",
-            config_uid=uid,
+            config_uid=ppar.uid,
         )
 
-    if debug_plot:
+    if ppar.level <= 1:
         refname = do.get_params("calibration_methods.in_air.dataset", config=config)
         title = f"Ratio of 'Ref-{refname}' vs 'In-Air' partial pressure of oxygen"
 
@@ -244,7 +224,7 @@ def get_data_for_one_parameterset_for_in_air_method(
             nrows=1,
             ncols=1,
             figsize=(10, 4),
-            dpi=pplot().dpi,
+            dpi=ppar.dpi,
             sharex=True,
         )
         ax.plot(data["Delta_T_REF"], data["REF_PPOX"] / data["PPOX1"], ".-")
@@ -259,16 +239,16 @@ def get_data_for_one_parameterset_for_in_air_method(
         ax.plot(
             data["Delta_T_REF"],
             np.polyval(poly_data, data["Delta_T_REF"]),
-            "*-r",
+            "-r",
             label="Linear fit",
         )
         ax.set_title(title)
         fig_commit(
             fig,
             name=title,
-            watermark=pplot().watermark,
+            watermark=ppar.watermark,
             category="input_data",
-            config_uid=uid,
+            config_uid=ppar.uid,
         )
 
     # Return

@@ -1,4 +1,4 @@
-from typing import Optional, Literal, Callable
+from typing import Optional, Literal
 import logging
 from copy import deepcopy
 import hashlib
@@ -7,6 +7,7 @@ import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
 
+from pydox.commodities import TPlotParams, PlotParams
 from pydox.utils.compute import mth_run
 from pydox.utils.xarray import xr_append_history
 from pydox.io.argo.types import MultiProfData, TrajData, CycData
@@ -372,9 +373,7 @@ def get_ts_near_surface(
     ds_sprof: MultiProfData,
     min_pres: float,
     max_pres: float,
-    pplot: Callable = None,
-    debug_plot: bool = False,
-    uid: Optional[str] = None,
+    ppar: Optional[PlotParams] = None,
 ) -> dict[str, xr.DataArray]:
     """Load valid salinity and temperature near the surface from a multi-profil Sprof dataset
 
@@ -386,12 +385,16 @@ def get_ts_near_surface(
         The minimum value (db) of the pressure range to consider.
     max_pres: float
         The maximum value (db) of the pressure range to consider.
-    debug_plot: bool, default=False
+    ppar: Callable[[Any], PlotParams] | PlotParams, default=None
+        An object that is able to return plotting parameter
 
     Returns
     -------
     dict[str, xr.DataArray]
     """
+    # Check arguments:
+    ppar: PlotParams = PlotParams.from_obj(ppar)
+
     # Get values for salinity:
 
     var_psal = ["PSAL", "PSAL_ADJUSTED"]
@@ -418,10 +421,11 @@ def get_ts_near_surface(
     spsal_merged: xr.DataArray = spsal_adj.copy().rename("PSAL_MERGED")  # (N_PROF, )
     spsal_merged[spsal_adj.isnull()] = spsal[spsal_adj.isnull()]
 
-    if debug_plot:
+    if ppar.level <= 0:
+
         title = "Near-surface salinity from Sprof"
         fig, ax = plt.subplots(
-            nrows=1, ncols=1, figsize=(10, 4), dpi=pplot().dpi, sharex=True
+            nrows=1, ncols=1, figsize=(10, 4), dpi=ppar.dpi, sharex=True
         )
         markers = ["s", "*", "."]
         for ii, ds in enumerate([spsal, spsal_adj, spsal_merged]):
@@ -433,15 +437,15 @@ def get_ts_near_surface(
         fig_commit(
             fig,
             name=title,
-            watermark=pplot().watermark,
+            watermark=ppar.watermark,
             category="debug",
-            config_uid=pplot().uid,
+            config_uid=ppar.uid,
         )
 
     # Then get values for temperature:
     stemp = get_temp_in_pres_range(ds_sprof, min_pres, max_pres, "TEMP")
 
-    if debug_plot:
+    if ppar.level <= 0:
         title = "Near-surface temperature from Sprof"
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 4), dpi=90, sharex=True)
         stemp.plot.line("s-", linewidth=0.5, ax=ax, label=stemp.name)
@@ -452,9 +456,9 @@ def get_ts_near_surface(
         fig_commit(
             fig,
             name=title,
-            watermark=pplot().watermark,
+            watermark=ppar.watermark,
             category="debug",
-            config_uid=pplot().uid,
+            config_uid=ppar.uid,
         )
 
     return {

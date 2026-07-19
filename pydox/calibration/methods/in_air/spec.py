@@ -76,12 +76,17 @@ class MethodInAir(Method):
                     icfg += 1
         return configs
 
-    def _load_input_data(
+    def load_input_data(
         self,
         a_float: ar.ArgoFloat,
         ppar: Optional[TPlotParams] = None,
-    ) -> dict[int, Any]:
-        """Load input data for the flatten list of configurations"""
+        **kwargs,
+    ) -> Self:
+        """Load input data for the flatten list of configurations
+
+        This method populates self._input_data
+        """
+        refresh: bool = kwargs.get("refresh", False)
 
         # Create a parameter generator for plots, to be communicated downstream at lower levels:
         if ppar is None:
@@ -95,26 +100,28 @@ class MethodInAir(Method):
         input_data_for_fit: dict[int, Any] = {}
 
         # todo Collect input data in parallel ?
-        # todo Cache input data for performances ?
         for iset, params in self.configs.items():
-            print(f"Load input data for config #{iset}")
-            # Call the appropriate lower-level method to load one set of data for a given configuration.
-            # The `ppar` function is propagated downstream with updated and appropriate configuration ID.
-            # The `uid` argument is also updated to match this specification configuration ID.
-            data = get_data_for_one_parameterset_for_in_air_method(
-                a_float,
-                self._cfg,
-                params,
-                uid=self.uid(iset),
-                ppar=partial(
-                    ppar,
-                    watermark=f"{self.name}\nConfig #{iset}",
+            if refresh or iset not in self._input_data:
+                print(f"Load input data for config #{iset}")
+                # Call the appropriate lower-level method to load one set of data for a given configuration.
+                # The `ppar` function is propagated downstream with updated and appropriate configuration ID.
+                # The `uid` argument is also updated to match this specification configuration ID.
+                data = get_data_for_one_parameterset_for_in_air_method(
+                    a_float,
+                    self._cfg,
+                    params,
                     uid=self.uid(iset),
-                ),
-            )
-            input_data_for_fit[iset] = data
+                    ppar=partial(
+                        ppar,
+                        watermark=f"{self.name}\nConfig #{iset}",
+                        uid=self.uid(iset),
+                    ),
+                )
+                self._input_data[iset] = data
+            else:
+                print(f"Input data for config #{iset} already in memory")
 
-        return input_data_for_fit
+        return self
 
     def fit(
         self,
@@ -161,15 +168,15 @@ class MethodInAir(Method):
         this_ppar = PlotParams.from_obj(ppar)
 
         ############### Load input data
-        # We first need to load data that will be used to fit for each configuration
+        # We first need to load data that will be used in fit
         print("Load input data")
-        input_data_for_fit: dict[int, Any] = self._load_input_data(a_float, ppar)
+        self.load_input_data(a_float, ppar)  # Populates self._input_data if necessary
 
         # Read and store the list of cycle numbers for each configuration
         input_cycs_for_fit = {}
         [
             input_cycs_for_fit.update({iset: data["CYCLE_NUMBER"]})
-            for iset, data in input_data_for_fit.items()
+            for iset, data in self.input_data.items()
         ]
 
         ############### Execute all computations
@@ -185,7 +192,7 @@ class MethodInAir(Method):
         # Now we have as many input_data as unique configuration:
         print("Compute coefficients")
         items = [
-            (iset, params, input_data_for_fit[iset])
+            (iset, params, self.input_data[iset])
             for iset, params in self.configs.items()
         ]
         results: FitResults = compute_fits(items, in_air.fit, method=method)
@@ -217,7 +224,7 @@ class MethodInAir(Method):
             # Return True if all input_data of a variable are similar:
             data_equal = lambda p: np.all(
                 [
-                    array_equal(input_data_for_fit[0][p], input_data_for_fit[ii][p])
+                    array_equal(self.input_data[0][p], self.input_data[ii][p])
                     for ii in range(self.n_configs)
                 ]
             )
@@ -231,17 +238,15 @@ class MethodInAir(Method):
                     dpi=this_ppar.dpi,
                 )
 
-                for iset in range(len(input_data_for_fit)):
-                    xdata = input_data_for_fit[iset]["CYCLE_NUMBER"]
-                    ydata = (
-                        input_data_for_fit[iset]["PPOX1"] * self.coefs[iset].gain.value
-                    )
+                for iset in range(len(self.input_data)):
+                    xdata = self.input_data[iset]["CYCLE_NUMBER"]
+                    ydata = self.input_data[iset]["PPOX1"] * self.coefs[iset].gain.value
                     if self.coefs[iset].drift is not None:
                         ydata = ydata * (
                             1
                             + self.coefs[iset].drift.value
                             / 100
-                            * input_data_for_fit[iset]["Delta_T_REF"]
+                            * self.input_data[iset]["Delta_T_REF"]
                             / 365
                         )
 
@@ -251,14 +256,14 @@ class MethodInAir(Method):
                     ):
                         ax.plot(
                             xdata,
-                            input_data_for_fit[iset]["REF_PPOX"],
+                            self.input_data[iset]["REF_PPOX"],
                             ".-",
                             label="Ref",
                         )
                     elif not data_equal("REF_PPOX"):
                         ax.plot(
                             xdata,
-                            input_data_for_fit[iset]["REF_PPOX"],
+                            self.input_data[iset]["REF_PPOX"],
                             ".-",
                             label=f"Ref (config {iset})",
                         )
@@ -270,14 +275,14 @@ class MethodInAir(Method):
                     ):
                         ax.plot(
                             xdata,
-                            input_data_for_fit[iset]["PPOX1"],
+                            self.input_data[iset]["PPOX1"],
                             ".-",
                             label="Non-adjusted (in-air)",
                         )
                     elif not data_equal("PPOX1"):
                         ax.plot(
                             xdata,
-                            input_data_for_fit[iset]["PPOX1"],
+                            self.input_data[iset]["PPOX1"],
                             ".-",
                             label=f"Non-adjusted (in-air) (config {iset})",
                         )
@@ -307,7 +312,7 @@ class MethodInAir(Method):
                 # One subplot for each config result (n_configs rows, 1 column)
 
                 fig, ax = plt.subplots(
-                    nrows=len(input_data_for_fit),
+                    nrows=len(self.input_data),
                     ncols=1,
                     figsize=(10, 5),
                     dpi=this_ppar.dpi,
@@ -319,26 +324,24 @@ class MethodInAir(Method):
                     else np.array(ax)[np.newaxis]
                 )
 
-                for iset in range(len(input_data_for_fit)):
-                    xdata = input_data_for_fit[iset]["CYCLE_NUMBER"]
-                    ydata = (
-                        input_data_for_fit[iset]["PPOX1"] * self.coefs[iset].gain.value
-                    )
+                for iset in range(len(self.input_data)):
+                    xdata = self.input_data[iset]["CYCLE_NUMBER"]
+                    ydata = self.input_data[iset]["PPOX1"] * self.coefs[iset].gain.value
                     if self.coefs[iset].drift is not None:
                         ydata = ydata * (
                             1
                             + self.coefs[iset].drift.value
                             / 100
-                            * input_data_for_fit[iset]["Delta_T_REF"]
+                            * self.input_data[iset]["Delta_T_REF"]
                             / 365
                         )
 
                     ax[iset].plot(
-                        xdata, input_data_for_fit[iset]["REF_PPOX"], ".-", label="Ref"
+                        xdata, self.input_data[iset]["REF_PPOX"], ".-", label="Ref"
                     )
                     ax[iset].plot(
                         xdata,
-                        input_data_for_fit[iset]["PPOX1"],
+                        self.input_data[iset]["PPOX1"],
                         ".-",
                         label="Non-adjusted (in-air)",
                     )

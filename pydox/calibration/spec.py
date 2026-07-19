@@ -47,6 +47,7 @@ class Workflow(ABC):
 
         # Init private placeholders:
         self._cfg: Config = deepcopy(config)
+        self._input_data = OrderedDict()
         self._fitted: bool = False
         self._fitted_float: dict = {
             "WMO": None,
@@ -256,6 +257,16 @@ class Workflow(ABC):
         So, if `self._flatten_configs()` is not or partially implemented, `n_configs` can be 0.
         """
         return len(self.flatten_configs())
+
+    @property
+    def input_data(self) -> Dict[int, Any]:
+        """Input data for fit"""
+        return self._input_data
+
+    @abstractmethod
+    def load_input_data(self) -> Dict[int, Any]:
+        """Input data for fit"""
+        raise NotImplementedError
 
     @property
     def coefs(self) -> CoefsDict:

@@ -119,9 +119,9 @@ class CalibrationSet(Workflow):
                 this_method.fit(argofloat_obj, **kwargs)
 
                 # Gather more detailed results in dedicated placeholders of the instance:
-                for iset, coefs in this_method._coefs.items():
+                for iset, coefs in this_method.coefs.items():
                     self._coefs[icfg] = coefs
-                    self._fit_data[icfg] = this_method._fit_data[iset]
+                    self._fit_data[icfg] = this_method.fit_data[iset]
                     self._fitted_float["CYCLE_NUMBER"][icfg] = (
                         this_method._fitted_float["CYCLE_NUMBER"][iset]
                     )
@@ -137,9 +137,9 @@ class CalibrationSet(Workflow):
                 coefs = this_method.coefs[0]
 
                 # Gather more detailed results in dedicated placeholders of the instance:
-                for iset, coefs in this_method._coefs.items():
+                for iset, coefs in this_method.coefs.items():
                     self._coefs[icfg] = coefs
-                    self._fit_data[icfg] = this_method._fit_data[iset]
+                    self._fit_data[icfg] = this_method.fit_data[iset]
                     self._fitted_float["CYCLE_NUMBER"][icfg] = (
                         this_method._fitted_float["CYCLE_NUMBER"][iset]
                     )

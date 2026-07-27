@@ -1,15 +1,25 @@
 from abc import ABC, abstractmethod
 from copy import deepcopy
-from typing import Dict, Any, Self, Optional
+from typing import Dict, Any, Self, Optional, List
 import json
 
+import hashlib
 from collections import OrderedDict
-from dataclasses import dataclass, asdict
+from dataclasses import asdict
 
+import numpy as np
+import matplotlib as mpl
+import argopy as ar
 import pydox as do
 from pydox._config.config import check_config, Config
-from pydox.commodities import ConfigsDict, CoefsDict
-from pydox.utils.casting import is_ctelist
+from pydox.commodities import (
+    ConfigsDict,
+    CoefsDict,
+    PydoxFigure,
+    VALID_FIGURE_CATEGORIES,
+)
+from pydox.utils.casting import is_ctelist, to_list
+from pydox.reporting.utils import configs_figure_list, method_figure_list
 
 
 class Workflow(ABC):
@@ -46,15 +56,21 @@ class Workflow(ABC):
         # but, this may not be coherent with the from_config class method expectation, see below.
 
         # Init private placeholders:
-        self._cfg: Config = deepcopy(config)
-        self._input_data = OrderedDict()
-        self._fitted: bool = False
+        self._cfg: Config = deepcopy(
+            config
+        )  # Used by self.get_params(), self.set_params(), self.reset_params()
+        self._input_data = (
+            OrderedDict()
+        )  # Filled by self.fit() or self.load_input_data(), return by self.input_data
+        self._fitted: bool = False  # Filled by self.fit(), return by self.fitted
         self._fitted_float: dict = {
             "WMO": None,
             "CYCLE_NUMBER": {},
         }  # Used to register float WMO/CYCLE_NUMBER used for fit
-        self._coefs: CoefsDict = OrderedDict()
-        self._fit_data = OrderedDict()
+        self._coefs: CoefsDict = (
+            OrderedDict()
+        )  # Filled by self.fit(), return by self.coefs
+        self._fit_data = OrderedDict()  # Filled by self.fit(), return by self.fit_data
 
     @classmethod
     def from_config(cls, config, *args, **kwargs) -> "Workflow":
@@ -189,6 +205,22 @@ class Workflow(ABC):
 
         return "\n".join(summary)
 
+    def _uid(self, icfg: int = None) -> str:
+        """UID for this Workflow or a specific configuration"""
+        m = hashlib.sha256()
+        m.update(bytes(str(self.name), "utf-8"))
+        m.update(bytes(str(self._cfg), "utf-8"))
+        configs = (
+            self.configs.keys() if icfg is None else ar.utils.checkers.to_list(icfg)
+        )
+        for c in configs:
+            m.update(bytes(str(self.configs[c]), "utf-8"))
+        return m.hexdigest()
+
+    def uid(self, icfg: int = None) -> str:
+        """UID for this Workflow or a specific configuration"""
+        return self._uid(icfg)
+
     @property
     def fitted(self) -> bool:
         """Was the instance fitted at least once ?"""
@@ -264,7 +296,7 @@ class Workflow(ABC):
         return self._input_data
 
     @abstractmethod
-    def load_input_data(self) -> Dict[int, Any]:
+    def load_input_data(self, data: Any) -> Dict[int, Any]:
         """Input data for fit"""
         raise NotImplementedError
 
@@ -275,6 +307,34 @@ class Workflow(ABC):
             return self._coefs
         else:
             raise ValueError(f"No coefficients computed")
+
+    @property
+    def fit_data(self) -> Dict[int, Any]:
+        """Input data for fit"""
+        if self.fitted:
+            return self._fit_data
+        else:
+            raise ValueError(f"No coefficients data computed")
+
+    @property
+    def configs_figures(self) -> OrderedDict[int, List[PydoxFigure]]:
+        """Return figures with similar uid as a configuration
+
+        See Also
+        --------
+        :class:`Workflow.figures`
+        """
+        return configs_figure_list(self)
+
+    @property
+    def figures(self) -> List[PydoxFigure]:
+        """Return figures with similar uid as this workflow instance
+
+        See Also
+        --------
+        :class:`Workflow.configs_figures`
+        """
+        return method_figure_list(self)
 
     @abstractmethod
     def _flatten_configs(self) -> ConfigsDict:
@@ -292,3 +352,85 @@ class Workflow(ABC):
     @abstractmethod
     def fit(self, data: Any) -> Self:
         raise NotImplementedError
+
+    def plot(
+        self,
+        icfg: Optional[int] = None,
+        categories: str | list[str] = "fit_results",
+        configs_layout: str | list[str] = ["hue"],
+    ) -> list[mpl.figure.Figure]:
+        """Show figures
+
+        Parameters
+        ----------
+        icfg: int, optional, default = None
+           Select plots for a specific configuration number.
+           If set to None (default), show only plots shared by all configurations (eg: fit results).
+        categories: str | list[str], default = "fit_results"
+            Select one or a list of plot categories to show (eg: "debug", "input_data", "fit_results").
+            Valid values are in :class:`pydox.commodities.VALID_FIGURE_CATEGORIES`.
+        configs_layout: str | list[str], default = "hue"
+            Select One or more possible layout for plots with more than one configuration.
+
+        Returns
+        -------
+        list[mpl.figure.Figure]
+        """
+        ###### Validate arguments
+        cfg_list: list[int] = []
+        if icfg is not None:
+            cfg_list: list[int] = to_list(icfg)
+        for i in cfg_list:
+            if i not in np.arange(self.n_configs):
+                raise ValueError(
+                    f"Invalid configuration number {i}. Valid values are {np.arange(self.n_configs)}"
+                )
+
+        categories: list[str] = to_list(
+            "fit_results" if categories is None else categories
+        )
+
+        if "all" in categories:
+            # Select what to display among commodities.VALID_FIGURE_CATEGORIES values:
+            categories: list[str] = VALID_FIGURE_CATEGORIES
+            # categories: list[str] = ["input_data", "fit_results"]
+
+        for cat in categories:
+            if cat not in VALID_FIGURE_CATEGORIES:
+                raise ValueError(
+                    f"Invalid plot category '{cat}'. Valid values are: {VALID_FIGURE_CATEGORIES}"
+                )
+
+        configs_layout: list[str] = to_list(configs_layout)
+
+        ###### Get the list of figures matching arguments
+        pfig_list: List[PydoxFigure] = []
+        if len(cfg_list) == 0:
+            for category in categories:
+                for fig in self.figures:
+                    if fig.category == category:
+                        if "configs_layout" in fig.name:
+                            for layout in configs_layout:
+                                if f"[configs_layout='{layout}']" in fig.name:
+                                    pfig_list.append(fig)
+                        else:
+                            pfig_list.append(fig)
+
+            emsg = f"No figures correspond to your criteria ! May be you need to specify a specific configuration number in {np.arange(self.n_configs)}"
+
+        else:
+            for icfg in cfg_list:
+                for category in categories:
+                    for fig in self.configs_figures[icfg]:
+                        if fig.category == category:
+                            pfig_list.append(fig)
+            emsg = f"No figures correspond to your criteria ! May be you should not specify a specific configuration number."
+
+        if len(pfig_list) == 0:
+            raise ValueError(emsg)
+
+        ###### Show figures
+        for fig in pfig_list:
+            fig.reload().show()
+
+        return [f.fig for f in pfig_list]

@@ -146,8 +146,8 @@ adjustment:
 plots:
   dpi: 100
   watermark: '(dev. version)' # Text that will always be displayed on figures as a watermark
-  configs_layout: ['hue', 'subplot'] # Generate these layout when plotting more than one configuration at a time
-  level: 0 # Generate plots for level higher or equal to this level (0: debug, 1: input data, 2: fit results)
+  configs_layout: ['hue', 'subplot'] # Generate these layout when plotting data from more than one configuration at a time
+  level: 0 # Generate plots for levels higher or equal to this level (0: debug, 1: input data, 2: fit results). Set to the lowest value to ensure the creation of all possible plots (but necessarily displayed or saved on files).
   save:
     format: png
     path: docs/img

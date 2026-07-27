@@ -16,7 +16,7 @@ def fig_commit(
     dest: Optional[Path] = None,
     config_uid: Optional[str] = None,
 ):
-    """Commit a named :mpl:`Figure` object to the global registry
+    """Commit a named :mpl:`Figure` object to the global registry of figures
 
     The :mpl:`Figure` object is automatically pickled (in a tmp folder) for later re-open or re-use in the session.
     The :mpl:`Figure` object is also closed upon commit.
@@ -32,6 +32,8 @@ def fig_commit(
             found = True
 
     if not found:
+        print(f"Commit figure ({new_f.category} - '{new_f.name}')")
+
         # Add watermark:
         default_watermark = do.get_params("plots.watermark")
         show_watermark = watermark is not None or default_watermark is not None
@@ -76,7 +78,7 @@ def fig_commit(
 def method_figure_list(obj) -> List[PydoxFigure]:
     results: List[PydoxFigure] = []
     for f in do.__figures:
-        if f.config_uid.startswith(obj.uid()):
+        if f.config_uid is not None and f.config_uid.startswith(obj.uid()):
             results.append(f)
     return results
 
@@ -87,6 +89,6 @@ def configs_figure_list(obj) -> OrderedDict[int, List[PydoxFigure]]:
     for iset, params in obj.configs.items():
         results[iset]: List[PydoxFigure] = []
         for f in do.__figures:
-            if f.config_uid.startswith(obj.uid(iset)):
+            if f.config_uid is not None and f.config_uid.startswith(obj.uid(iset)):
                 results[iset].append(f)
     return results

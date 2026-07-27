@@ -57,3 +57,10 @@ class MethodClimatology(Method):
 
     def fit(self, data: Any) -> Self:
         raise NotImplementedError
+
+    def load_input_data(
+        self,
+        *args,
+        **kwargs,
+    ):
+        raise NotImplementedError

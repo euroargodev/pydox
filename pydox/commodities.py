@@ -33,6 +33,7 @@ from typing import (
     runtime_checkable,
     Callable,
     Self,
+    List,
 )
 import matplotlib as mpl
 import pickle
@@ -318,6 +319,48 @@ class PydoxFigure:
         self.fig.show()
 
 
+class DoFigures:
+    """A class to provide a facade to the internal global registry of figures"""
+
+    def __init__(self, obj):
+        self.registry: list[PydoxFigure] = obj
+
+    def __getitem__(self, *args) -> list[PydoxFigure] | PydoxFigure:
+        """Get a :class:`PydoxFigure` instance from global registry
+
+        Use figure index or figure name indexing
+        """
+        if isinstance(args[0], str):
+            return [fig for fig in self.registry if fig.name == args[0]]
+        else:
+            return self.registry.__getitem__(*args)
+
+    def __len__(self) -> int:
+        return len(self.registry)
+
+    def __iter__(self):
+        for v in self.registry:
+            yield v
+
+    def __repr__(self) -> str:
+        summary = ["<pydox.figures>"]
+        summary.append(f"{len(self)} figures commited:")
+        for fig in self:
+            msg = f" * Level {fig.level:2d} - {fig.category:15s} - '{fig.name}'"
+            if fig.config_uid == "":
+                msg = f"{msg} (orpheans 😵)"
+            summary.append(msg)
+        return "\n".join(summary)
+
+    def _ipython_key_completions_(self) -> list[str]:
+        """Provide method for key-autocompletions in IPython."""
+        return [p.name for p in self]
+
+    @property
+    def orpheans(self) -> list[PydoxFigure]:
+        return [fig for fig in self if fig.config_uid == ""]
+
+
 @runtime_checkable
 class TPlotParams(Protocol):
     """A type for anything able to return a PlotParams class instance
@@ -347,7 +390,9 @@ class TPlotParams(Protocol):
 class PlotParams:
     """A placeholder for plotting parameters to be communicated from high to low-level APIs
 
-    The `level` attribute is related to VALID_FIGURE_CATEGORIES. Categories are semantic for the end-user, `level` is for internal use.
+    The `level` attribute defines the plot category, it does not relate to where in the code the plot is created.
+
+    Hence, `level` is related to VALID_FIGURE_CATEGORIES that are semantic for the end-user, but `level` is for internal use.
 
     The expected list of values for `level`:
 

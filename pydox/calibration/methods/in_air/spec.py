@@ -4,8 +4,8 @@ import logging
 from functools import partial
 
 import numpy as np
-import argopy as ar
 import matplotlib.pyplot as plt
+import argopy as ar
 
 from pydox._config.utils import format_value_txt
 from pydox.utils.casting import to_list
@@ -20,11 +20,15 @@ from pydox.commodities import (
     PlotParams,
     TPlotParams,
 )
-from pydox.reporting.utils import fig_commit
 from pydox.core import in_air
 from pydox.calibration.method import Method
 from pydox.calibration.methods.in_air.utils import (
     get_data_for_one_parameterset_for_in_air_method,
+)
+from pydox.reporting.utils import fig_commit
+from pydox.calibration.methods.in_air.plots import (
+    plot_fit_results_hue,
+    plot_fit_results_subplot,
 )
 
 
@@ -94,6 +98,7 @@ class MethodInAir(Method):
                 PlotParams,
                 watermark=self.name,
                 dpi=self.get_params("plots.dpi"),
+                level=self.get_params("plots.level"),
             )
 
         # We first need to load data that will be used for fit for each configuration
@@ -102,7 +107,12 @@ class MethodInAir(Method):
         # todo Collect input data in parallel ?
         for iset, params in self.configs.items():
             if refresh or iset not in self._input_data:
-                print(f"Load input data for config #{iset}")
+                print(f"Load input data for config #{iset} ...")
+                this_ppar = partial(
+                    ppar,
+                    watermark=f"{self.name}\nConfig #{iset}",
+                    uid=self.uid(iset),
+                )
                 # Call the appropriate lower-level method to load one set of data for a given configuration.
                 # The `ppar` function is propagated downstream with updated and appropriate configuration ID.
                 # The `uid` argument is also updated to match this specification configuration ID.
@@ -111,11 +121,7 @@ class MethodInAir(Method):
                     self._cfg,
                     params,
                     uid=self.uid(iset),
-                    ppar=partial(
-                        ppar,
-                        watermark=f"{self.name}\nConfig #{iset}",
-                        uid=self.uid(iset),
-                    ),
+                    ppar=this_ppar,
                 )
                 self._input_data[iset] = data
             else:
@@ -169,8 +175,9 @@ class MethodInAir(Method):
 
         ############### Load input data
         # We first need to load data that will be used in fit
-        print("Load input data")
+        print("Start load input data")
         self.load_input_data(a_float, ppar)  # Populates self._input_data if necessary
+        print("End load input data")
 
         # Read and store the list of cycle numbers for each configuration
         input_cycs_for_fit = {}
@@ -213,160 +220,15 @@ class MethodInAir(Method):
         self._fitted_float["CYCLE_NUMBER"] = input_cycs_for_fit
 
         ############### Plot
-        if this_ppar.level <= 2:
-            suptitle = "Calibration results"
 
-            # Take 2 arrays and return True if all values are similar (ignore NaNs, but ensure they are located at the same index):
-            array_equal = (
-                lambda x, y: np.equal(np.isnan(x), np.isnan(y)).all()
-                and np.equal(x[~np.isnan(x)], y[~np.isnan(x)]).all()
-            )
-            # Return True if all input_data of a variable are similar:
-            data_equal = lambda p: np.all(
-                [
-                    array_equal(self.input_data[0][p], self.input_data[ii][p])
-                    for ii in range(self.n_configs)
-                ]
+        if "hue" in self.get_params("plots.configs_layout"):
+            plot_fit_results_hue(
+                self.input_data, self.coefs, uid=self.uid(), ppar=this_ppar
             )
 
-            if "hue" in self.get_params("plots.configs_layout"):
-                # Each config result are superimposed on the single plot
-                fig, ax = plt.subplots(
-                    nrows=1,
-                    ncols=1,
-                    figsize=(10, 6),
-                    dpi=this_ppar.dpi,
-                )
-
-                for iset in range(len(self.input_data)):
-                    xdata = self.input_data[iset]["CYCLE_NUMBER"]
-                    ydata = self.input_data[iset]["PPOX1"] * self.coefs[iset].gain.value
-                    if self.coefs[iset].drift is not None:
-                        ydata = ydata * (
-                            1
-                            + self.coefs[iset].drift.value
-                            / 100
-                            * self.input_data[iset]["Delta_T_REF"]
-                            / 365
-                        )
-
-                    if (
-                        data_equal("REF_PPOX")
-                        and "Ref" not in ax.get_legend_handles_labels()[-1]
-                    ):
-                        ax.plot(
-                            xdata,
-                            self.input_data[iset]["REF_PPOX"],
-                            ".-",
-                            label="Ref",
-                        )
-                    elif not data_equal("REF_PPOX"):
-                        ax.plot(
-                            xdata,
-                            self.input_data[iset]["REF_PPOX"],
-                            ".-",
-                            label=f"Ref (config {iset})",
-                        )
-
-                    if (
-                        data_equal("PPOX1")
-                        and "Non-adjusted (in-air)"
-                        not in ax.get_legend_handles_labels()[-1]
-                    ):
-                        ax.plot(
-                            xdata,
-                            self.input_data[iset]["PPOX1"],
-                            ".-",
-                            label="Non-adjusted (in-air)",
-                        )
-                    elif not data_equal("PPOX1"):
-                        ax.plot(
-                            xdata,
-                            self.input_data[iset]["PPOX1"],
-                            ".-",
-                            label=f"Non-adjusted (in-air) (config {iset})",
-                        )
-
-                    ax.plot(
-                        xdata,
-                        ydata,
-                        ".-",
-                        label=f"Adjusted (config {iset})",
-                    )
-
-                ax.grid()
-                ax.set_xlabel("Float Cycle number of the measurement")
-                ax.set_ylabel("Partial pressure of oxygen [mb]")
-                ax.legend()
-                ax.set_title(suptitle)
-
-                fig_commit(
-                    fig,
-                    name=f"{suptitle} [configs_layout='hue']",
-                    category="fit_results",
-                    watermark=this_ppar.watermark,
-                    config_uid=self.uid(),  # Use Calibration UID, not that of a specific configuration
-                )
-
-            if "subplot" in self.get_params("plots.configs_layout"):
-                # One subplot for each config result (n_configs rows, 1 column)
-
-                fig, ax = plt.subplots(
-                    nrows=len(self.input_data),
-                    ncols=1,
-                    figsize=(10, 5),
-                    dpi=this_ppar.dpi,
-                    sharex=True,
-                )
-                ax = (
-                    ax.flatten()
-                    if isinstance(ax, np.ndarray)
-                    else np.array(ax)[np.newaxis]
-                )
-
-                for iset in range(len(self.input_data)):
-                    xdata = self.input_data[iset]["CYCLE_NUMBER"]
-                    ydata = self.input_data[iset]["PPOX1"] * self.coefs[iset].gain.value
-                    if self.coefs[iset].drift is not None:
-                        ydata = ydata * (
-                            1
-                            + self.coefs[iset].drift.value
-                            / 100
-                            * self.input_data[iset]["Delta_T_REF"]
-                            / 365
-                        )
-
-                    ax[iset].plot(
-                        xdata, self.input_data[iset]["REF_PPOX"], ".-", label="Ref"
-                    )
-                    ax[iset].plot(
-                        xdata,
-                        self.input_data[iset]["PPOX1"],
-                        ".-",
-                        label="Non-adjusted (in-air)",
-                    )
-                    ax[iset].plot(
-                        xdata,
-                        ydata,
-                        ".-",
-                        label=f"Adjusted (config {iset})",
-                    )
-
-                    ax[iset].grid()
-                    ax[iset].set_xlabel("Float Cycle number of the measurement")
-                    ax[iset].set_ylabel("Partial pressure of oxygen [mb]")
-                    ax[iset].legend()
-                    ax[iset].set_title(f"Correction : {iset}")
-
-                # plt.tight_layout()
-                plt.suptitle(suptitle)
-
-                fig_commit(
-                    fig,
-                    name=f"{suptitle} [configs_layout='subplot']",
-                    category="fit_results",
-                    watermark=this_ppar.watermark,
-                    config_uid=self.uid(),  # Use Calibration UID, not that of a specific configuration
-                )
+        if "subplot" in self.get_params("plots.configs_layout"):
+            plot_fit_results_subplot(
+                self.input_data, self.coefs, uid=self.uid(), ppar=this_ppar
+            )
 
         return self

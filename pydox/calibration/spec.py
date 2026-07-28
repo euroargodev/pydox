@@ -223,7 +223,7 @@ class Workflow(ABC):
     @property
     def fitted(self) -> bool:
         """Was the instance fitted at least once ?"""
-        return self._fitted
+        return self._fitted # Set by self.fit()
 
     def get_params(self, *args, **kwargs):
         """Get configuration parameter(s) for this instance only"""
@@ -292,32 +292,34 @@ class Workflow(ABC):
     @property
     def input_data(self) -> Dict[int, Any]:
         """Input data for fit"""
-        return self._input_data
+        return self._input_data # Populated by `self.load_input_data()`
 
     @abstractmethod
     def load_input_data(self, data: Any) -> Dict[int, Any]:
         """Input data for fit"""
+        # Must populate the internal placeholder `self._input_data`
         raise NotImplementedError
 
     @property
     def coefs(self) -> CoefsDict:
-        """A property to directly access the dictionary of coefficients"""
+        """Dictionary of fit coefficients for each configuration"""
+        #
         if self.fitted:
-            return self._coefs
+            return self._coefs # Populated by `self.fit()`
         else:
             raise ValueError(f"No coefficients computed")
 
     @property
     def fit_data(self) -> Dict[int, Any]:
-        """Input data for fit"""
+        """Dictionary of fit auxiliary data for each configuration"""
         if self.fitted:
-            return self._fit_data
+            return self._fit_data # Populated by `self.fit()`
         else:
             raise ValueError(f"No coefficients data computed")
 
     @property
     def configs_figures(self) -> OrderedDict[int, List[PydoxFigure]]:
-        """Return figures associated with each configurations UID
+        """Dictionary of figures associated with each configurations UID
 
         See Also
         --------
@@ -330,7 +332,7 @@ class Workflow(ABC):
 
     @property
     def figures(self) -> List[PydoxFigure]:
-        """Return figures associated with this workflow UID
+        """List of figures associated with this workflow UID
 
         See Also
         --------
@@ -353,6 +355,9 @@ class Workflow(ABC):
 
     @abstractmethod
     def fit(self, data: Any) -> Self:
+        """Load input data and compute coefficients"""
+        # Must rely on `self.load_input_data` to load data for fit.
+        # Must populate `self.fitted`, `self._fit_data`, `self._coefs`, `self._fitted_float`
         raise NotImplementedError
 
     def plot(

@@ -6,8 +6,7 @@ These functions are expected to receive low-level setting values (no high-level 
 
 import logging
 from copy import deepcopy
-from typing import Literal, Optional, Callable
-from functools import partial
+from typing import Literal, Optional
 
 import numpy as np
 import xarray as xr
@@ -28,7 +27,6 @@ from pydox.io.argo.utils import (
     psal_rtraj_substitute_sprof,
     get_uid_for_in_air_method_parameters,
 )
-from pydox.reporting.facade import fig_commit
 
 
 log = logging.getLogger("pydox.io.argo.facade")
@@ -154,7 +152,7 @@ def get_argo_data_for_in_air_method(
             ax[ii].set_title(f"{v}")
         plt.suptitle(suptitle)
         plt.tight_layout()
-        fig_commit(
+        do.figures.commit(
             fig,
             name=suptitle,
             watermark=ppar.watermark,
@@ -192,7 +190,7 @@ def get_argo_data_for_in_air_method(
             ax[ii].set_title(f"{v}")
         plt.suptitle(suptitle)
         plt.tight_layout()
-        fig_commit(
+        do.figures.commit(
             fig,
             name=suptitle,
             watermark=ppar.watermark,
@@ -238,7 +236,7 @@ def get_argo_data_for_in_air_method(
             ax[ii].set_title(f"{v}")
         plt.suptitle(suptitle)
         plt.tight_layout()
-        fig_commit(
+        do.figures.commit(
             fig,
             name=suptitle,
             watermark=ppar.watermark,
@@ -305,7 +303,7 @@ def get_argo_data_for_in_air_method(
             ax[ii].set_title(f"{v}")
         plt.suptitle(suptitle)
         plt.tight_layout()
-        fig_commit(
+        do.figures.commit(
             fig,
             name=suptitle,
             watermark=ppar.watermark,

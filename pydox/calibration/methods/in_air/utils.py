@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 import pydox as do
 from pydox._config.config import Config
 from pydox.commodities import ParameterSet, ParamsInAir, TPlotParams, PlotParams
-from pydox.reporting.facade import fig_commit
 from pydox.io.argo.types import ArgoDataForInAir
 
 from pydox.io.argo.facade import get_argo_data_for_in_air_method, semantic_cycle2values
@@ -209,7 +208,7 @@ def get_data_for_one_parameterset_for_in_air_method(
         ax.set_title(title)
         ax.legend()
         plt.tight_layout()
-        fig_commit(
+        do.figures.commit(
             fig,
             name=title,
             watermark=ppar.watermark,
@@ -244,7 +243,7 @@ def get_data_for_one_parameterset_for_in_air_method(
             label="Linear fit",
         )
         ax.set_title(title)
-        fig_commit(
+        do.figures.commit(
             fig,
             name=title,
             watermark=ppar.watermark,

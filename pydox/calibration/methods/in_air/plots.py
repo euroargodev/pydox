@@ -2,13 +2,13 @@ from typing import Dict, Any, Optional
 import numpy as np
 import matplotlib.pyplot as plt
 
+import pydox as do
 from pydox.commodities import (
     CoefsDict,
     TPlotParams,
     PlotParams,
     CoefficientsInAir,
 )
-from pydox.reporting.facade import fig_commit
 from pydox.calibration.methods.in_air.utils import data_equal
 
 
@@ -131,7 +131,7 @@ def plot_fit_results_hue(
     ax.legend()
     ax.set_title(suptitle)
 
-    fig_commit(
+    do.figures.commit(
         fig,
         name=f"{suptitle} [configs_layout='hue']",
         category="fit_results",
@@ -201,7 +201,7 @@ def plot_fit_results_subplot(
     # plt.tight_layout()
     plt.suptitle(suptitle)
 
-    fig_commit(
+    do.figures.commit(
         fig,
         name=f"{suptitle} [configs_layout='subplot']",
         category="fit_results",

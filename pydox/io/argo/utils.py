@@ -7,11 +7,11 @@ import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
 
-from pydox.commodities import TPlotParams, PlotParams
+import pydox as do
+from pydox.commodities import PlotParams
 from pydox.utils.compute import mth_run
 from pydox.utils.xarray import xr_append_history
 from pydox.io.argo.types import MultiProfData, TrajData, CycData
-from pydox.reporting.facade import fig_commit
 
 log = logging.getLogger("pydox.io.argo.utils")
 
@@ -433,7 +433,7 @@ def get_ts_near_surface(
         ax.legend()
         ax.set_title(title)
         plt.tight_layout()
-        fig_commit(
+        do.figures.commit(
             fig,
             name=title,
             watermark=ppar.watermark,
@@ -452,7 +452,7 @@ def get_ts_near_surface(
         ax.legend()
         ax.set_title(title)
         plt.tight_layout()
-        fig_commit(
+        do.figures.commit(
             fig,
             name=title,
             watermark=ppar.watermark,

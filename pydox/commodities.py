@@ -33,7 +33,6 @@ from typing import (
     runtime_checkable,
     Callable,
     Self,
-    List,
 )
 import matplotlib as mpl
 import pickle
@@ -281,11 +280,16 @@ class PydoxFigure:
     # axes: mpl.axes._axes.Axes | list[mpl.axes._axes.Axes] = None
 
     def __post_init__(self):
-        # Validate/set the category
+        # Validate/set
+        if not isinstance(self.fig, mpl.figure.Figure):
+            raise ValueError(
+                f"Cannot create a PydoxFigure. 'fig' must be a matplotlib.figure.Figure instance, get {type(self.fig)} instead."
+            )
+
         if self.category is not None:
             if self.category not in VALID_FIGURE_CATEGORIES:
                 raise ValueError(
-                    f"'{self.category}' is not a valid category. Must be one in: {VALID_FIGURE_CATEGORIES}"
+                    f"Cannot create a PydoxFigure. '{self.category}' is not a valid category. Must be one in: {VALID_FIGURE_CATEGORIES}"
                 )
         else:
             # Set to default category (lowest level):
@@ -293,15 +297,17 @@ class PydoxFigure:
 
     @property
     def level(self) -> int:
+        """This figure level based on its category attribute"""
         cat2level = {
             "debug": 0,
-            "input_data": 1,
-            "fit_results": 2,
+            "input_data": 10,
+            "fit_results": 20,
         }
         return cat2level[self.category]
 
     @property
     def uid(self) -> str:
+        """This instance uid, not to be confused with 'config_uid'"""
         m = hashlib.sha256()
         m.update(bytes(str(self.name), "utf-8"))
         if self.config_uid is not None:
@@ -311,19 +317,28 @@ class PydoxFigure:
         return m.hexdigest()
 
     def reload(self) -> Self:
+        """Reload the pickle file with this figure object, and update the 'fig' attribute"""
         with open(self.pickle, "rb") as fid:
             self.fig = pickle.load(fid)
         return self
 
     def show(self):
+        """Call :meth:`mpl.figure.Figure.show` on this instance figure object."""
         self.fig.show()
 
 
-class DoFigures:
-    """A class to provide a facade to the internal global registry of figures"""
+class _DoFigures:
+    """A private class to provide a facade to the internal global registry of figures
+
+    This is not intended to be called directly by end-users.
+
+    Use `do.figures` instead.
+    """
 
     def __init__(self, obj):
-        self.registry: list[PydoxFigure] = obj
+        self.registry: list[PydoxFigure] = (
+            obj  # no copy ! just the pointer to stay in sync with the global registry do.__figures.
+        )
 
     def __getitem__(self, *args) -> list[PydoxFigure] | PydoxFigure:
         """Get a :class:`PydoxFigure` instance from global registry
@@ -345,10 +360,21 @@ class DoFigures:
     def __repr__(self) -> str:
         summary = ["<pydox.figures>"]
         summary.append(f"{len(self)} figures commited:")
+
+        cat_width = max([len(f.category) for f in self] + [10])
+        name_width = max([len(f.name) for f in self] + [10])
+        uid_width = max(
+            [len(f.config_uid) for f in self if f.config_uid is not None] + [10]
+        )
+
         for fig in self:
-            msg = f" * Level {fig.level:2d} - {fig.category:15s} - '{fig.name}'"
-            if fig.config_uid == "":
-                msg = f"{msg} (orpheans 😵)"
+            msg = f"| {fig.level:2d} | {fig.category:{cat_width}} | {fig.name:{name_width}}"
+            if fig.config_uid == "" or fig.config_uid is None:
+                uid_msg = "orpheans 😵"
+            else:
+                uid_msg = fig.config_uid
+            msg = f"{msg} | {uid_msg:{uid_width}} |"
+
             summary.append(msg)
         return "\n".join(summary)
 
@@ -358,7 +384,38 @@ class DoFigures:
 
     @property
     def orpheans(self) -> list[PydoxFigure]:
+        """List orphean figures
+
+        A figure is considered as an _orphean_ if it has no 'config_uid'.
+        """
         return [fig for fig in self if fig.config_uid == ""]
+
+    def clear(self):
+        """Clear global registry and delete pickle files
+
+        If the parent folder of pickle files is left empty at the end of the process (and is not the internal temporary folder given by do.get_tmp()), we also delete it.
+        """
+        import pydox as do  # Avoid circularity
+
+        # Delete files and registry entry (capture the list of parent folders as well).
+        parents_folder = []
+        while self.registry:
+            fig = self.registry.pop(0)
+            pick = Path(fig.pickle)
+            parents_folder.append(pick.parents[0])
+            pick.unlink(missing_ok=True)
+
+        # Handle parent folders
+        # Delete if empty (ignore .* hidden files)
+        parents_folder = list(set(parents_folder))
+        while parents_folder:
+            par = parents_folder.pop(0)
+            if par != do.tmp_root():
+                content = [
+                    child for child in par.iterdir() if not child.name.startswith(".")
+                ]
+                if len(content) == 0:
+                    par.rmdir()
 
 
 @runtime_checkable
@@ -390,41 +447,66 @@ class TPlotParams(Protocol):
 class PlotParams:
     """A placeholder for plotting parameters to be communicated from high to low-level APIs
 
-    The `level` attribute defines the plot category, it does not relate to where in the code the plot is created.
+    Notes
+    -----
+    **About the `level` attribute**
 
-    Hence, `level` is related to VALID_FIGURE_CATEGORIES that are semantic for the end-user, but `level` is for internal use.
+    The `level` attribute does not relate to where in the code the plot is created.
+    It is an attribute that is intended to be used by a function to check whether a plot should be generated or not.
 
-    The expected list of values for `level`:
+    This provides a mechanism to define the minimal level of figures to be generated in the configuration.
+    It can be seen as a `logging level <https://docs.python.org/3/library/logging.html#logging-levels>`_, but for plots.
 
-    - 0: debug, for plots related to low level data manipulation at load time
-    - 1: input data, for plots related to data used as input for a fit/computation (basically the final state of input data loading and pre-processing, to be used by a fit)
-    - 2: fit, for plots related to fit/computation results
+    Example: If a function defines its own plot as a level 2, the plot should be generated only if the PlotParams.level is higher or equal to 2.
 
+    The default value is from the configuration parameter `plots.level`.
+
+    Expected list of possible values for `level`:
+
+    - 0 < 10: Plots with debug purposes, related to low level data manipulation at load time
+    - 10 < 20: Plots related to input or intermediate data, eg: data used as input for a fit/computation (basically the final state of input data loading and pre-processing, to be used by a fit)
+    - >= 20: Plots related to fit/computation results
+
+    See Also
+    --------
+    :attr:`do.commodities.VALID_FIGURE_CATEGORIES`
     """
 
-    level: int = (
-        0  # Since this is default, set to the minimal value so that any plot will be generated
-    )
-    uid: str = ""
+    level: int = None
+    """Minimal level of figures to be generated based on this set of plotting parameters. Default: 'plots.level'"""
+
     watermark: str = ""
+    """A string to be printed on top of any plot."""
+
     dpi: int = None
+    """The resolution of figures, in dots-per-inch. Default: 'plots.dpi' """
+
+    uid: str = ""
+    """An unique identifier string related to this object. Eg: Calibration or CalibrationSet uid, possibly for a specific configuration."""
 
     def __post_init__(self):
         """Valid and assign default attributes from the runtime configuration"""
+        if self.level is None:
+            import pydox as do  # Avoid circularity
+
+            object.__setattr__(self, "level", do.get_params("plots.level"))
+
         if self.dpi is None:
             import pydox as do  # Avoid circularity
 
             object.__setattr__(self, "dpi", do.get_params("plots.dpi"))
 
     @classmethod
-    def from_obj(cls, obj, **kwargs) -> "PlotParams":
+    def get(
+        cls, obj: Optional[Callable | TPlotParams] = None, **kwargs
+    ) -> "PlotParams":
         """Return a :class:``PlotParams`` instance from an object
 
         Behavior:
 
         - If object is None, return a default :class:``PlotParams`` instance with **kwargs.
         - If object is a partial of :class:``PlotParams``, return the called partial.
-        - If object is an instance of :class:``PlotParams``, return it untouched.
+        - If object is an instance of :class:``PlotParams``, return it unchanged.
 
         In any other case, a :class:`ValueError` is raised.
 
@@ -433,6 +515,9 @@ class PlotParams:
         Parameters
         ----------
         obj: None | partial(:class:``PlotParams``) | :class:``PlotParams``
+
+        **kwargs:
+            Passed to :class:``PlotParams`` if obj is None. Ignored otherwise.
 
         Returns
         -------

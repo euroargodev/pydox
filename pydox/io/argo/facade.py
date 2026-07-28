@@ -28,7 +28,7 @@ from pydox.io.argo.utils import (
     psal_rtraj_substitute_sprof,
     get_uid_for_in_air_method_parameters,
 )
-from pydox.reporting.utils import fig_commit
+from pydox.reporting.facade import fig_commit
 
 
 log = logging.getLogger("pydox.io.argo.facade")
@@ -48,7 +48,7 @@ def get_argo_data_for_in_air_method(
 ) -> ArgoDataForInAir | dict[str, xr.Dataset]:
     """Load Argo float data to calibrate oxygen with atmospheric data (in-air method)
 
-    Adapted from `m_argo_data.get_argo_data_for_NCEP()`
+    Adapted from `m_argo_data.get_argo_data_for_NCEP()`.
 
     Parameters
     ----------
@@ -60,12 +60,21 @@ def get_argo_data_for_in_air_method(
     cycles: list[int]
     Sprof: xr.Dataset
     Rtraj: xr.Dataset
+
+    Other Parameters
+    ----------------
+    uid: str
     ppar: TPlotParams
 
     Returns
     -------
     dict[str, xr.Dataset | list[int]]
         A dictionary
+
+    Notes
+    -----
+    For similar set of primary parameters, new figures will be commited only if the `uid` is different.
+
     """
     # Get UID for this set of parameters:
     uid_suff = get_uid_for_in_air_method_parameters(
@@ -81,7 +90,7 @@ def get_argo_data_for_in_air_method(
     uid = f"{uid}-{uid_suff}" if uid is not None else uid_suff
     # Appending the uid_suff will allow to identify similar plots but created with higher level different configs.
 
-    ppar: PlotParams = PlotParams.from_obj(ppar, uid=uid, level=0)
+    ppar: PlotParams = PlotParams.get(ppar)
     ppar.uid = (
         uid if uid is not None else ppar.uid
     )  # Ensure to use the last possible uid value
@@ -130,7 +139,7 @@ def get_argo_data_for_in_air_method(
         == np.unique(Rtraj_inwater["CYCLE_NUMBER"])
     )
 
-    if ppar.level <= 0:
+    if (this_plot_level := 0) >= ppar.level:
         suptitle = "Rtraj data after code selection and cycle matching"
         v2plot = ["PSAL", "TEMP", "PPOX_DOXY"]
         fig, ax = plt.subplots(
@@ -168,7 +177,7 @@ def get_argo_data_for_in_air_method(
                     f"{dsname.title()} trajectory {pname} DataArray is full of NaNs after group by cycles !"
                 )
 
-    if ppar.level <= 0:
+    if (this_plot_level := 0) >= ppar.level:
         suptitle = "In-air and In-Water Rtraj data after median-per-cycle grouping"
         v2plot = ["PSAL", "TEMP", "PPOX_DOXY"]
         fig, ax = plt.subplots(
@@ -191,7 +200,7 @@ def get_argo_data_for_in_air_method(
             config_uid=ppar.uid,
         )
 
-    if ppar.level <= 0:
+    if (this_plot_level := 0) >= ppar.level:
         # Super-impose Sprof data:
         suptitle = "Sprof vs Rtraj In-Air and In-Water data"
         v2plot = ["PSAL", "TEMP", "PPOX_DOXY"]
@@ -263,7 +272,7 @@ def get_argo_data_for_in_air_method(
             f"{ds.attrs['title']} merged with some Sprof multi-profile data"
         )
 
-    if ppar.level <= 0:
+    if (this_plot_level := 0) >= ppar.level:
         suptitle = "Sprof vs Rtraj In-Air and In-Water data - after substitution"
         v2plot = ["PSAL", "TEMP"]
         fig, ax = plt.subplots(

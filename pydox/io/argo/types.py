@@ -1,8 +1,9 @@
 from typing import Annotated
 import xarray as xr
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 import numpy as np
 
+import pydox as do
 
 # Type for a xarray object with dimensions N_PROF and N_LEVELS
 MultiProfData = Annotated[
@@ -48,3 +49,6 @@ class ArgoDataForInAir:
     """The optode height in meters"""
 
     launch_date: np.datetime64
+
+    def keys(self):
+        return asdict(self).keys()

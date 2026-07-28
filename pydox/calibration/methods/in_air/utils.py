@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import pydox as do
 from pydox._config.config import Config
 from pydox.commodities import ParameterSet, ParamsInAir, TPlotParams, PlotParams
-from pydox.reporting.utils import fig_commit
+from pydox.reporting.facade import fig_commit
 from pydox.io.argo.types import ArgoDataForInAir
 
 from pydox.io.argo.facade import get_argo_data_for_in_air_method, semantic_cycle2values
@@ -31,7 +31,7 @@ def get_argo_data(
 
     # Read parameters from the configuration object:
     optode_height = do.get_params("argo.optode_height", config=config)
-    if "CONFIG_OptodeVerticalPressureOffset_dbar" in a_float.launchconfig.parameters:
+    if "OptodeVerticalPressureOffset_dbar" in a_float.launchconfig.parameters:
         optode_height = a_float.launchconfig["OptodeVerticalPressureOffset_dbar"]
 
     min_pres: float = do.get_params(
@@ -147,7 +147,7 @@ def get_data_for_one_parameterset_for_in_air_method(
     # Otherwise, with a direct call to this method:
     # - note that the below kwargs `uid` and `level` are used only if ppar is None,
     # - the below kwargs `level` is set to 1 because this is the expected plotting level for input data related plots.
-    ppar: PlotParams = PlotParams.from_obj(ppar, uid=uid, level=1)
+    ppar: PlotParams = PlotParams.get(ppar, uid=uid)
     ppar.uid = (
         uid if uid is not None else ppar.uid
     )  # Ensure to use the last possible uid value
@@ -176,7 +176,8 @@ def get_data_for_one_parameterset_for_in_air_method(
     this_atm = get_atmospheric_data(this_argo, config, uid=uid, ppar=ppar)
     data["REF_PPOX"]: np.ndarray = this_atm["REF_PPOX"]
 
-    if ppar.level <= 1:
+    # Figures
+    if (this_plot_level := 10) >= ppar.level:
         refname = do.get_params("calibration_methods.in_air.dataset", config=config)
         title = "Partial pressure of oxygen (PPOX) used for fitting"
 
@@ -216,7 +217,7 @@ def get_data_for_one_parameterset_for_in_air_method(
             config_uid=ppar.uid,
         )
 
-    if ppar.level <= 1:
+    if (this_plot_level := 10) >= ppar.level:
         refname = do.get_params("calibration_methods.in_air.dataset", config=config)
         title = f"Ratio of 'Ref-{refname}' vs 'In-Air' partial pressure of oxygen"
 
@@ -256,3 +257,29 @@ def get_data_for_one_parameterset_for_in_air_method(
         return data
     else:
         return data, iset
+
+
+# A function to return True if 2 numpy arrays have similar values, ignoring NaNs, but ensuring they are located at the same index:
+array_equal = (
+    lambda x, y: np.equal(np.isnan(x), np.isnan(y)).all()
+    and np.equal(x[~np.isnan(x)], y[~np.isnan(x)]).all()
+)
+
+
+def data_equal(data, param):
+    """Return True if all arrays of a parameters from a dict of dict are similar
+
+    This is to be used with dict `input_data` that has configuration numbers as keys.
+
+    Parameters
+    ----------
+    data: Dict[int, Dict[param: str, np.array]]
+    param: str
+        Some key in the sub dict
+    """
+    if np.unique([len(data[ii][param]) for ii in range(len(data))]).size > 1:
+        return False
+    else:
+        return np.all(
+            [array_equal(data[0][param], data[ii][param]) for ii in range(len(data))]
+        )

@@ -195,17 +195,19 @@ class CalibrationSet(Workflow):
             watermark=self.name,
             dpi=self.get_params("plots.dpi"),
             level=self.get_params("plots.level"),
+            uid=self.uid(),
         )
         if np.all(np.unique([m.rcgroup for m in self._methods.values()]) == "in_air"):
+            # If all methods are in-air, we can safely generate these plots:
 
             if "hue" in self.get_params("plots.configs_layout"):
                 in_air_plots.plot_fit_results_hue(
-                    self.input_data, self.coefs, uid=self.uid(), ppar=ppar
+                    self.input_data, self.coefs, ppar=ppar
                 )
 
             if "subplot" in self.get_params("plots.configs_layout"):
                 in_air_plots.plot_fit_results_hue(
-                    self.input_data, self.coefs, uid=self.uid(), ppar=ppar
+                    self.input_data, self.coefs, ppar=ppar
                 )
 
         return self

@@ -3,8 +3,6 @@ from collections import OrderedDict
 import logging
 from functools import partial
 
-import numpy as np
-import matplotlib.pyplot as plt
 import argopy as ar
 
 from pydox._config.utils import format_value_txt
@@ -25,7 +23,6 @@ from pydox.calibration.method import Method
 from pydox.calibration.methods.in_air.utils import (
     get_data_for_one_parameterset_for_in_air_method,
 )
-from pydox.reporting.utils import fig_commit
 from pydox.calibration.methods.in_air.plots import (
     plot_fit_results_hue,
     plot_fit_results_subplot,
@@ -170,8 +167,6 @@ class MethodInAir(Method):
             dpi=self.get_params("plots.dpi"),
             level=self.get_params("plots.level"),
         )
-        # Also create a set of plotting parameters to be used under the scope of this .fit method:
-        this_ppar = PlotParams.from_obj(ppar)
 
         ############### Load input data
         # We first need to load data that will be used in fit
@@ -220,15 +215,14 @@ class MethodInAir(Method):
         self._fitted_float["CYCLE_NUMBER"] = input_cycs_for_fit
 
         ############### Plot
+        # Create a set of plotting parameters to be used under the scope of this .fit method:
+        this_ppar: PlotParams = PlotParams.get(ppar)
+        this_ppar.uid = self.uid()
 
         if "hue" in self.get_params("plots.configs_layout"):
-            plot_fit_results_hue(
-                self.input_data, self.coefs, uid=self.uid(), ppar=this_ppar
-            )
+            plot_fit_results_hue(self.input_data, self.coefs, ppar=this_ppar)
 
         if "subplot" in self.get_params("plots.configs_layout"):
-            plot_fit_results_subplot(
-                self.input_data, self.coefs, uid=self.uid(), ppar=this_ppar
-            )
+            plot_fit_results_subplot(self.input_data, self.coefs, ppar=this_ppar)
 
         return self

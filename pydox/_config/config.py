@@ -530,8 +530,9 @@ def reset_params(
         reference_config = kwargs["reference"]
 
     # Loop through all parameters and reset them (set values from reference configuration):
+    # We ignore parameters starting with an underscore "_" because they are considered private and managed differently.
     for p in params:
-        if p not in _read_only_dotted_params:
+        if p not in _read_only_dotted_params and not p.split(".")[-1].startswith("_"):
             reference_value = get_params(p, config=reference_config)
             set_params(p, reference_value, config=config)
 

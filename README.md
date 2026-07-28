@@ -37,47 +37,63 @@ c.set_params('calibration_parameters', cycles=[1, 100])
 c.set_params('calibration_methods.in_air', carryover=[False, True])
 
 print(c)
+```
 
+```python
 # Compute calibrations coefficients for all possible configurations:
 c.fit(a_float)
-# c.fit(a_float, debug_plot=True) # Can also display a bunch of figures
 
-# Access attributes with configurations and corresponding coefficients:
-c.configs
-c.coefs
+# Attributes as dict with configuration number as key: 
+c.configs  # Configuration parameters
+c.input_data # Data used as input for fit
+
+c.coefs # Fit results coefficients
+c.fit_data # Fit auxiliary data
+```
+
+**Figures**
+In order to display figures associated with this Calibration instance, you can use the `plot` method:
+
+```python
+c.plot() # Will show the highest level figures (most synthetic)
+c.plot(0, categories='debug') # Show debugging figures for configuration #0
+c.plot(1, categories='input_data') # Show figures from input data for configuration #1
+c.plot(categories='fit_results') # Show figures from fit results with default layout ('hue')
+c.plot(categories='fit_results', configs_layout='subplot') # Show figures from fit results with a specific layout
 ```
 
 ### Tips
 
+Trigger load and access input data:
 ```python
-# Access to private input data: 
-input_data_for_fit = c._load_input_data(a_float)
+# Trigger input data loading
+c.load_input_data(a_float)  
+
+# Access to input data: 
+input_data_for_fit = c.input_data
 ```
 
+Load and process Argo data, low-level with explicit list of parameters:
 ```python
-# Load and process Argo data, low-level with explicit list of parameters
 from pydox.io.argo.facade import get_argo_data_for_in_air_method
-import numpy as np
 
-get_argo_data_for_in_air_method(
+argo_data = get_argo_data_for_in_air_method(
     cycles = a_float.CYCLE_NUMBERS,
     Sprof = a_float.dataset('Sprof'),
     Rtraj = a_float.dataset('Rtraj'),
-    debug_plot = 0,
     
     min_pres = do.get_params("argo.in_water_salinity.min_pressure"),
     max_pres = do.get_params("argo.in_water_salinity.max_pressure"),
     in_air_codes = do.get_params("argo.codes.in_air"),
     in_water_codes = do.get_params("argo.codes.in_water"),
     which_psal = do.get_params("argo.use"),
-);
+)
 
 # Which is basically equivalent to:
-# d = get_argo_data_for_in_air_method(
+# get_argo_data_for_in_air_method(
 #     cycles = a_float.CYCLE_NUMBERS,
 #     Sprof = a_float.dataset('Sprof'),
 #     Rtraj = a_float.dataset('Rtraj'),
-#     debug_plot = True,
 #     
 #     min_pres = 0.,
 #     max_pres = 10.,
@@ -87,10 +103,11 @@ get_argo_data_for_in_air_method(
 # )
 ```
 
+And then load NCEP data, which depends on the Argo data:
 ```python
-# Load NCEP data:
-from pydox.io.ncep.facade import open_ncep
-ds = open_ncep()
+from pydox.io.ncep.facade import get_ncep_data_for_in_air_method
+
+d = get_ncep_data_for_in_air_method(argo_data)
 ```
 
 ## Development of the library
@@ -153,11 +170,12 @@ pydox/
 │   └── config.py        # Primary functions to manage pydox settings
 │
 ├── calibration/           # High-level user interface to running calibrations
-│   ├── facade.py          # Provides `Calibration` and `CalibrationSet`
+│   ├── facade.py          # Wrapper for `Calibration` and `CalibrationSet` implementation
 │   ├── spec.py            # The inner machinery: `Workflow`, one base class to rule them all
 │   ├── method.py          # `Method` base class for method implementations
 │   └── methods/           # Submodules for each method implementation
 │       ├── in_air/        # In-air calibration
+│       │   ├── plots.py   # Specific plot functions
 │       │   ├── spec.py    # `MethodInAir` implementation
 │       │   └── utils.py   # Specific high-level utilities, eg wrapper for Argo/NCEP data loading 
 │       └── climatology.py # Climatology-based calibration

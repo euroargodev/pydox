@@ -416,7 +416,7 @@ class Workflow(ABC):
                         else:
                             pfig_list.append(fig)
 
-            emsg = f"No figures correspond to your criteria ! May be you need to specify a specific configuration number in {np.arange(self.n_configs)}"
+            emsg = f"No figures correspond to your criteria ! May be you need to provide a specific configuration number in {np.arange(self.n_configs)} or set a lower value to the 'plots.level' setting to generate more figures (currently set to {self.get_params('plots.level')})"
 
         else:
             for icfg in cfg_list:
@@ -424,7 +424,7 @@ class Workflow(ABC):
                     for fig in self.configs_figures[icfg]:
                         if fig.category == category:
                             pfig_list.append(fig)
-            emsg = f"No figures correspond to your criteria ! May be you should not specify a specific configuration number."
+            emsg = f"No figures correspond to your criteria ! May be you should NOT specify a specific configuration number or set a lower value to the 'plots.level' setting to generate more figures (currently set to {self.get_params('plots.level')})."
 
         if len(pfig_list) == 0:
             raise ValueError(emsg)

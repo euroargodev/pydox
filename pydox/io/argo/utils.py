@@ -11,7 +11,7 @@ from pydox.commodities import TPlotParams, PlotParams
 from pydox.utils.compute import mth_run
 from pydox.utils.xarray import xr_append_history
 from pydox.io.argo.types import MultiProfData, TrajData, CycData
-from pydox.reporting.utils import fig_commit
+from pydox.reporting.facade import fig_commit
 
 log = logging.getLogger("pydox.io.argo.utils")
 
@@ -393,10 +393,9 @@ def get_ts_near_surface(
     dict[str, xr.DataArray]
     """
     # Check arguments:
-    ppar: PlotParams = PlotParams.from_obj(ppar)
+    ppar: PlotParams = PlotParams.get(ppar)
 
     # Get values for salinity:
-
     var_psal = ["PSAL", "PSAL_ADJUSTED"]
     spsal, spsal_adj = None, None
 
@@ -421,7 +420,7 @@ def get_ts_near_surface(
     spsal_merged: xr.DataArray = spsal_adj.copy().rename("PSAL_MERGED")  # (N_PROF, )
     spsal_merged[spsal_adj.isnull()] = spsal[spsal_adj.isnull()]
 
-    if ppar.level <= 0:
+    if (this_plot_level := 0) >= ppar.level:
 
         title = "Near-surface salinity from Sprof"
         fig, ax = plt.subplots(
@@ -445,7 +444,7 @@ def get_ts_near_surface(
     # Then get values for temperature:
     stemp = get_temp_in_pres_range(ds_sprof, min_pres, max_pres, "TEMP")
 
-    if ppar.level <= 0:
+    if (this_plot_level := 0) >= ppar.level:
         title = "Near-surface temperature from Sprof"
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 4), dpi=90, sharex=True)
         stemp.plot.line("s-", linewidth=0.5, ax=ax, label=stemp.name)

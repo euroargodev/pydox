@@ -2,39 +2,14 @@ from typing import Dict, Any, Optional
 import numpy as np
 import matplotlib.pyplot as plt
 
-import pydox as do
 from pydox.commodities import (
     CoefsDict,
     TPlotParams,
     PlotParams,
     CoefficientsInAir,
 )
-from pydox.reporting.utils import fig_commit
-
-# A function to return True if 2 numpy arrays have similar values, ignoring NaNs, but ensuring they are located at the same index:
-array_equal = (
-    lambda x, y: np.equal(np.isnan(x), np.isnan(y)).all()
-    and np.equal(x[~np.isnan(x)], y[~np.isnan(x)]).all()
-)
-
-
-def data_equal(data, param):
-    """Return True if all arrays of a parameters from a dict of dict are similar
-
-    This is to be used with dict `input_data` that has configuration numbers as keys.
-
-    Parameters
-    ----------
-    data: Dict[int, Dict[param: str, np.array]]
-    param: str
-        Some key in the sub dict
-    """
-    if np.unique([len(data[ii][param]) for ii in range(len(data))]).size > 1:
-        return False
-    else:
-        return np.all(
-            [array_equal(data[0][param], data[ii][param]) for ii in range(len(data))]
-        )
+from pydox.reporting.facade import fig_commit
+from pydox.calibration.methods.in_air.utils import data_equal
 
 
 def predict(coefs: CoefficientsInAir, data: dict[int, Any]) -> Any:
@@ -64,8 +39,8 @@ def predict(coefs: CoefficientsInAir, data: dict[int, Any]) -> Any:
 def plot_fit_results_hue(
     input_data: Dict[int, Any],
     coefs: CoefsDict,
-    uid: str = "",
     ppar: Optional[TPlotParams] = None,
+    figsize=(10, 5),
 ) -> None:
     """Plot in-air fit results, each config superimposed on a single plot
 
@@ -78,16 +53,12 @@ def plot_fit_results_hue(
     uid: str = ""
     ppar: Optional[TPlotParams] = None
     """
-    _this_plot_level = 2
+    this_plot_level = 20
 
-    if ppar is None:
-        ppar = PlotParams(
-            dpi=do.get_params("plots.dpi"),
-            level=do.get_params("plots.level"),
-        )
-    if ppar.level > _this_plot_level:
+    ppar: PlotParams = PlotParams.get(ppar)
+    if this_plot_level < ppar.level:
         print(
-            f"This plot was not generated because plots.level {ppar.level} is higher than this plot level {_this_plot_level}"
+            f"This plot was not generated because plots.level {ppar.level} is higher than this plot level {this_plot_level}"
         )
         return None
 
@@ -97,7 +68,7 @@ def plot_fit_results_hue(
     fig, ax = plt.subplots(
         nrows=1,
         ncols=1,
-        figsize=(10, 6),
+        figsize=figsize,
         dpi=ppar.dpi,
     )
 
@@ -165,28 +136,23 @@ def plot_fit_results_hue(
         name=f"{suptitle} [configs_layout='hue']",
         category="fit_results",
         watermark=ppar.watermark,
-        config_uid=uid,
+        config_uid=ppar.uid,
     )
 
 
 def plot_fit_results_subplot(
     input_data: Dict[int, Any],
     coefs: CoefsDict,
-    uid: str = "",
     ppar: Optional[TPlotParams] = None,
     figsize=(10, 5),
 ) -> None:
     """Plot in-air fit results, one subplot for each config result (n_configs rows, 1 column)"""
-    _this_plot_level = 2
+    this_plot_level = 20
 
-    if ppar is None:
-        ppar = PlotParams(
-            dpi=do.get_params("plots.dpi"),
-            level=do.get_params("plots.level"),
-        )
-    if ppar.level > _this_plot_level:
+    ppar = PlotParams.get(ppar)
+    if this_plot_level < ppar.level:
         print(
-            f"This plot was not generated because plots.level {ppar.level} is higher than this plot level {_this_plot_level}"
+            f"This plot was not generated because plots.level {ppar.level} is higher than this plot level {this_plot_level}"
         )
         return None
 
@@ -240,5 +206,5 @@ def plot_fit_results_subplot(
         name=f"{suptitle} [configs_layout='subplot']",
         category="fit_results",
         watermark=ppar.watermark,
-        config_uid=uid,
+        config_uid=ppar.uid,
     )

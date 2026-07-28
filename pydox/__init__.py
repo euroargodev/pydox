@@ -11,7 +11,7 @@ from pydox._config.config import rcParams as params
 from pydox._config.utils import tmp_root
 
 from pydox.calibration.facade import Calibration, CalibrationSet
-from pydox.commodities import PydoxFigure, DoFigures
+from pydox.commodities import PydoxFigure, _DoFigures
 
 #
 from importlib.metadata import version as _version
@@ -25,4 +25,4 @@ except Exception:
 
 # Define module level placeholder for the list of figure objects:
 __figures: list[PydoxFigure] = []  # Internal global registry of figures
-figures = DoFigures(__figures)  # Facade to registry of figures
+figures = _DoFigures(__figures)  # Facade for the registry manager of figures

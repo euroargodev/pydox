@@ -19,7 +19,6 @@ from pydox.commodities import (
     VALID_FIGURE_CATEGORIES,
 )
 from pydox.utils.casting import is_ctelist, to_list
-from pydox.reporting.utils import configs_figure_list, method_figure_list
 
 
 class Workflow(ABC):
@@ -318,23 +317,26 @@ class Workflow(ABC):
 
     @property
     def configs_figures(self) -> OrderedDict[int, List[PydoxFigure]]:
-        """Return figures with similar uid as a configuration
+        """Return figures associated with each configurations UID
 
         See Also
         --------
         :class:`Workflow.figures`
         """
-        return configs_figure_list(self)
+        results = OrderedDict()
+        for icfg in range(self.n_configs):
+            results[icfg]: List[PydoxFigure] = do.figures.uidstartswith(self.uid(icfg))
+        return results
 
     @property
     def figures(self) -> List[PydoxFigure]:
-        """Return figures with similar uid as this workflow instance
+        """Return figures associated with this workflow UID
 
         See Also
         --------
         :class:`Workflow.configs_figures`
         """
-        return method_figure_list(self)
+        return do.figures.uidstartswith(self.uid())
 
     @abstractmethod
     def _flatten_configs(self) -> ConfigsDict:

@@ -526,6 +526,13 @@ class _DoFigures:
                 if len(content) == 0:
                     par.rmdir()
 
+    def uidstartswith(self, uid: str) -> list[PydoxFigure]:
+        return [
+            fig
+            for fig in self
+            if fig.config_uid is not None and fig.config_uid.startswith(uid)
+        ]
+
 
 @runtime_checkable
 class TPlotParams(Protocol):

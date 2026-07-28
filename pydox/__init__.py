@@ -24,5 +24,6 @@ except Exception:
 
 # Define global figure registry and manager:
 from pydox.commodities import PydoxFigure, _DoFigures
+
 __figures: list[PydoxFigure] = []  # Internal global registry of figures
 figures = _DoFigures(__figures)  # Facade for the registry manager of figures

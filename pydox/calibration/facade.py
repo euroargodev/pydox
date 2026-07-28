@@ -206,7 +206,7 @@ class CalibrationSet(Workflow):
                 )
 
             if "subplot" in self.get_params("plots.configs_layout"):
-                in_air_plots.plot_fit_results_hue(
+                in_air_plots.plot_fit_results_subplot(
                     self.input_data, self.coefs, ppar=ppar
                 )
 

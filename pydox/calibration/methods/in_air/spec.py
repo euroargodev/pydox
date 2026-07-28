@@ -171,7 +171,7 @@ class MethodInAir(Method):
         ############### Load input data
         # We first need to load data that will be used in fit
         print("Start load input data")
-        self.load_input_data(a_float, ppar)  # Populates self._input_data if necessary
+        self.load_input_data(a_float, ppar)
         print("End load input data")
 
         # Read and store the list of cycle numbers for each configuration

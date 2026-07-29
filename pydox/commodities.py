@@ -432,7 +432,7 @@ class _DoFigures:
 
         # Create a PydoxFigure instance with these figure and meta-data:
         this_f = PydoxFigure(
-            fig=fig, name=name, category=category, config_uid=config_uid
+            fig=fig, name=name, category=category, config_uid=str(config_uid)
         )
 
         # Check, by uid, if the figure was already committed:
@@ -532,6 +532,11 @@ class _DoFigures:
             for fig in self
             if fig.config_uid is not None and fig.config_uid.startswith(uid)
         ]
+
+    def to_pdf(self, pdf_file: Path | str, **kwargs):
+        from pydox.reporting.pdf import registry_report
+
+        return registry_report(self.registry, outputfile=pdf_file, **kwargs)
 
 
 @runtime_checkable

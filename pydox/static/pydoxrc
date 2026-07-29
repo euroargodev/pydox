@@ -164,7 +164,8 @@ plots:
 
 # ============================================= Reporting
 reports:
-  template:
+  template: lops
+  template_list:
     - lops
   save:
     format: pdf

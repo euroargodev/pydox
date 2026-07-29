@@ -223,7 +223,7 @@ class Workflow(ABC):
     @property
     def fitted(self) -> bool:
         """Was the instance fitted at least once ?"""
-        return self._fitted # Set by self.fit()
+        return self._fitted  # Set by self.fit()
 
     def get_params(self, *args, **kwargs):
         """Get configuration parameter(s) for this instance only"""
@@ -292,7 +292,7 @@ class Workflow(ABC):
     @property
     def input_data(self) -> Dict[int, Any]:
         """Input data for fit"""
-        return self._input_data # Populated by `self.load_input_data()`
+        return self._input_data  # Populated by `self.load_input_data()`
 
     @abstractmethod
     def load_input_data(self, data: Any) -> Dict[int, Any]:
@@ -305,7 +305,7 @@ class Workflow(ABC):
         """Dictionary of fit coefficients for each configuration"""
         #
         if self.fitted:
-            return self._coefs # Populated by `self.fit()`
+            return self._coefs  # Populated by `self.fit()`
         else:
             raise ValueError(f"No coefficients computed")
 
@@ -313,7 +313,7 @@ class Workflow(ABC):
     def fit_data(self) -> Dict[int, Any]:
         """Dictionary of fit auxiliary data for each configuration"""
         if self.fitted:
-            return self._fit_data # Populated by `self.fit()`
+            return self._fit_data  # Populated by `self.fit()`
         else:
             raise ValueError(f"No coefficients data computed")
 

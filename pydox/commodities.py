@@ -19,7 +19,6 @@ https://medium.com/the-pythonworld/why-i-stopped-using-python-dataclass-everywhe
 import hashlib
 from pathlib import Path
 from dataclasses import dataclass, field, asdict
-import logging
 
 import numpy as np
 from functools import partial
@@ -37,8 +36,6 @@ from typing import (
 )
 import matplotlib as mpl
 import pickle
-
-log = logging.getLogger("pydox.commodities")
 
 
 @dataclass(frozen=1)
@@ -430,7 +427,7 @@ class _DoFigures:
         """
         import pydox as do  # Avoid circularity
 
-        info = partial(do.reporting.logs.print_log.info, logger=log, level=10)
+        log = do.reporting.logs.getLogger("pydox.commodities", context_level=10)
 
         if name.strip() == "" or name is None:
             raise ValueError("A figure must have a name to be commited")
@@ -448,8 +445,8 @@ class _DoFigures:
 
         # If not found, commit this:
         if not found:
-            info(
-                f"Commit figure '{this_f.name}' (level {this_f.level} / {this_f.category})"
+            log.info(
+                f"Commit figure '{this_f.name}' - {this_f.category} (level {this_f.level})"
             )
 
             # Print watermark:

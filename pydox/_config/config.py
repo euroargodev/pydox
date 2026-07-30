@@ -1,7 +1,6 @@
 # ‼️ This is the only module where the global configuration object is to be referred to as ``rcParams`` and not ``do.params``
 
 import importlib
-import warnings
 from pathlib import Path
 from matplotlib.rcsetup import validate_stringlist
 import os
@@ -25,6 +24,8 @@ from pydox._config import (
 )
 from pydox._config.utils import runner, config_repr_txt, config_repr_html
 from pydox._config.yaml import load_config_from_file
+
+# from pydox.reporting.logs import getLogger # Impossible without circularity, _config is only module where we cant use getLogger
 
 
 log = logging.getLogger("pydox.config")

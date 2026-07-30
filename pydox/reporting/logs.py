@@ -1,32 +1,70 @@
 import logging
+import datetime
+from pathlib import Path
+
 import pydox as do
 
 logger = logging.getLogger("pydox")
 logger.setLevel(logging.DEBUG)
 
-# create file handler which regular logs, even debug messages
-fh = logging.FileHandler("pydox.log")
+# Create a file handler with regular logs, even debug messages
+logfolder = Path(do.get_params("output.root")).joinpath("logs")
+logfolder.mkdir(parents=True, exist_ok=True)
+
+logfile = logfolder.joinpath(
+    f"{do.tmp_root().name}.log"
+)  # Use timestamp from tmp root, makes easier to link tmp files with log files.
+
+fh = logging.FileHandler(logfile)
 fh.setFormatter(
     logging.Formatter(
-        "%(asctime)s [%(levelname)s] %(name)s:%(lineno)d: %(message)s",
-        datefmt="%I:%M:%S %p",
+        "%(asctime)s - %(levelname)-7s - %(message)s",
+        datefmt="%H:%M:%S",
     )
 )
 logger.addHandler(fh)
 
-# create console handler for users, with a filter to log only INFO and WARNING
+logfile = logfolder.joinpath(
+    f"{do.tmp_root().name}-full.log"
+)  # Use timestamp from tmp root, makes easier to link tmp files with log files.
+
+fh = logging.FileHandler(logfile)
+fh.setFormatter(
+    logging.Formatter(
+        "%(asctime)s [%(levelname)s] %(threadName)s:%(name)s:%(lineno)d: %(message)s",
+        datefmt="%H:%M:%S",
+    )
+)
+logger.addHandler(fh)
 
 
-class PydoxFormatter(logging.Formatter):
+class getLogger:
+
+    def __init__(self, name: str, context_level: int = 0):
+
+        self.log: logging.Logger = logging.getLogger(name)
+        self.context_level = context_level
+        self.pydox_level = do.get_params("pydox.screen_log_level")
+        self.screen_log = do.get_params("pydox.screen_log")
+        # if self.filtered:
+        #     print(
+        #         f"Logger '{name}' created with context_level={self.context_level} >= pydox_level={self.pydox_level}"
+        #     )
+        # else:
+        #     print(
+        #         f"Logger '{name}' created but context_level={self.context_level} < pydox_level={self.pydox_level}"
+        #     )
+
+    @property
+    def filtered(self):
+        return self.screen_log and self.context_level >= self.pydox_level
 
     grey = "\x1b[38;20m"
     yellow = "\x1b[33;20m"
     red = "\x1b[31;20m"
     bold_red = "\x1b[31;1m"
     reset = "\x1b[0m"
-    format = "PYDOX - %(asctime)s - %(message)s"
-    # format = "%(levelname)s - %(message)s"
-    # format = "%(levelname)s - %(message)s [%(name)s]"
+    format = "PYDOX - {asctime} - {message}"
 
     FORMATS = {
         logging.DEBUG: grey + format + reset,
@@ -36,43 +74,29 @@ class PydoxFormatter(logging.Formatter):
         logging.CRITICAL: bold_red + format + reset,
     }
 
-    def format(self, record):
-        log_fmt = self.FORMATS.get(record.levelno)
-        formatter = logging.Formatter(log_fmt, datefmt="%I:%M:%S")
-        return formatter.format(record)
+    def print(self, msg, levelno):
+        # datefmt = "%Y%m%d%H%M%S%f"
+        datefmt = "%Hh%M:%S"
+        asctime = datetime.datetime.now(datetime.timezone.utc).strftime(datefmt)
+        msg = self.FORMATS.get(levelno).format(message=msg, asctime=asctime)
+        print(msg)
 
+    def error(self, msg: str, *args, **kwargs):
+        self.log.error(msg, *args, **kwargs)  # Regular logging to file
+        if self.filtered:
+            self.print(msg, levelno=logging.ERROR)  # Custom logging to std.out
 
-class PydoxFilter(logging.Filter):
-    def filter(self, record: logging.LogRecord) -> bool:
-        if record.levelno == logging.INFO:
-            return True
-        if record.levelno == logging.WARNING:
-            return True
-        return False
+    def warning(self, msg: str, *args, **kwargs):
+        self.log.warning(msg, *args, **kwargs)  # Regular logging to file
+        if self.filtered:
+            self.print(msg, levelno=logging.WARNING)  # Custom logging to std.out
 
+    def debug(self, msg: str, *args, **kwargs):
+        self.log.debug(msg, *args, **kwargs)  # Regular logging to file
+        if self.filtered:
+            self.print(msg, levelno=logging.DEBUG)  # Custom logging to std.out
 
-stream = logging.StreamHandler()
-# stream.setFormatter(logging.Formatter("%(levelname)s - %(message)s"))
-# stream.setFormatter(logging.Formatter("%(levelname)s - %(message)s [%(name)s]"))
-stream.setFormatter(PydoxFormatter())
-stream.addFilter(filter=PydoxFilter(name="pydox_filter"))
-
-if do.get_params("pydox.screen_log"):
-    logger.addHandler(stream)
-
-
-class _print_log:
-    def debug(self, msg: str = "", logger: logging.Logger = None, level: int = 0):
-        if int(level) >= do.get_params("pydox.screen_log_level"):
-            logger.debug(msg)
-
-    def info(self, msg: str = "", logger: logging.Logger = None, level: int = 0):
-        if int(level) >= do.get_params("pydox.screen_log_level"):
-            logger.info(msg)
-
-    def warning(self, msg: str = "", logger: logging.Logger = None, level: int = 0):
-        if int(level) >= do.get_params("pydox.screen_log_level"):
-            logger.warning(msg)
-
-
-print_log = _print_log()
+    def info(self, msg: str, *args, **kwargs):
+        self.log.info(msg, *args, **kwargs)  # Regular logging to file
+        if self.filtered:
+            self.print(msg, levelno=logging.INFO)  # Custom logging to std.out

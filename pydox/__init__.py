@@ -27,6 +27,3 @@ from pydox.commodities import PydoxFigure, _DoFigures
 
 __figures: list[PydoxFigure] = []  # Internal global registry of figures
 figures = _DoFigures(__figures)  # Facade for the registry manager of figures
-
-#
-from pydox.reporting.logs import logger

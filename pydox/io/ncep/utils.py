@@ -1,18 +1,14 @@
 from copy import deepcopy
-from functools import partial
-import logging
 
 import pydox as do
 import numpy as np
 import xarray as xr
 
-from pydox.reporting.logs import print_log
+from pydox.reporting.logs import getLogger
 from pydox.io.argo.types import ArgoDataForInAir
 from pydox.utils.chemistry import watervapor
 
-
-log = logging.getLogger("pydox.io.ncep.utils")
-info = partial(print_log.info, logger=log, level=0)
+log = getLogger("pydox.io.ncep.utils", context_level=0)
 
 
 def compute_NCEP_PPOX(
@@ -31,7 +27,7 @@ def compute_NCEP_PPOX(
 
     """
     if argo_data_for_air.optode_height is None:
-        info(
+        log.info(
             f"Set optode_height to configuration value: {do.get_params('argo.optode_height')}"
         )
         argo_data_for_air.optode_height = do.get_params("argo.optode_height")

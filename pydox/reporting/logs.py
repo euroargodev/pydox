@@ -53,10 +53,13 @@ class getLogger:
     The pydox setting "pydox.logging_level" can be used to filter messages along the `standard logging library value <https://docs.python.org/3/library/logging.html#logging-levels>`_ (eg: 'DEBUG', 'INFO', 'WARNING', 'ERROR').
     This setting applies to all channels (files and stdout).
 
-    The pydox setting "pydox.screen_log_context_level" is used to filter along where in the code a message is logged.
+    The pydox setting "pydox.screen.min_context_level" is used to filter along where in the code a message is logged.
     This setting only applies to the stdout channel (screen).
 
     Therefore, and for instance, it is possible to print 'INFO' messages only at high-levels in the library (eg: `Calibration.fit()`), while low-level routines can also log 'INFO' messages.
+
+    The pydox setting "pydox.screen.log" will simply switch on or off the stdout channel (screen).
+
 
     Examples
     --------

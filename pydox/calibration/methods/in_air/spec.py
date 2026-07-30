@@ -6,6 +6,7 @@ from functools import partial
 import argopy as ar
 
 from pydox._config.utils import format_value_txt
+from pydox.reporting.logs import print_log
 from pydox.utils.casting import to_list
 from pydox.utils.compute import compute_fits, ExecutionMethods
 from pydox.commodities import (
@@ -29,7 +30,8 @@ from pydox.calibration.methods.in_air.plots import (
 )
 
 
-log = logging.getLogger("pydox.calibration.methods.in_air")
+log = logging.getLogger("pydox.calibration.methods.in_air.spec")
+info = partial(print_log.info, logger=log, level=20)
 
 
 class MethodInAir(Method):
@@ -104,7 +106,7 @@ class MethodInAir(Method):
         # todo Collect input data in parallel ?
         for iset, params in self.configs.items():
             if refresh or iset not in self._input_data:
-                print(f"Load input data for config #{iset} ...")
+                info(f"Load input data for config #{iset} ...")
                 this_ppar = partial(
                     ppar,
                     watermark=f"{self.name}\nConfig #{iset}",
@@ -122,7 +124,7 @@ class MethodInAir(Method):
                 )
                 self._input_data[iset] = data
             else:
-                print(f"Input data for config #{iset} already in memory")
+                info(f"Input data for config #{iset} already in memory")
 
         return self
 
@@ -170,9 +172,9 @@ class MethodInAir(Method):
 
         ############### Load input data
         # We first need to load data that will be used in fit
-        print("Start load input data")
+        info("Start loading input data")
         self.load_input_data(a_float, ppar)
-        print("End load input data")
+        info("End loading input data")
 
         # Read and store the list of cycle numbers for each configuration
         input_cycs_for_fit = {}
@@ -192,7 +194,7 @@ class MethodInAir(Method):
         # results: FitResults = compute_fits(items, fct, method=method)
 
         # Now we have as many input_data as unique configuration:
-        print("Compute coefficients")
+        info("Compute coefficients")
         items = [
             (iset, params, self.input_data[iset])
             for iset, params in self.configs.items()

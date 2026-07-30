@@ -7,6 +7,7 @@ These functions are expected to receive low-level setting values (no high-level 
 import logging
 from copy import deepcopy
 from typing import Literal, Optional
+from functools import partial
 
 import numpy as np
 import xarray as xr
@@ -15,6 +16,7 @@ import argopy as ar
 
 import pydox as do
 from pydox._config.config import Config
+from pydox.reporting.logs import print_log
 from pydox.commodities import ParameterSet, PlotParams, TPlotParams
 from pydox.io.argo.types import MultiProfData, TrajData, CycData, ArgoDataForInAir
 from pydox.io.argo.utils import (
@@ -30,6 +32,8 @@ from pydox.io.argo.utils import (
 
 
 log = logging.getLogger("pydox.io.argo.facade")
+debug = partial(print_log.debug, logger=log, level=0)
+warning = partial(print_log.warning, loggger=log, level=0)
 
 
 def get_argo_data_for_in_air_method(
@@ -120,7 +124,7 @@ def get_argo_data_for_in_air_method(
     for ds, dsname in [(Rtraj_inair, "in-air"), (Rtraj_inwater, "in-water")]:
         for pname in ["PSAL", "TEMP"]:
             if ds[pname].isnull().all():
-                log.debug(
+                debug(
                     f"{dsname.title()} trajectory {pname} DataArray is full of NaNs !"
                 )
 
@@ -171,7 +175,7 @@ def get_argo_data_for_in_air_method(
     for ds, dsname in [(Rtraj_inair, "in-air"), (Rtraj_inwater, "in-water")]:
         for pname in ["PSAL", "TEMP"]:
             if ds[pname].isnull().all():
-                log.debug(
+                debug(
                     f"{dsname.title()} trajectory {pname} DataArray is full of NaNs after group by cycles !"
                 )
 
@@ -329,7 +333,7 @@ def get_argo_data_for_in_air_method(
         # todo: Check if using primary profile in Sprof is always a valid choice
 
         if np.abs(t_traj - t_sprof) > 0.5:
-            log.warning(
+            warning(
                 f"Cycle {cyc.item()}: temperature from Rtraj in-water and Sprof differ by more than 0.5 degC ({t_traj - t_sprof:0.2f} degC) !"
             )
 
@@ -343,7 +347,7 @@ def get_argo_data_for_in_air_method(
         this = Sprof.loc[{"N_PROF": Sprof["CYCLE_NUMBER"] == cyc}]
 
         if len(this["N_PROF"]) == 0:
-            log.debug(f"Cycle number {cyc.values} is in Rtraj but not in Sprof !")
+            debug(f"Cycle number {cyc.values} is in Rtraj but not in Sprof !")
             lat, lon, pqc = np.nan, np.nan, 0
         else:
             # Use data from primary profile:

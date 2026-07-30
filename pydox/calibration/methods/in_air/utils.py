@@ -1,5 +1,6 @@
 from typing import Any, Optional
 import logging
+from functools import partial
 
 import argopy as ar
 import numpy as np
@@ -8,6 +9,7 @@ import matplotlib.pyplot as plt
 
 import pydox as do
 from pydox._config.config import Config
+from pydox.reporting.logs import print_log
 from pydox.commodities import ParameterSet, ParamsInAir, TPlotParams, PlotParams
 from pydox.io.argo.types import ArgoDataForInAir
 
@@ -16,6 +18,7 @@ from pydox.io.ncep.facade import get_ncep_data_for_in_air_method
 
 
 log = logging.getLogger("pydox.calibration.methods.in_air.utils")
+info = partial(print_log.info, logger=log, level=10)
 
 
 def get_argo_data(
@@ -26,7 +29,7 @@ def get_argo_data(
     ppar: Optional[TPlotParams] = None,
 ) -> ArgoDataForInAir | dict[str, xr.Dataset]:
     """Load Argo float data to correct oxygen with atmospheric data (in-air method)"""
-    print(f"Load Argo data ({a_float.WMO})")
+    info(f"Load Argo data ({a_float.WMO})")
 
     # Read parameters from the configuration object:
     optode_height = do.get_params("argo.optode_height", config=config)
@@ -89,7 +92,7 @@ def get_atmospheric_data(
 ) -> dict[str, Any]:
     """Load reference data to correct oxygen with atmospheric data (in-air method)"""
     dataset: str = do.get_params("calibration_methods.in_air.dataset", config=config)
-    print(f"Load atmospheric data ({dataset})")
+    info(f"Load atmospheric data ({dataset})")
 
     if dataset == "ncep":
         # name: str = do.get_params(

@@ -195,6 +195,8 @@ pressure_coefficients:
 
 # ============================================= Pydox user interface
 pydox:
+  screen_log: True # Should we print logging information on screen
+  screen_log_level: 20 # (>=0: debug, >=10: input data, >=20: fit results)
   verbose:
     cell_text: False # Should we force to use text output in notebook cells, even when HTML is available
     configs: False  # Should we print ALL parameters of a configuration set, or omit meta-data like src of the reference dataset

@@ -2,18 +2,22 @@ from typing import Optional, Literal
 import logging
 from copy import deepcopy
 import hashlib
+from functools import partial
 
 import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
 
 import pydox as do
+from pydox.reporting.logs import print_log
 from pydox.commodities import PlotParams
 from pydox.utils.compute import mth_run
 from pydox.utils.xarray import xr_append_history
 from pydox.io.argo.types import MultiProfData, TrajData, CycData
 
 log = logging.getLogger("pydox.io.argo.utils")
+info = partial(print_log.info, logger=log, level=0)
+debug = partial(print_log.debug, logger=log, level=0)
 
 
 def xr_logging(
@@ -35,7 +39,6 @@ def xr_logging(
     xr.Dataset | xr.DataArray
         Updated object
     """
-    # log.info(new_entry)
     return xr_append_history(obj, new_entry, attr="pydox_history")
 
 
@@ -85,7 +88,7 @@ def preprocess_raw_sprof(ds_sprof: xr.Dataset) -> MultiProfData:
     ds_sprof = ds_sprof.set_coords("CYCLE_NUMBER")  # Also for CYCLE_NUMBER
 
     # We will only work with Ascending profiles:
-    log.info("Keep only Ascending profiles in Sprof")
+    info("Keep only Ascending profiles in Sprof")
     ds_sprof = ds_sprof.drop_sel(
         {"N_PROF": ds_sprof["N_PROF"][~ds_sprof["DIRECTION"].isin("A")]}
     )
@@ -401,7 +404,7 @@ def get_ts_near_surface(
 
     for i_var in range(0, len(var_psal)):
         pname: str = var_psal[i_var]
-        log.debug(
+        debug(
             f"Look for {pname} in Sprof near the surface between {min_pres} and {max_pres}"
         )
         # Extract associated PSAL (good QC and good pressure)
@@ -500,7 +503,7 @@ def traj_groupby_cycles(ds: TrajData | xr.Dataset) -> CycData | xr.Dataset:
     # (groupby.median tends to return only floats)
     for v in ds:
         if v in this and this[v].dtype != dtypes[v]:
-            # log.debug(f"Convert {v} from {this[v].dtype} to {dtypes[v]}")
+            # debug(f"Convert {v} from {this[v].dtype} to {dtypes[v]}")
             this[v] = this[v].astype(dtypes[v])
 
     #
@@ -551,7 +554,7 @@ def psal_rtraj_substitute_sprof(
         this = subs.loc[{"N_PROF": subs["CYCLE_NUMBER"] == trajcyc}]
 
         if len(this["N_PROF"]) == 0:
-            log.debug(
+            debug(
                 f"This trajectory array cycle number {trajcyc.values} is not in multi-prof array, replaced with NaN."
             )
             new_value = np.nan

@@ -428,7 +428,7 @@ def get_ts_near_surface(
         markers = ["s", "*", "."]
         for ii, ds in enumerate([spsal, spsal_adj, spsal_merged]):
             ds.plot.line("-", linewidth=0.5, ax=ax, label=ds.name, marker=markers[ii])
-        ax.grid()
+        ax.grid(True)
         ax.legend()
         ax.set_title(title)
         plt.tight_layout()
@@ -447,7 +447,7 @@ def get_ts_near_surface(
         title = "Near-surface temperature from Sprof"
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 4), dpi=90, sharex=True)
         stemp.plot.line("s-", linewidth=0.5, ax=ax, label=stemp.name)
-        ax.grid()
+        ax.grid(True)
         ax.legend()
         ax.set_title(title)
         plt.tight_layout()

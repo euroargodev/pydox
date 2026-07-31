@@ -446,7 +446,7 @@ class _DoFigures:
         # If not found, commit this:
         if not found:
             log.info(
-                f"Commit figure '{this_f.name}' - {this_f.category} (level {this_f.level})"
+                f"Commit figure: '{this_f.name}' - Category: '{this_f.category}' (level {this_f.level})"
             )
 
             # Print watermark:
@@ -468,12 +468,16 @@ class _DoFigures:
                         0.5,
                         watermark,
                         transform=ax.transAxes,
-                        fontsize=40,
-                        color="gray",
-                        alpha=0.5,
+                        fontsize=do.get_params("plots.watermark.fontsize"),
+                        fontweight="bold",
+                        color=getattr(
+                            do.reporting.colors.COLORS,
+                            do.get_params("plots.watermark.color"),
+                        ),
+                        alpha=0.4,
                         ha="center",
                         va="center",
-                        rotation=30,
+                        rotation=20,
                     )
 
             # Save figure object to a pickle file:

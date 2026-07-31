@@ -1,9 +1,12 @@
 import logging
 import datetime
+import time
 from pathlib import Path
 import sys
 
 import pydox as do
+
+logging.Formatter.converter = time.gmtime
 
 logger = logging.getLogger("pydox")
 logger.setLevel(logging.DEBUG)
@@ -22,6 +25,7 @@ fh.setFormatter(
         datefmt="%H:%M:%S",
     )
 )
+
 logger.addHandler(fh)
 
 
@@ -138,7 +142,7 @@ class getLogger:
 
     def print(self, msg: str, levelno: int):
         if self.filtered:
-            datefmt = "%Hh%M:%S"
+            datefmt = "%H:%M:%S"
             asctime = datetime.datetime.now(datetime.timezone.utc).strftime(datefmt)
             msg = self.FORMATS.get(levelno).format(
                 message=msg, asctime=asctime, level=self.LEVEL[levelno]

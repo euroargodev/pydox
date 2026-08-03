@@ -1,29 +1,5 @@
-from dataclasses import dataclass
 from matplotlib import colors as mcolors
-
-
-@dataclass(frozen=True)
-class DEFAULT_SCHEME:
-    NAME = "DEFAULT/PYDOX"
-
-    # HEX COLORS
-    _IMPERIAL_BLUE = "#0a2463ff"
-    _REGAL_NAVY = "#023978ff"
-    _PACIFIC_BLUE = "#0c9eb3ff"
-    _TROPICAL_TEAL = "#14b1b7ff"
-    _PEARL_AQUA = "#7bcaccff"
-    _FROZEN_WATER = "#bae3e2ff"
-    _PORCELAIN = "#f8fbf8ff"
-
-    SCHEME = [
-        _IMPERIAL_BLUE,
-        _REGAL_NAVY,
-        _PACIFIC_BLUE,
-        _TROPICAL_TEAL,
-        _PEARL_AQUA,
-        _FROZEN_WATER,
-        _PORCELAIN,
-    ]
+import pydox as do
 
 
 class Template2Colors:
@@ -31,15 +7,18 @@ class Template2Colors:
     NAME: str = ""
     SCHEME: tuple[str] = []
 
-    def __init__(self, scheme):
-        self.NAME = scheme.NAME
-        self.SCHEME = scheme.SCHEME
+    def __init__(self, scheme: list[str], name: str = ""):
+        self.NAME = name
+        self.SCHEME = scheme
         if len(self.SCHEME) != 7:
             raise ValueError(f"The template color scheme must have {self.N} colors")
 
     @classmethod
-    def from_scheme(cls, scheme):
-        return cls(scheme)
+    def from_config(cls, config):
+        return cls(
+            scheme=do.get_params("reports.template.colors.scheme", config=config),
+            name=do.get_params("reports.template.name", config=config),
+        )
 
     def convert(self, hex: str):
         return mcolors.to_rgba(hex)
@@ -77,6 +56,3 @@ class Template2Colors:
         return mcolors.LinearSegmentedColormap.from_list(
             self.NAME, self.SCHEME, N=self.N
         )
-
-
-COLORS = Template2Colors.from_scheme(DEFAULT_SCHEME)

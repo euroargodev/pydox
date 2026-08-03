@@ -147,10 +147,10 @@ plots:
   # Set this to the lowest value 0 to ensure the generation of all possible plots.
   watermark:
     show: True # Display or not by default
-    default: 'Pydox' # Text that will always be displayed on figures.
+    default: 'Pydox' # Text that will always be displayed on figures. Set 'show' attribute to False to disable, not an empty string here
     fontsize: 24
-    color: 'MEDIUM' # From the 'reporting.template' color scheme: DARKEST, DARK, MEDIUM_DARK, MEDIUM, LIGHT_MEDIUM, LIGHT, LIGHTEST
-  configs_layout: ['hue', 'subplot'] # Generate these layout when plotting data from more than one configuration at a time
+    color: MEDIUM # Use a string value from the 'reports.template' setting color scheme: DARKEST, DARK, MEDIUM_DARK, MEDIUM, LIGHT_MEDIUM, LIGHT, LIGHTEST
+  configs_layout: ['hue', 'subplot'] # Generate all these layout when plotting data from more than one configuration at a time.
   save:
     format: png
     path: docs/img
@@ -164,9 +164,11 @@ plots:
 
 # ============================================= Reporting
 reports:
-  template: pydox
-  template_list:
-    - pydox
+  template:
+    name: pydox # Name of the template to use. Use `template.src` to register your own
+    colors:
+      scheme: ['#0a2463ff', '#023978ff', '#0c9eb3ff', '#14b1b7ff', '#7bcaccff', '#bae3e2ff', '#f8fbf8ff']
+    mplstyle: # # e.g. : ${HOME}/PYDOX/CUSTOM_TEMPLATES/custom.mplstyle
   save:
     format: pdf
     prefix: null # loaded as None, no prefix

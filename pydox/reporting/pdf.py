@@ -11,17 +11,21 @@ from fpdf.outline import TableOfContents
 
 from pydox.commodities import PydoxFigure
 
-if do.get_params("reports.template") is not None:
-    # todo Implement user-defined templating
-    if do.get_params("reports.template").lower() == "pydox":
-        from pydox.reporting.colors import COLORS
-    else:
-        raise ValueError(
-            f"Invalid template '{do.get_params('reports.template')}'. Valid values are: {do.get_params('reports.template_list')}"
-        )
-else:
-    # Load default LOPS template
-    from pydox.reporting.colors import COLORS
+global COLORS
+
+# # Load a COLORS instance from the current template:
+# if do.get_params("reports.template.default") is not None:
+#     if do.get_params("reports.template.default").strip().lower() == "pydox":
+#         from pydox.reporting.colors import COLORS
+#     # todo Implement user-defined templating
+#     else:
+#         raise ValueError(
+#             f"Unknown template '{do.get_params('reports.template.default')}'"
+#         )
+# else:
+#     # Load default LOPS template
+#     from pydox.reporting.colors import COLORS
+#
 
 
 class FpdfBoundingBox(TypedDict):

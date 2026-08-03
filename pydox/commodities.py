@@ -42,6 +42,8 @@ import pickle
 class Data:
     """A placeholder for a numerical item: store a value and an error, as float32"""
 
+    # todo Consider using Decimal: https://docs.python.org/3/library/decimal.html
+
     value: Union[float, int, np.number]
     error: Union[float, int, np.number] = field(default_factory=lambda: 0.0)
 
@@ -97,7 +99,7 @@ class Params:
     initial_gain: Data
     initial_drift: Data
     cycles: Any  # not sure what to use exactly here
-    dummy: int  # For dev. only
+    dummy: int  # For dev. only #todo Don't forget to remove this in v1
 
     @property
     def uid(self) -> str:
@@ -265,7 +267,7 @@ class FitResult:
 FitResults: TypeAlias = OrderedDict[int, FitResult]
 """A type for a dictionary of a single fit result, e.g. from core.in_air.fit(). Holds and instance of Coefficients and input fit data"""
 
-VALID_FIGURE_CATEGORIES = ["debug", "input_data", "fit_results"]
+VALID_FIGURE_CATEGORIES = tuple(["debug", "input_data", "fit_results"])
 
 
 @dataclass
@@ -471,7 +473,7 @@ class _DoFigures:
                         fontsize=do.get_params("plots.watermark.fontsize"),
                         fontweight="bold",
                         color=getattr(
-                            do.reporting.colors.COLORS,
+                            do.reporting.COLORS,
                             do.get_params("plots.watermark.color"),
                         ),
                         alpha=0.4,

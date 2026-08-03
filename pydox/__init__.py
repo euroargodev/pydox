@@ -11,7 +11,7 @@ from pydox._config.config import rcParams as params
 from pydox._config.utils import tmp_root
 
 from pydox.calibration.facade import Calibration, CalibrationSet
-from pydox import reporting
+from pydox.reporting.facade import load_template
 
 import matplotlib
 from importlib.metadata import version as _version
@@ -28,6 +28,6 @@ from pydox.commodities import PydoxFigure, _DoFigures
 
 __figures: list[PydoxFigure] = []  # Internal global registry of figures
 figures = _DoFigures(__figures)  # Facade for the registry manager of figures
-matplotlib.pyplot.style.use(
-    "pydox.static.default"
-)  # todo Use value from pydox setting when implemented
+
+# Load and apply default template:
+load_template()

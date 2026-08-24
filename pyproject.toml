@@ -38,7 +38,7 @@ source-code = "https://github.com/euroargodev/pydox"
 
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools>=77.0.3", "setuptools-scm>=8", "wheel"]
+requires = ["setuptools>=84.0.0", "setuptools-scm>=8", "wheel"]
 
 [tool.setuptools]
 packages = ["pydox"]

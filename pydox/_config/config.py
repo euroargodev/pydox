@@ -5,7 +5,6 @@ from pathlib import Path
 from matplotlib.rcsetup import validate_stringlist
 import os
 import sys
-from functools import reduce
 import operator
 from typing import List, Dict, Any, Generator, TypeAlias
 from copy import deepcopy
@@ -22,7 +21,7 @@ from pydox._config import (
     _read_only_dotted_params,
     _not_overloaded_dotted_params,
 )
-from pydox._config.utils import runner, config_repr_txt, config_repr_html
+from pydox._config.utils import reduce, runner, config_repr_txt, config_repr_html
 from pydox._config.yaml import load_config_from_file
 
 # from pydox.reporting.logs import getLogger # Impossible without circularity, _config is only module where we cant use getLogger

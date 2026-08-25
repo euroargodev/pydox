@@ -1,6 +1,7 @@
 from typing import TypeAlias, Optional, Any
 from matplotlib import colors as mcolors
 import pydox as do
+from pydox.errors import MissingSetting
 
 Color: TypeAlias = tuple[float, float, float, float]  # RGBA
 
@@ -94,16 +95,16 @@ class ColorScheme:
     @classmethod
     def from_config(cls, config: Optional[Any] = None) -> "ColorScheme":
         """Create a :class:`ColorScheme` from a configuration object"""
-        if do.get_params("reports.template", config=config).get(
-            "colors", None
-        ) and do.get_params("reports.template", config=config).get("name", None):
-            return cls(
-                scheme=do.get_params("reports.template.colors", config=config),
-                name=do.get_params("reports.template.name", config=config),
-            )
+        settings = do.get_params("reports.template", config=config)
+        if settings is not None:
+            if settings.get("colors", None) and settings.get("name", None):
+                return cls(
+                    scheme=do.get_params("reports.template.colors", config=config),
+                    name=do.get_params("reports.template.name", config=config),
+                )
         else:
-            raise ValueError(
-                "Settings 'reports.template.colors' and/or 'reports.template.name' are missing from this configuration object to create a color scheme."
+            raise MissingSetting(
+                "Cannot create a color scheme because settings 'reports.template.colors' and/or 'reports.template.name' are missing from this configuration object."
             )
 
     def _convert(self, hex: str) -> Color:

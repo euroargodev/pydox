@@ -1,5 +1,5 @@
 # DEFAULT PYDOX MATPLOTLIB STYLE
-# Shortcuts like {COLORS.*} are automatically replaced at runtime with the `reports.template.colors.scheme` setting.
+# Shortcuts like {COLORS.*} are automatically replaced at runtime with values from the `reports.template.colors.scheme` setting.
 
 figure.facecolor: white
 figure.titlesize: x-large

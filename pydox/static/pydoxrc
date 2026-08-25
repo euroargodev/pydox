@@ -161,14 +161,18 @@ plots:
       max: 500.
       step: 500.
   extend_lon_lat: 1  # Extend longitude/latitude for position plots
+  mplstyle: # Use this setting to apply a custom MPL stylesheet file, e.g. : ${HOME}/PYDOX/CUSTOM_TEMPLATES/custom.mplstyle
+    # Pydox stylesheet is used by default.
+    # See also: https://matplotlib.org/stable/users/explain/customizing.html#defining-your-own-style
 
 # ============================================= Reporting
 reports:
   template:
-    name: pydox # Name of the template to use. Use `template.src` to register your own
-    colors:
-      scheme: ['#0a2463ff', '#023978ff', '#0c9eb3ff', '#14b1b7ff', '#7bcaccff', '#bae3e2ff', '#f8fbf8ff']
-    mplstyle: # # e.g. : ${HOME}/PYDOX/CUSTOM_TEMPLATES/custom.mplstyle
+    name: pydox # Name of the template
+    colors: ['#0a2463', '#023978', '#0c9eb3', '#14b1b7', '#7bcacc', '#bae3e2', '#f8fbf8']
+      # Must be 7 HEX colors, from dark to light
+      # https://coolors.co/0a2463-023978-0c9eb3-14b1b7-7bcacc-bae3e2-f8fbf8
+
   save:
     format: pdf
     prefix: null # loaded as None, no prefix

@@ -29,7 +29,7 @@ fh.setFormatter(
 logger.addHandler(fh)
 
 
-# Create another file handler just with messages (no thread, logger or file name, nore line number)
+# Create another file handler just with messages (no print of thread, logger or file name, nore line number)
 
 logfile = logfolder.joinpath(
     f"{do.tmp_root().name}-small.log"

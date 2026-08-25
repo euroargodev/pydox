@@ -1,43 +1,42 @@
-# DEFAULT PYDOX MATPLOTLIB STYLE (do not edit directly)
+# DEFAULT PYDOX MATPLOTLIB STYLE
+# Shortcuts like {COLORS.*} are automatically replaced at runtime with the `reports.template.colors.scheme` setting.
 
 figure.facecolor: white
-figure.titlesize: x-large     # size of the figure title (``Figure.suptitle()``)
+figure.titlesize: x-large
 
-axes.edgecolor: {COLORS.DARK} # COLORS.DARK
+axes.edgecolor: {COLORS.DARK}
 axes.facecolor: white
-axes.labelcolor:  {COLORS.MEDIUM_DARK} # COLORS.DARK
+axes.labelcolor:  {COLORS.MEDIUM_DARK}
 axes.grid: True
 axes.axisbelow: line
-# axes.prop_cycle: cycler('color', ['m', 'c', 'y', 'k'])
 axes.prop_cycle: cycler('color', ['377eb8', 'ff7f00', '4daf4a', 'f781bf', 'a65628', '984ea3', '999999', 'e41a1c', 'dede00'])
 axes.spines.left: True
 axes.spines.bottom: True
 axes.spines.right: True
 axes.spines.top: True
 
-grid.color: {COLORS.MEDIUM_DARK} # COLORS.DARK
+grid.color: {COLORS.MEDIUM_DARK}
 grid.linestyle: :
 grid.linewidth: 0.8
 grid.alpha: 1.0
 
-text.color: {COLORS.DARKEST} # COLORS.DARKEST
-#axes.titlecolor:    {COLORS.DARKEST} # or inherit from text.color
+text.color: {COLORS.DARKEST}
+#axes.titlecolor: {COLORS.DARKEST}
 
 patch.edgecolor: black
 patch.force_edgecolor: False
 
 image.cmap: viridis
 
-xtick.color: {COLORS.MEDIUM_DARK} # COLORS.DARK
-# xtick.labelcolor:  'r' #{COLORS.DARK} # color of the tick labels or inherit from xtick.color
+xtick.color: {COLORS.MEDIUM_DARK}
+# xtick.labelcolor: {COLORS.DARK} # color of the tick labels or inherit from xtick.color
 xtick.top: False
 xtick.bottom: True
 
-ytick.color: {COLORS.MEDIUM_DARK} # COLORS.DARK
+ytick.color: {COLORS.MEDIUM_DARK}
 # ytick.labelcolor: {COLORS.DARK} # color of the tick labels or inherit from ytick.color
 ytick.left: True
 ytick.right: False
 
-# "legend.facecolor":     inherit,  # inherit from axes.facecolor; or color spec
-#legend.edgecolor: 0.8
-legend.edgecolor: {COLORS.DARK} # COLORS.DARK
+#legend.facecolor: inherit,  # inherit from axes.facecolor; or color spec
+legend.edgecolor: {COLORS.DARK}

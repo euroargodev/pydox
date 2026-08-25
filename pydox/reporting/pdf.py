@@ -11,22 +11,6 @@ from fpdf.outline import TableOfContents
 
 from pydox.commodities import PydoxFigure
 
-global COLORS
-
-# # Load a COLORS instance from the current template:
-# if do.get_params("reports.template.default") is not None:
-#     if do.get_params("reports.template.default").strip().lower() == "pydox":
-#         from pydox.reporting.colors import COLORS
-#     # todo Implement user-defined templating
-#     else:
-#         raise ValueError(
-#             f"Unknown template '{do.get_params('reports.template.default')}'"
-#         )
-# else:
-#     # Load default LOPS template
-#     from pydox.reporting.colors import COLORS
-#
-
 
 class FpdfBoundingBox(TypedDict):
     x: float
@@ -80,6 +64,10 @@ def registry_report(
     **kwargs,
 ):
     outputfile = Path(outputfile)
+
+    # (re)Load COLORS from the current template:
+    do.reporting.facade.load_template()
+    COLORS = do.reporting.COLORS
 
     class PDF(FPDF):
         def reset_font(self):

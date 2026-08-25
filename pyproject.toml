@@ -19,7 +19,7 @@ classifiers = [
 ]
 dynamic = ["version"]
 requires-python = ">=3.11"
-dependencies = ["numpy>=2.4", "scipy>=1.16", "pyyaml>=6.0", "matplotlib>=3.10", "IPython>=9.4"]
+dependencies = ["numpy>=2.4", "scipy>=1.16", "pyyaml>=6.0", "matplotlib>=3.11.1", "IPython>=9.4"]
 license-files = [
     "LICENSE",
     "LICENSES/*",

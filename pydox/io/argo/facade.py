@@ -521,19 +521,27 @@ def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients):
                                 dtype=data.dtype
                             )
 
-                        if name == "PARAMETER":
-                            data = np.concatenate([data, data], axis=axis)
-
+                        #if name == "PARAMETER":
+                        #data = np.concatenate([data, data], axis=axis)
                         # axis_calib = data_file[name].dimensions.index("N_CALIB")
                         # axis_nprof = data_file[name].dimensions.index("N_PROF")
 
                         # Old data at the beggining
                         slices = [slice(0, s) for s in data.shape]
                         new_data[tuple(
-                            slices)] = data  # We copy the existing data in the previous calibration. The sub-array of new_data that is mommon with data is initialized to data.
+                            slices)] = data  # We copy the existing data in the previous calibration or history. The sub-array of new_data that is common with data is initialized to data.
+
 
                         # For each profiles N_PROF : We complete the new calibration information.
                         for i_prof in range(0, nb_prof):
+                            if "SCIENTIFIC_CALIB" in name or name == "PARAMETER" :
+                                new_data[i_prof, nb_calib_new - 1, :, :] = new_data[i_prof, nb_calib_new - 2, :, :] # Copy the information from the previous calibration in the new one
+                            elif name == "HISTORY_START_PRES" or name == "HISTORY_STOP_PRES" or name == "HISTORY_PREVIOUS_VALUE":
+                                new_data[nb_history_new - 1, i_prof] = new_data[nb_history_new-2, i_prof] # Copy the information from the previous history in the new one
+                            else :
+                                new_data[nb_history_new - 1, i_prof, :] = new_data[nb_history_new-2, i_prof, :] # Copy the information from the previous history in the new one
+
+
 
                             # Update DATA_MODE and PARAMETR_DATA_MODE for DOXY
                             data_file2["DATA_MODE"][i_prof] = b'D'
@@ -563,7 +571,7 @@ def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients):
                                 strlen = data_file[name].shape[idx]
                                 new_data[i_prof, nb_calib_new - 1, i_param, :] = stringtochar(
                                     np.array([f"Gain : {coef_kept.gain.value}, drift : {coef_kept.drift.value}"],
-                                             dtype=f"S{strlen}"))[0]  # 'merdum'
+                                             dtype=f"S{strlen}"))[0]
 
                             if name == 'SCIENTIFIC_CALIB_DATE':
                                 date_str = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -606,7 +614,7 @@ def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients):
                                     i for i, d in enumerate(data_file['HISTORY_STEP'].dimensions) if "STRING" in d)
                                 strlen = data_file[name].shape[idx]
                                 new_data[nb_history_new - 1, i_prof, :] = \
-                                stringtochar(np.array(["ARQS".ljust(strlen)], dtype=f"S{strlen}"))[0]
+                                stringtochar(np.array(["ARSQ".ljust(strlen)], dtype=f"S{strlen}"))[0]
 
                             if name == 'HISTORY_REFERENCE':
                                 idx = next(

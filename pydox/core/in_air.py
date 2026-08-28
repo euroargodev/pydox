@@ -136,6 +136,7 @@ def inair_fit(params: ParamsInAir, data=Any) -> FitResult:
     # And fill in results for output:
     c = {}
     c["gain"] = Data(fit_results[0], np.sqrt(np.diag(covariance))[0])
+    c["drift"] = Data(0,0) # We must have a drift in the result. By default, 0
     # c["gain"] = Data(
     #     fit_results[0], params.dummy
     # )  # Replace error with dummy var. to track stuff in dev.

@@ -6,10 +6,13 @@ import json
 from collections import OrderedDict
 from dataclasses import dataclass, asdict
 
+import argopy as ar
+
 import pydox as do
 from pydox._config.config import check_config, Config
 from pydox.commodities import ConfigsDict, CoefsDict
 from pydox.utils.casting import is_ctelist
+from pydox.io.argo.facade import corr_B_files
 
 
 class Workflow(ABC):
@@ -186,6 +189,11 @@ class Workflow(ABC):
             [summary.append(line) for line in self._repr_coefs()]
 
         return "\n".join(summary)
+
+    def create_corrBfile(self, data_float: ar.ArgoFloat, res_to_keep : int) -> None:
+        coef_kept = deepcopy(self.coefs[res_to_keep])
+        corr_B_files(data_float, coef_kept)
+        return None
 
     @property
     def fitted(self) -> bool:

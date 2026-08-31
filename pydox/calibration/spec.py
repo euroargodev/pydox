@@ -13,6 +13,7 @@ import argopy as ar
 import pydox as do
 from pydox._config.config import check_config, Config
 from pydox.commodities import (
+    ParameterSet,
     ConfigsDict,
     CoefsDict,
     PydoxFigure,
@@ -58,14 +59,16 @@ class Workflow(ABC):
         self._cfg: Config = deepcopy(
             config
         )  # Used by self.get_params(), self.set_params(), self.reset_params()
-        self._input_data = (
-            OrderedDict()
-        )  # Filled by self.fit() or self.load_input_data(), return by self.input_data
         self._fitted: bool = False  # Filled by self.fit(), return by self.fitted
         self._fitted_float: dict = {
             "WMO": None,
             "CYCLE_NUMBER": {},
         }  # Used to register float WMO/CYCLE_NUMBER used for fit
+
+        # Init private placeholders depending on configuration order and number:
+        self._input_data = (
+            OrderedDict()
+        )  # Filled by self.load_input_data() and self.fit(), return by self.input_data
         self._coefs: CoefsDict = (
             OrderedDict()
         )  # Filled by self.fit(), return by self.coefs
@@ -174,8 +177,8 @@ class Workflow(ABC):
             To be used by :class:`Method.__repr__`
         """
         summary = []
-        for ic, coef in self.coefs.items():
-            summary += [f"  {ic}: {str(coef)}"]
+        for ic in range(self.n_configs):
+            summary += [f"  {ic}: {str(self.coefs[ic])}"]
         return summary
 
     def __repr__(self):

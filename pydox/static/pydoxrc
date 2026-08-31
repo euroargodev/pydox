@@ -167,14 +167,24 @@ plots:
 
 # ============================================= Reporting
 reports:
-  template:
-    name: pydox # Name of the template
-    colors: ['#0a2463', '#023978', '#0c9eb3', '#14b1b7', '#7bcacc', '#bae3e2', '#f8fbf8']
+#  template:
+#    name: pydox # Name of the template
+#    colors: ['#0a2463', '#023978', '#0c9eb3', '#14b1b7', '#7bcacc', '#bae3e2', '#f8fbf8']
+#      # Must be 7 HEX colors, from dark to light
+#      # https://coolors.co/0a2463-023978-0c9eb3-14b1b7-7bcacc-bae3e2-f8fbf8
+
+  template: pydox # Name of the template to use. Must be defined under 'reports.templates'
+  templates:
+    pydox:
+      name: Pydox
+      colors: ['#0a2463', '#023978', '#0c9eb3', '#14b1b7', '#7bcacc', '#bae3e2', '#f8fbf8']
       # Must be 7 HEX colors, from dark to light
       # https://coolors.co/0a2463-023978-0c9eb3-14b1b7-7bcacc-bae3e2-f8fbf8
+      html: # Absolute path toward the HTML template file, Pydox template is used by default if empty
+      latex: # Absolute path toward the LaTeX template file, Pydox template is used by default if empty
 
   save:
-    format: pdf
+    format: html
     prefix: null # loaded as None, no prefix
     path: docs
     # <output.root>/<WMO>/<reports.save.path>/<reports.save.prefix>{report_name}.<reports.save.format>

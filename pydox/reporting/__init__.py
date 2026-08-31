@@ -7,6 +7,7 @@ The 'reporting' sub-module is to be understood in a general sense, i.e.:
 This may need to be more finely refactored in the future.
 
 """
+
 from typing import Optional
 from pydox.reporting import colors
 from pydox.reporting import logs

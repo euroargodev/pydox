@@ -30,4 +30,4 @@ __figures: list[PydoxFigure] = []  # Internal global registry of figures
 figures = _DoFigures(__figures)  # Facade for the registry manager of figures
 
 # Load and apply default template:
-load_template()
+# load_template()

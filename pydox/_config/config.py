@@ -1,4 +1,5 @@
 # ‼️ This is the only module where the global configuration object is to be referred to as ``rcParams`` and not ``do.params``
+# ‼️ This is the only module where the pydox logger cannot be used
 
 import importlib
 from pathlib import Path
@@ -203,6 +204,7 @@ def overload_config(x, y) -> Config:
     z = deepcopy(x)
     for key in flatten_config_keys(y):
         if key.lower() not in _not_overloaded_dotted_params:
+            log.debug(f"Overloading {key}")
             set_by_path(z, key, get_by_path(y, key))
     return z
 
@@ -294,7 +296,7 @@ def set_by_path(config: Dict | List, key: str, value: Any) -> Dict | List:
     key = key.split(".")
     if len(key) > 1:
         group = get_by_path(config, ".".join(key[:-1]))
-        group[key[-1]] = value
+        group[key[-1]] = value  # This modifies group in config in place
     else:
         config[key[0]] = value
     return config

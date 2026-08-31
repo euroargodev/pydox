@@ -95,17 +95,29 @@ class ColorScheme:
     @classmethod
     def from_config(cls, config: Optional[Any] = None) -> "ColorScheme":
         """Create a :class:`ColorScheme` from a configuration object"""
-        settings = do.get_params("reports.template", config=config)
-        if settings is not None:
-            if settings.get("colors", None) and settings.get("name", None):
-                return cls(
-                    scheme=do.get_params("reports.template.colors", config=config),
-                    name=do.get_params("reports.template.name", config=config),
-                )
-        else:
+        reports: dict[Any:Any] = do.get_params("reports", config=config)
+
+        template: str = reports["template"]
+        if template is None:
             raise MissingSetting(
-                "Cannot create a color scheme because settings 'reports.template.colors' and/or 'reports.template.name' are missing from this configuration object."
+                f"Cannot create a color scheme because setting 'reports.template' is missing from this configuration object."
             )
+        elif reports.get("templates").get(template, None) is None:
+            raise MissingSetting(
+                f"Cannot create a color scheme because setting 'reports.templates.{template}' is missing from this configuration object."
+            )
+        elif (
+            reports.get("templates").get(template).get("colors", None) is None
+            and reports.get("templates").get(template).get("name", None) is None
+        ):
+            raise MissingSetting(
+                f"Cannot create a color scheme because settings 'reports.templates.{template}.colors' and/or 'reports.templates.{template}.name' are missing from this configuration object."
+            )
+
+        return cls(
+            scheme=reports.get("templates").get(template).get("colors"),
+            name=reports.get("templates").get(template).get("name"),
+        )
 
     def _convert(self, hex: str) -> Color:
         """Private color format converter

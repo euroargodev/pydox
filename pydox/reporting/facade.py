@@ -15,7 +15,7 @@ def mpl_style_use(config: Optional[Any] = None) -> None:
 
     If any, load and set Matplotlib to use the stylesheet from the configuration setting: "reports.plots.mplstyle".
 
-    If the stylesheet uses shortnames like "{COLOR.DARK}" or "{COLOR.LIGHTEST}" for colors, they are automatically replaced with real RGBA values based on the "reports.template.colors" configuration setting.
+    If the stylesheet uses shortnames like "{COLOR.DARK}" or "{COLOR.LIGHTEST}" for colors, they are automatically replaced with real RGBA values based on the "reports.templates.<reports.template>.colors" configuration setting.
 
     Parameters
     ----------
@@ -53,8 +53,8 @@ def load_template(config: Optional[Any] = None) -> None:
     """Load template (color scheme, Matplotlib stylesheet, etc...)
 
     This function does the following:
-    - Set :class:`pydox.reporting.COLORS` with the template color scheme define with the configuration setting: "reports.template.colors".
-    - If any, load and set Matplotlib to use the stylesheet from the configuration setting: "reports.template.mplstyle".
+    - Set :class:`pydox.reporting.COLORS` with the template color scheme define with the configuration setting: "reports.templates.<reports.template>.colors".
+    - If any, load and set Matplotlib to use the stylesheet from the configuration setting: "reports.templates.<reports.template>.mplstyle".
 
     Parameters
     ----------

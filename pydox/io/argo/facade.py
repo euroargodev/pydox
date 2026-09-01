@@ -426,6 +426,14 @@ def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients):
 
     relative_error = do.get_params("adjustment.relative_error")
 
+    print("Correction used :")
+    print(f"gain : {coef_kept.gain}")
+
+    if coef_kept.drift is None:
+        print("No drift applied")
+    else:
+        print(f"drift : {coef_kept.drift}")
+
     # For each B file
     for i_fic in range(0, len(list_Bfiles)):
         fic_en_cours = list_Bfiles[i_fic]
@@ -569,9 +577,14 @@ def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients):
                                     i for i, d in enumerate(data_file['SCIENTIFIC_CALIB_COEFFICIENT'].dimensions) if
                                     "STRING" in d)
                                 strlen = data_file[name].shape[idx]
-                                new_data[i_prof, nb_calib_new - 1, i_param, :] = stringtochar(
-                                    np.array([f"Gain : {coef_kept.gain.value}, drift : {coef_kept.drift.value}"],
+                                if coef_kept.drift is None:
+                                    new_data[i_prof, nb_calib_new - 1, i_param, :] = stringtochar(
+                                    np.array([f"Gain : {coef_kept.gain.value}, No drift applied"],
                                              dtype=f"S{strlen}"))[0]
+                                else:
+                                    new_data[i_prof, nb_calib_new - 1, i_param, :] = stringtochar(
+                                        np.array([f"Gain : {coef_kept.gain.value}, drift : {coef_kept.drift.value}"],
+                                                 dtype=f"S{strlen}"))[0]
 
                             if name == 'SCIENTIFIC_CALIB_DATE':
                                 date_str = datetime.now().strftime("%Y%m%d%H%M%S")

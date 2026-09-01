@@ -9,7 +9,9 @@ import re
 import pydox as do
 from pydox._config import _read_only_dotted_params
 
-_path2static = Path(importlib.util.find_spec("pydox.static").submodule_search_locations[0])
+_path2static = Path(
+    importlib.util.find_spec("pydox.static").submodule_search_locations[0]
+)
 
 
 def uid(obj: Any):
@@ -18,7 +20,7 @@ def uid(obj: Any):
     return "".join(random.sample(s, len(s)))
 
 
-def get_shell(): # pragma: no cover
+def get_shell():  # pragma: no cover
     return get_ipython().__class__.__name__
 
 
@@ -51,6 +53,7 @@ def format_value_txt(value: Any) -> str:
         return json.dumps(value)
     else:
         return str(value)
+
 
 def dict_to_string(d: Dict[str, Any], level: int = 0, indent: int = 2) -> str:
     """Recursively convert a nested dictionary to a formatted string."""
@@ -133,22 +136,22 @@ def config_repr_html(
         HTML string representation of the configuration. To be rendered with IPython.display.HTML
     """
 
-    def clean_css(css)-> str:
+    def clean_css(css) -> str:
         # Remove new lines and blank spaces:
-        css = css.replace("\n", "").replace(" ", "");
+        css = css.replace("\n", "").replace(" ", "")
         # Remove block comments (/* ... */):
         cleaned = []
         i = 0
         while i < len(css):
-            if css[i:i + 2] == '/*':
+            if css[i : i + 2] == "/*":
                 # Skip until the end of the comment
-                i = css.find('*/', i) + 2
+                i = css.find("*/", i) + 2
                 if i == 1:  # No closing delimiter found
                     i = len(css)
             else:
                 cleaned.append(css[i])
                 i += 1
-        return ''.join(cleaned)
+        return "".join(cleaned)
 
     def clean_html(html_string):
         """
@@ -161,16 +164,18 @@ def config_repr_html(
             str: The cleaned HTML string with no blank lines or excessive whitespace.
         """
         # Remove blank lines
-        html_string = re.sub(r'\n\s*\n', '\n', html_string)
+        html_string = re.sub(r"\n\s*\n", "\n", html_string)
 
         # Remove leading/trailing whitespace from each line
-        html_string = '\n'.join(line.strip() for line in html_string.split('\n'))
+        html_string = "\n".join(line.strip() for line in html_string.split("\n"))
 
         # Remove whitespace between tags (but preserve whitespace inside tags)
-        html_string = re.sub(r'>\s+<', '><', html_string)
+        html_string = re.sub(r">\s+<", "><", html_string)
 
         # Remove any remaining empty lines
-        html_string = '\n'.join(line for line in html_string.split('\n') if line.strip())
+        html_string = "\n".join(
+            line for line in html_string.split("\n") if line.strip()
+        )
 
         return html_string
 
@@ -224,7 +229,7 @@ def config_repr_html(
     if tidy:
         css_style = clean_css(css_style)
 
-    checked = "" if collapsed else "checked" # Initial state: All collapsed or expanded
+    checked = "" if collapsed else "checked"  # Initial state: All collapsed or expanded
     html = f"""
     <div>
         <style>{css_style}</style>

@@ -430,8 +430,8 @@ def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients):
     for i_fic in range(0, len(list_Bfiles)):
         fic_en_cours = list_Bfiles[i_fic]
         bid = re.match(r".*_(\d+)[A-Z]?\.nc$",
-                       fic_en_cours)  # On recherche les chiffres apres '_', ie le numero de cycle.
-        cycle_en_cours = int(bid.group(1))  # group(1) : 1er groupe capture (ie entre parenthese : (\d+))
+                       fic_en_cours)  # We look for the number after the underscore, ie the cycle number
+        cycle_en_cours = int(bid.group(1))  # group(1) : 1st group  (the number in the parenthesis : (\d+))
         if min(cycles_to_write) <= cycle_en_cours <= max(cycles_to_write):
             res_file = Path(rep_res) / Path(fic_en_cours).name.replace(".nc",
                                                                        "_new.nc")  # os.path.join(rep_res,os.path.basename(fic_en_cours.replace(".nc","_new.nc")))
@@ -445,7 +445,7 @@ def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients):
                 data_file = Dataset(res_file, 'r+')  # Data from Input file
                 data_file2 = Dataset(res_file2, 'w')  # Data to be register in the Output file
                 data_file.set_auto_mask(
-                    False)  # Fichier BD6902882_075.nc. C1PHASE_DOXY=0.71 with C1PHASE_DOXY_QC=1 but C1PHASE_DOXY.valid_min = 10.
+                    False)  # File BD6902882_075.nc. C1PHASE_DOXY=0.71 with C1PHASE_DOXY_QC=1 but C1PHASE_DOXY.valid_min = 10.
                 # Without this instruction, 0.71 is replaced by FillValue. So, in the output file, 0.71 is also replaced by FillValue
 
                 # DOXY Indice in PARAMETER
@@ -706,15 +706,15 @@ def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients):
                 bad_count = np.isin(doxy_qc_en_cours, bad_flags).sum()
                 total = good_count + bad_count  # flag 0 and 9 are ignored
                 if total != 0:
-                    if good_count == total:  # Tous les DOXY_QC sont bons
+                    if good_count == total:  # All DOXY_QC are good
                         data_file2['PROFILE_DOXY_QC'][i_prof] = b'A'
-                    elif good_count / total >= 0.75:  # 75% des DOXY_QC sont bons
+                    elif good_count / total >= 0.75:  # 75%  DOXY_QC are good
                         data_file2['PROFILE_DOXY_QC'][i_prof] = b'B'
-                    elif good_count / total >= 0.5:  # 50% des DOXY_QC sont bons
+                    elif good_count / total >= 0.5:  # 50%  DOXY_QC are good
                         data_file2['PROFILE_DOXY_QC'][i_prof] = b'C'
-                    elif good_count / total >= 0.25:  # 25% des DOXY_QC sont bons
+                    elif good_count / total >= 0.25:  # 25%  DOXY_QC are good
                         data_file2['PROFILE_DOXY_QC'][i_prof] = b'D'
-                    elif good_count / total > 0:  # moins de 25% des DOXY_QC sont bons
+                    elif good_count / total > 0:  # less than 25%  DOXY_QC are good
                         data_file2['PROFILE_DOXY_QC'][i_prof] = b'E'
                     else:
                         data_file2['PROFILE_DOXY_QC'][i_prof] = b' '  # b'F' ?

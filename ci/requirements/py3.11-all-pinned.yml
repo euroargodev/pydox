@@ -1,10 +1,9 @@
-name: pydox-dev-2
+name: pydox-dev
 channels:
   - conda-forge
 dependencies:
   - python = 3.11
-# todo : install argopy from master et not force erddapy version ?)
-  -
+
 # CORE:
   - numpy = 2.4.2
   - scipy = 1.16.0
@@ -12,7 +11,6 @@ dependencies:
   - h5netcdf = 1.6.3
   - netCDF4 = 1.7.2
   - xarray = 2025.7.1
-  - erddapy = 2.2.4
 #  - argopy = 1.4.0  # installed with pip for the last dev. version instead
   - pwlf = 2.5.1
   - gsw = 3.6.19
@@ -67,7 +65,7 @@ dependencies:
 
 # PIP:
   - pip:
-      - git+https://github.com/euroargodev/argopy.git@argofloat-open-profile
+      - git+https://github.com/euroargodev/argopy
       - pytest-reportlog == 0.4.0
       - numpydoc==1.10.0
       - readthedocs-sphinx-ext==2.2.5

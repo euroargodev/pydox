@@ -157,8 +157,8 @@ class Workflow(ABC):
             To be used by :class:`Method.__repr__`
         """
         summary = []
-        for ic, coef in self.coefs.items():
-            summary += [f"  {ic}: {str(coef)}"]
+        for ic in range(self.n_configs):
+            summary += [f"  {ic}: {str(self.coefs[ic])}"]
         return summary
 
     def __repr__(self):

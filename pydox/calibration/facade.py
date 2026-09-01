@@ -78,6 +78,8 @@ class CalibrationSet(Workflow):
         return self
 
     def _flatten_configs(self) -> ConfigsDict:
+        # This method implementation *imposes* how to 'iterate' over methods and their ordered placeholders (eg: coefs, fit_data, ...).
+        # To keep any CalibrationSet ordered placeholder consistent, we need to iterate: 1st on method, then on configurations.
         configs: ConfigsDict = OrderedDict()
         icfg: int = 0
         for im, m in self._methods.items():
@@ -123,12 +125,12 @@ class CalibrationSet(Workflow):
             for im, this_method in self._methods.items():
                 this_method.fit(argofloat_obj, debug_plot=debug_plot)
 
-                # Gather more detailed results in dedicated placeholders of the instance:
-                for iset, coefs in this_method._coefs.items():
-                    self._coefs[icfg] = coefs
-                    self._fit_data[icfg] = this_method._fit_data[iset]
+                # Gather detailed results:
+                for idc, dc in this_method.configs.items():
+                    self._coefs[icfg] = this_method.coefs[idc]
+                    self._fit_data[icfg] = this_method._fit_data[idc]
                     self._fitted_float["CYCLE_NUMBER"][icfg] = (
-                        this_method._fitted_float["CYCLE_NUMBER"][iset]
+                        this_method._fitted_float["CYCLE_NUMBER"][idc]
                     )
                     icfg += 1
 
@@ -139,18 +141,18 @@ class CalibrationSet(Workflow):
             icfg: int = 0
             for im, this_method in self._methods.items():
                 this_method.fit(argofloat_obj, debug_plot=debug_plot)
-                coefs = this_method.coefs[0]
+                idc = 0  # We can safely use the 1st value because all methods have a single configuration (see self.is_cumulative()).
 
                 # Gather more detailed results in dedicated placeholders of the instance:
-                for iset, coefs in this_method._coefs.items():
-                    self._coefs[icfg] = coefs
-                    self._fit_data[icfg] = this_method._fit_data[iset]
-                    self._fitted_float["CYCLE_NUMBER"][icfg] = (
-                        this_method._fitted_float["CYCLE_NUMBER"][iset]
-                    )
+                self._coefs[icfg] = this_method.coefs[idc]
+                self._fit_data[icfg] = this_method._fit_data[idc]
+                self._fitted_float["CYCLE_NUMBER"][icfg] = this_method._fitted_float[
+                    "CYCLE_NUMBER"
+                ][idc]
 
                 # Update next method configuration initial conditions with this estimate:
                 if im + 1 < len(self._methods):
+                    coefs = this_method.coefs[idc]
                     self._methods[im + 1].set_params(
                         "calibration_parameters.initial_guess.gain",
                         coefs.gain.value,

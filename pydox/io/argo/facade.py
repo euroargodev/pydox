@@ -330,6 +330,7 @@ def get_argo_data_for_in_air_method(
 def semantic_cycle2values(
     a_float: ar.ArgoFloat,
     settings: Config | ParameterSet,
+    group : Literal["calibration_parameters","adjustment"] = "calibration_parameters",
     dsname: Literal["Sprof"] = "Sprof",
 ) -> list[int]:
     """Convert a cycle range to a list of cycle numbers, handle semantic like 'first' and 'last'
@@ -355,7 +356,7 @@ def semantic_cycle2values(
 
     try:
         semantic_cycles: tuple = do.get_params(
-            "calibration_parameters.cycles", config=settings
+            f"{group}.cycles", config=settings
         )
     except Exception as e:
         if isinstance(settings, ParameterSet):
@@ -396,17 +397,8 @@ def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients):
         and generate the corrected B files (BD files).
     """
 
-    semantic_cycles = do.get_params("adjustment.cycles")
-    if semantic_cycles[0] == "first":
-        cycle_first = data_float.dataset('Sprof')['CYCLE_NUMBER'].min().item()
-    else:
-        cycle_first = semantic_cycles[0]
-    if semantic_cycles[-1] == "last":
-        cycle_last = data_float.dataset('Sprof')['CYCLE_NUMBER'].max().item()
-    else:
-        cycle_last = semantic_cycles[-1]
 
-    cycles_to_write = [cycle_first, cycle_last]
+    cycles_to_write = semantic_cycle2values(data_float,settings=None,group="adjustment")
     print(cycles_to_write)
 
     dims_to_extend = {"N_CALIB", "N_HISTORY"}  # We add a new calibration

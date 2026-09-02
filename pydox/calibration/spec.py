@@ -458,7 +458,7 @@ class Workflow(ABC):
     def set_best_fit(self, icfg: int):
         if self.fitted:
             if icfg in range(self.n_configs):
-                if self.best_fit is not None:
+                if self.best_fit is not None and self.best_fit != icfg:
                     log.warning(
                         f"This instance best_fit is already set to {self.best_fit}, you're about to overwrite it with {icfg}."
                     )

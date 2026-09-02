@@ -1,9 +1,12 @@
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
+import pydox as do
 from pydox._config.utils import dict_to_string
+from pydox.errors import UnsupportedSetting
 from pydox.utils.casting import to_list
 from pydox.calibration.spec import Workflow
+from pydox.reporting.html import CalibrationHTMLReport
 
 
 class Method(Workflow, ABC):
@@ -145,3 +148,13 @@ class Method(Workflow, ABC):
             [summary.append(line) for line in self._repr_coefs()]
 
         return "\n".join(summary)
+
+    def to_report(self, a_float, file_name: Optional[str] = None, **kwargs):
+        """Create calibration report"""
+        if do.get_params("reports.save.format", config=self._cfg) != "html":
+            raise UnsupportedSetting(
+                f"Only 'html' report format is supported at this time."
+            )
+        self._reporter = CalibrationHTMLReport(self, a_float)
+
+        return self._reporter.publish(file_name=file_name, **kwargs)

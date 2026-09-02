@@ -24,6 +24,7 @@ from pydox._config import (
 )
 from pydox._config.utils import reduce, runner, config_repr_txt, config_repr_html
 from pydox._config.yaml import load_config_from_file
+from pydox.errors import MissingSetting
 
 # from pydox.reporting.logs import getLogger # Impossible without circularity, _config is only module where we cant use getLogger
 
@@ -295,8 +296,23 @@ def set_by_path(config: Dict | List, key: str, value: Any) -> Dict | List:
         raise ValueError(f"Parameter '{key}' is read-only !")
     key = key.split(".")
     if len(key) > 1:
+
+        # Make sure that all subgroups exist (even empty)
+        # This allows to apply a setting even if the parent subgroup do not exist before.
+        # Eg:
+        # to set `reports.templates.new_template.name`,
+        # requires ``reports.templates.new_template` subgroup to exist
+        for ik in range(1, len(key)):
+            try:
+                get_by_path(config, ".".join(key[:ik]))
+            except MissingSetting:
+                group = get_by_path(config, ".".join(key[: ik - 1]))
+                group[key[ik - 1]] = {}
+
+        #
         group = get_by_path(config, ".".join(key[:-1]))
         group[key[-1]] = value  # This modifies group in config in place
+
     else:
         config[key[0]] = value
     return config

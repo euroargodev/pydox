@@ -20,6 +20,9 @@ from pydox.commodities import (
     VALID_FIGURE_CATEGORIES,
 )
 from pydox.utils.casting import is_ctelist, to_list
+from pydox.reporting.logs import getLogger
+
+log = getLogger("pydox.calibration.spec", context_level=20)
 
 
 class Workflow(ABC):
@@ -64,6 +67,9 @@ class Workflow(ABC):
             "WMO": None,
             "CYCLE_NUMBER": {},
         }  # Used to register float WMO/CYCLE_NUMBER used for fit
+        self._best_fit: int = (
+            None  # Will hold the best user-defined configuration id, Filled by self.set_best_fit(), return by self.best_fit
+        )
 
         # Init private placeholders depending on configuration order and number:
         self._input_data = (
@@ -444,3 +450,24 @@ class Workflow(ABC):
             fig.reload().show()
 
         return [f.fig for f in pfig_list]
+
+    @property
+    def best_fit(self):
+        return self._best_fit
+
+    def set_best_fit(self, icfg: int):
+        if self.fitted:
+            if icfg in range(self.n_configs):
+                if self.best_fit is not None:
+                    log.warning(
+                        f"This instance best_fit is already set to {self.best_fit}, you're about to overwrite it with {icfg}."
+                    )
+                self._best_fit = icfg
+            else:
+                raise ValueError(
+                    f"Configuration id {icfg} is not valid, must be one in: {np.arange(self.n_configs)}"
+                )
+        else:
+            raise ValueError(
+                "Cannot select the best configuration before fitting on one Argo float data !"
+            )

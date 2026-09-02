@@ -1,0 +1,368 @@
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oxygen Delayed Mode Quality Control of Argo float {{ WMO }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0 auto;
+            max-width: 1200px;
+            padding: 20px;
+            color: {{colors[0]}};
+        }
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            /*border-bottom: 1px solid #ddd;*/
+            border-bottom: 1px solid {{colors[1]}};
+            padding-bottom: 20px;
+        }
+        header h1{
+            color: {{colors[2]}};
+        }
+        footer {
+          font-size: 12px;
+          text-align: center;
+          padding: 3px;
+          background-color: {{colors[-1]}};
+          color: {{colors[1]}};
+          border-top: 1px solid {{colors[1]}};
+        }
+        footer img {
+            height: 4em;
+            vertical-align: middle;
+            display: inline;
+        }
+        h1 h2 h3 h4{
+            margin-top: 5px;
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        h2 {
+            font-size: 20px;
+            border-bottom: 1px solid {{colors[3]}};
+            padding-bottom: 5px;
+            /*margin-top: 30px;*/
+        }
+        h3 {
+            font-size: 18px;
+            /*margin-top: 25px;*/
+        }
+        h4 {
+            font-size: 16px;
+            /*margin-top: 20px;*/
+        }
+        a {
+          color: {{colors[1]}};
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .author-info {
+            font-style: italic;
+            margin-top: 10px;
+        }
+        .date {
+            margin-top: 10px;
+            font-style: italic;
+        }
+        section {
+            margin-bottom: 30px;
+        }
+        figure {
+            text-align: center;
+            margin: 20px 0;
+        }
+        figcaption {
+            font-style: italic;
+            margin-top: 10px;
+            text-align: center;
+        }
+        a.back {
+            font-style: normal;
+            font-size: small;
+            margin-top: 10px;
+            text-align: center;
+            display: block;
+        }
+        img {
+            max-width: 50%;
+            height: auto;
+            vertical-align: middle;
+        }
+        .summary-box {
+            background-color: {{colors[-1]}};
+            padding: 5px;
+            border-left: 4px solid {{colors[2]}};
+            margin: 20px 0;
+        }
+        .reference {
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        .reference a {
+            color: #0066cc;
+        }
+        .toc {
+            background-color: {{colors[-1]}};
+            padding: 5px;
+            margin-bottom: 30px;
+        }
+        .toc h1 h2 h3 h4{
+            margin-top: 5px;
+        }
+        .toc ul {
+            list-style-type: none;
+            /*padding-left: 0;*/
+        }
+        .toc li {
+            /*margin: 5px 0;*/
+        }
+        .toc a {
+            text-decoration: none;
+            color: #0066cc;
+        }
+        .toc a:hover {
+            text-decoration: underline;
+            color: {{colors[1]}};
+        }
+        .example {
+            font-style: italic;
+            color: #666;
+            background-color: #fffde7;
+            padding: 5px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .code-block {
+            background-color: #f5f5f5;
+            padding: 5px;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre;
+            overflow-x: auto;
+        }
+        i.bi {
+            color: {{colors[0]}};
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Oxygen Delayed Mode Quality Control of Argo float {{ WMO }}</h1>
+        <div class="author-info">
+            <p><strong>{{ operator.name }}</strong>{% if operator.email is not none %}&nbsp<a href="mailto:{{operator.email}}"><i class="bi bi-envelope"></i></a>{% endif %}</p>
+            {% if operator.affiliation is not none %}<p>{{ operator.affiliation }}</p>{% endif %}
+            {% if operator.orcid is not none %}
+            <p>ORCID <img src="{{icon_orcid}}">: <a href="https://orcid.org/{{ operator.orcid }}" target="_blank">{{ operator.orcid }}</a></p>
+            {% endif %}
+        </div>
+        <div class="date">{{creation_date}}</div>
+    </header>
+
+    <figure>
+        <img src="{{plot_traj.src}}" alt="Float {{ WMO }} Trajectory Map">
+        <figcaption>Trajectory map of float {{ WMO }}.</figcaption>
+    </figure>
+
+    <div class="summary-box">
+        <h2>Summary</h2>
+        <h4>Best adjustment selected is with configuration id: {{ iselected }}</h4>
+        {{summary}}
+    </div>
+
+    <div class="toc" id="top-toc">
+        <h2>Table of Contents</h2>
+        <ul>
+            <li><a href="#introduction">Introduction</a>
+                <ul>
+                    <li><a href="#intro-tech">Technical Information</a></li>
+                </ul>
+            </li>
+            <li><a href="#figures">Figures</a>
+                <ul>
+                    <li><a href="#fig-results">Fit results</a></li>
+                    <li><a href="#fig-input">Input data</a></li>
+                </ul>
+            </li>
+            <li><a href="#comment">Comment</a></li>
+            <li><a href="#appendix">Appendix</a>
+                <ul>
+                    <li><a href="#app-fisc-fig">Misc figures</a></li>
+                </ul>
+            </li>
+            <li><a href="#references">References</a></li>
+        </ul>
+    </div>
+
+    <section id="introduction">
+        {% if introduction is not none %}
+        <h2 id="intro-text">Introduction</h2>
+        {{introduction}}
+        {% endif %}
+
+        <h3 id="intro-tech">Technical Information</h3>
+        <table>
+            <caption>Technical information about float <a href="{{fleetmonitoring_url}}" target="_blank">{{ WMO }}&nbsp<i class="bi bi-box-arrow-up-right"></i></a></caption>
+            <thead>
+                <tr>
+                    <th>Parameters</th>
+                    <th>{{ WMO }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>DAC</td><td>{{af.dac}}</td></tr>
+                <tr><td>Platform type</td><td>{{af.metadata['platform']['type']}} ({{af.metadata['maker']}})</td></tr>
+                <tr><td>Transmission system</td><td>{{af.metadata['transmissionSystem']}}</td></tr>
+<!--                <tr><td>CTD Sensor type</td><td>?</td></tr>-->
+<!--                <tr><td>Other sensors</td><td>n/a</td></tr>-->
+                <tr><td>Deployment</td><td>{{af.metadata["deployment"]["launchDate"]}}</td></tr>
+                <tr><td>Dep. Lat</td><td>{{af.metadata["deployment"]["lat"]}}</td></tr>
+                <tr><td>Dep. Lon</td><td>{{af.metadata["deployment"]["lon"]}}</td></tr>
+<!--                <tr><td>Park Depth</td><td>1000 m</td></tr>-->
+<!--                <tr><td>Profile depth</td><td>2000 m</td></tr>-->
+<!--                <tr><td>Cycle time</td><td>10 days</td></tr>-->
+<!--                <tr><td>Ship</td><td>RRS James Clark Ross</td></tr>-->
+<!--                <tr><td>PI</td><td>Jon Turton</td></tr>-->
+<!--                <tr><td>Float Status</td><td>Active</td></tr>-->
+<!--                <tr><td>Age</td><td>5.01 y</td></tr>-->
+<!--                <tr><td>Last Cycle</td><td>155</td></tr>-->
+<!--                <tr><td>Grey list</td><td>PSAL</td></tr>-->
+            </tbody>
+        </table>
+    </section>
+
+    <section id="figures">
+        <h2>Figures</h2>
+
+            <h3 id="fig-results">Fit results</h3>
+
+                <figure>
+                    <a href="{{plot_result.src}}" target="_blank"><img src="{{plot_result.src}}" alt="{{ plot_result.title }}"></a>
+                    <figcaption>{{ plot_result.legend }} <a href="#figures" class="back"><i class="bi bi-arrow-up-circle"></i> Back</a></figcaption>
+                </figure>
+
+            <h3 id="fig-input">Input data</h3>
+
+            {% for fig in figures['input_data'] %}
+                <figure>
+                    <a href="{{fig.src}}" target="_blank"><img src="{{fig.src}}" alt="{{ fig.title }}"></a>
+                    <figcaption>{{ fig.legend }} <a href="#figures" class="back"><i class="bi bi-arrow-up-circle"></i> Back</a></figcaption>
+                </figure>
+            {% endfor %}
+
+    </section>
+
+    <section id="comment">
+        <h2>Comment</h2>
+        {% if comment is none %}
+        <p>
+            Write comments about any problems with float and decision made on this float including e.g.
+            Is the float still active? Where is float located and what is the trajectory over its lifetime? 
+            Has it crossed through different water masses, changed latitude, etc? Is the float on the grey list? 
+            If DMQC has been done on some profiles before what decisions have been made and if anything has changed? 
+            What was the setup used in set_calseries.m? Did you run any more code iterations with different configurations? 
+            If yes how it helped you to make a final decision?
+        </p>
+        <p class="example">
+            For example:<br>
+            "Float was deployed in the Brazil Basin. For most of life, this float stayed in the system of local eddies. 
+            The most favourable water masses, which are useful for comparison with climatology is relatively stable 
+            intermediate waters from around 400-900 m. The initial comparison between Argo float data reference data 
+            from CTD data shows that salinity data are within its variability, however, slightly shifted toward saltier 
+            values of CTD data. The sea surface pressure data are not displaying values below 0 dbar, however, 
+            there are no indications of negative pressure drift.
+            <br><br>
+            The comparison with satellite altimeter data suggested some potential offset between the sea surface height 
+            and dynamic height anomaly, which were further verified by comparing Argo data with Argo reference data using 
+            the OWC method. This float was not DMQC-ed before. In set_calseries.m we set the maximum of barks to -1 to show 
+            evidence of suspected offset. The CTD referenced data were too limited and too variable to detect any offset. 
+            Much clearer result was obtained by comparing Argo float data to Argo reference data. 
+            The OWC analysis showed indications of salty offset. Argo data from this float are of around 0.0125 saltier 
+            that reference data. The offset of -0.0125 was applied to salinity data and submitted to GDAC. 
+            This float is still active and further monitoring is still required."
+        </p>
+        {% else %}
+        <p>{{comment}}</p>
+        {% endif %}
+    </section>
+
+    <section id="appendix">
+        <h2>Appendix</h2>
+<!--        <p>In this section we can add any additional supporting graphs.</p>-->
+
+        <h3 id="app-misc-fig">Misc figures</h3>
+            <div class="toc" id="misc-fig-toc">
+                <h4>List of misc figures</h4>
+                <ul>
+                    {% for fig in figures['fit_results'] %}
+                    <li><a href="#{{fig.src}}">{{ fig.title }}</a></li>
+                    {% endfor %}
+                    {% for fig in figures['debug'] %}
+                    <li><a href="#{{fig.src}}">{{ fig.title }}</a></li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <h4>Debug plots</h4>
+            {% for fig in figures['fit_results'] %}
+                <figure id="{{fig.src}}">
+                    <a href="{{fig.src}}" target="_blank"><img src="{{fig.src}}" alt="{{ fig.title }}"></a>
+                    <figcaption>{{ fig.legend }} <a href="#misc-fig-toc" class="back"><i class="bi bi-arrow-up-circle"></i> Back to list</a></figcaption>
+                </figure>
+            {% endfor %}
+
+            <h4>Debug plots</h4>
+            {% for fig in figures['debug'] %}
+                <figure id="{{fig.src}}">
+                    <a href="{{fig.src}}" target="_blank"><img src="{{fig.src}}" alt="{{ fig.title }}"></a>
+                    <figcaption>{{ fig.legend }} <a href="#misc-fig-toc" class="back"><i class="bi bi-arrow-up-circle"></i> Back to list</a></figcaption>
+                </figure>
+            {% endfor %}
+
+    </section>
+
+    <section id="references">
+        <h2>References</h2>
+        <div class="reference">
+            <p>
+                Cabanes, C., Thierry, V., &amp; Lagadec, C. (2016). 
+                <em>Improvement of bias detection in Argo float conductivity sensors and its application in the North Atlantic.</em> 
+                Deep-Sea Research Part I: Oceanographic Research Papers, 114, 128–136. 
+                <a href="https://doi.org/10.1016/j.dsr.2016.05.007">https://doi.org/10.1016/j.dsr.2016.05.007</a>
+            </p>
+            <p>
+                Johnson, G. C., Toole, J. M., &amp; Larson, N. G. (2007). 
+                <em>Sensor corrections for Sea-Bird SBE-41CP and SBE-41 CTDs.</em> 
+                Journal of Atmospheric and Oceanic Technology, 24(6), 1117–1130. 
+                <a href="https://doi.org/10.1175/JTECH2016.1">https://doi.org/10.1175/JTECH2016.1</a>
+            </p>
+            <p>
+                Wong, A., Keeley, R., Carval, T., and the Argo Data Management Team (2020). 
+                <em>Argo Quality Control Manual for CTD and Trajectory Data.</em> 
+                <a href="http://dx.doi.org/10.13155/33951">http://dx.doi.org/10.13155/33951</a>
+            </p>
+        </div>
+    </section>
+
+    <footer><img src="{{logo_pydox}}"><p>HTML document automatically generated with {{creator}} on {{creation_date}}</p></footer>
+</body>
+</html>

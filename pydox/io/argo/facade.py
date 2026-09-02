@@ -15,9 +15,7 @@ import argopy as ar
 from pathlib import Path
 import shutil
 import fsspec
-from netCDF4 import Dataset
-from netCDF4 import chartostring
-from netCDF4 import stringtochar
+from netCDF4 import Dataset, chartostring, stringtochar
 import re
 import numpy as np
 from datetime import datetime
@@ -393,8 +391,24 @@ def semantic_cycle2values(
 
 
 def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients):
-    """ Function to read B files associated to the ArgoFloat, correct the DOXY_ADJUSTED, update the associated QC, SCIENTIFIC_CALIB*, ...
+    """ Function to read B files associated to the ArgoFloat, correct the DOXY_ADJUSTED using coef_kept, update the associated QC, SCIENTIFIC_CALIB*, ...
         and generate the corrected B files (BD files).
+        DOXY_ADJUSTED = (coef_kept.gain * (1 + coef_kept.drift/100* (juld_day - juld_day_launch)/365) * DOXY.
+        In the future, we will apply a pressure correction determined by comparison DOXY CTD with ARGO DOXY.
+        This pressure correction will estimate on DOXY, that's why we decided to correct the DOXY and not the PPOX.
+
+        Parameters
+        ----------
+        data_float : ar.ArgoFloat
+            The :class:`ar.ArgoFloat` object to read cycle numbers from.
+        coef_kept : Coefficients
+            contains the final gain/drift to apply to correct the DOXY data
+
+        Returns
+        -------
+            None
+            The function generates BD files with corrected DOXY in DOXY_ADJUSTED. Variables depending of N_CALIB and N_HISTORY are updated, as the update_date.
+
     """
 
 
@@ -403,16 +417,13 @@ def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients):
 
     dims_to_extend = {"N_CALIB", "N_HISTORY"}  # We add a new calibration
 
-    good_flags = [b'1', b'2', b'5', b'8']
-    bad_flags = [b'3', b'4']
-
     # List of B files to be modified
     list_files = data_float.lsprofiles()
     list_Bfiles = [f for f in list_files if
                    Path(f).name.startswith("B")]  # list of B files (ascending/descending in realtime or delayed mode)
 
     # Output directory/ relative error
-    rep_res = Path(do.get_params('output.root')) / str(data_float.WMO) / do.get_params("adjustment.save.path")
+    rep_res = Path(do.get_params('output.root')).joinpath(f"{data_float.WMO}").joinpath(do.get_params("adjustment.save.path"))
     if not Path(rep_res).exists():
         Path(rep_res).mkdir(parents=True, exist_ok=True)
 
@@ -428,19 +439,19 @@ def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients):
 
     # For each B file
     for i_fic in range(0, len(list_Bfiles)):
-        fic_en_cours = list_Bfiles[i_fic]
+        file_in_progress = list_Bfiles[i_fic]
         bid = re.match(r".*_(\d+)[A-Z]?\.nc$",
-                       fic_en_cours)  # We look for the number after the underscore, ie the cycle number
+                       file_in_progress)  # We look for the number after the underscore, ie the cycle number
         cycle_en_cours = int(bid.group(1))  # group(1) : 1st group  (the number in the parenthesis : (\d+))
         if min(cycles_to_write) <= cycle_en_cours <= max(cycles_to_write):
-            res_file = Path(rep_res) / Path(fic_en_cours).name.replace(".nc",
-                                                                       "_new.nc")  # os.path.join(rep_res,os.path.basename(fic_en_cours.replace(".nc","_new.nc")))
-            res_file2 = Path(rep_res) / Path(fic_en_cours).name.replace(".nc",
-                                                                        "_new2.nc")  # os.path.join(rep_res,os.path.basename(fic_en_cours.replace(".nc","_new2.nc")))
+            res_file = Path(rep_res).joinpath(Path(file_in_progress).name.replace(".nc",
+                                                                       "_new.nc") ) # os.path.join(rep_res,os.path.basename(file_in_progress.replace(".nc","_new.nc")))
+            res_file2 = Path(rep_res).joinpath(Path(file_in_progress).name.replace(".nc",
+                                                                        "_new2.nc")) # os.path.join(rep_res,os.path.basename(file_in_progress.replace(".nc","_new2.nc")))
 
             # We copy the input file (which can be on local disk but also on internet) in the output directory.
             # We copy this input file in the output file.
-            with fsspec.open(fic_en_cours, "rb") as src, open(res_file, "wb") as dst:
+            with fsspec.open(file_in_progress, "rb") as src, open(res_file, "wb") as dst:
                 shutil.copyfileobj(src, dst)
                 data_file = Dataset(res_file, 'r+')  # Data from Input file
                 data_file2 = Dataset(res_file2, 'w')  # Data to be register in the Output file
@@ -459,40 +470,37 @@ def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients):
                 nb_history = data_file.dimensions['N_HISTORY'].size
                 nb_history_new = nb_history + 1
 
-                data_file2.setncatts(data_file.__dict__)  # Copy all global attributs from input data in output data
+                # Copy global attributs
+                global_attr = data_file.ncattrs()
+                for name_attr in global_attr:
+                    value_attr = data_file.getncattr(name_attr)
+                    data_file2.setncattr(name_attr, value_attr)
+
+                date_str = datetime.now().strftime("%Y%m%d%H%M%S")
+                date_strlen = len(date_str)
 
                 # We copy the dimension
                 for name, dim in data_file.dimensions.items():
-                    if name in dims_to_extend:
+                    if name == "N_CALIB": #in dims_to_extend: N_HISTORY must be UNLIMITED
                         data_file2.createDimension(name, len(dim) + 1)  # add 1 for N_CALIB
                     else:
                         data_file2.createDimension(name, len(dim) if not dim.isunlimited() else None)
 
                 # We copy the variables
                 for name, var in data_file.variables.items():
-                    # Force a fillvalue
-                    fill_value = getattr(var, "_FillValue", None)
-                    if fill_value is not None:
-                        out_var = data_file2.createVariable(
-                            name,
-                            var.dtype,
-                            var.dimensions,
-                            fill_value=fill_value
-                        )
-                    else:
-                        out_var = data_file2.createVariable(
-                            name,
-                            var.dtype,
-                            var.dimensions
-                        )
+                    out_var = data_file2.createVariable(
+                        name,
+                        var.dtype,
+                        var.dimensions,
+                        fill_value=getattr(var, "_FillValue", None)
+                    )
 
-                    # We copy the variable's attribut
-                    attrs = {
-                        k: v for k, v in var.__dict__.items()
-                        if k != "_FillValue"
-                    }
-                    out_var.setncatts(attrs)
 
+                    var_attrs = var.ncattrs()
+                    for k in var_attrs:
+                        if k != "_FillValue":
+                            value_attr = var.getncattr(k)
+                            out_var.setncattr(k, value_attr)
                     data = var[:]
 
                     # Does the current variable depends on N_CALIB or N_HISTORY ?
@@ -508,6 +516,7 @@ def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients):
                         for axis in extend_axes:
                             new_shape[axis] += 1  # We add a new calibration
 
+                        fill_value = getattr(var, "_FillValue", None)
                         # Creation of new_data
                         if fill_value is not None:
                             new_data = np.full(
@@ -544,8 +553,10 @@ def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients):
 
 
                             # Update DATA_MODE and PARAMETR_DATA_MODE for DOXY
-                            data_file2["DATA_MODE"][i_prof] = b'D'
-                            data_file2["PARAMETER_DATA_MODE"][i_prof, i_param] = b'D'
+                            if name =="DATA_MODE":
+                                data_file2["DATA_MODE"][i_prof] = b'D'
+                            if name == "PARAMETER_DATA_MODE":
+                                data_file2["PARAMETER_DATA_MODE"][i_prof, i_param] = b'D'
 
                             # Update SCIENTIFIC_CALIB_ variables
                             if name == 'SCIENTIFIC_CALIB_COMMENT':
@@ -579,11 +590,8 @@ def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients):
                                                  dtype=f"S{strlen}"))[0]
 
                             if name == 'SCIENTIFIC_CALIB_DATE':
-                                date_str = datetime.now().strftime("%Y%m%d%H%M%S")
-                                strlen = len(date_str)
                                 new_data[i_prof, nb_calib_new - 1, i_param, :] = \
-                                stringtochar(np.array([date_str], dtype=f"S{strlen}"))[0]
-                                data_file2["DATE_UPDATE"][:] = stringtochar(np.array([date_str], dtype=f"S{strlen}"))[0]
+                                stringtochar(np.array([date_str], dtype=f"S{date_strlen}"))[0]
 
                             if name == 'HISTORY_INSTITUTION':
                                 idx = next(i for i, d in enumerate(data_file['HISTORY_INSTITUTION'].dimensions) if
@@ -649,21 +657,19 @@ def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients):
                                 new_data[nb_history_new - 1, i_prof] = max_pres
 
                             if name == 'HISTORY_DATE':
-                                date_str = datetime.now().strftime("%Y%m%d%H%M%S")
-                                strlen = len(date_str)
                                 new_data[nb_history_new - 1, i_prof, :] = \
-                                stringtochar(np.array([date_str], dtype=f"S{strlen}"))[0]
+                                stringtochar(np.array([date_str], dtype=f"S{date_strlen}"))[0]
 
                         out_var[:] = new_data
 
-                    else:  # N_CALIB not in the variable's dimension : we copy the input data
+                    else:  # N_CALIB and N_HISTORY not in the variable's dimension : we copy the input data
                         out_var[:] = data
 
             # We correct the DOXY_ADJUSTED by applying the equation : DOXY_ADJUSTED = DOXY * gain * (1 + drift/100 * delta_T/365). We apply the correction directly to the DOXY, not on PPOX.
             # As PPOX = value(S,T) * DOXY, the results are the same.
             # todo : must be checked with VT
             juld_var = data_file2["JULD"]
-            ref_date = re.search(r"since (.+?) UTC", juld_var.units).group(1)
+            ref_date = re.search(r"days since (.+?) UTC", juld_var.units).group(1)
             ref_date = np.datetime64(ref_date)
             date_juld = ref_date + (data_file2["JULD"][:].data * 86400).astype('timedelta64[s]')
             delta_T_Ref = (date_juld - data_float.dataset("meta")["LAUNCH_DATE"].values) / np.timedelta64(1, "D")
@@ -700,6 +706,8 @@ def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients):
             )
 
             # Global profile QC
+            good_flags = [b'1', b'2', b'5', b'8']
+            bad_flags = [b'3', b'4']
             for i_prof in range(0, nb_prof):
                 doxy_qc_en_cours = data_file2['DOXY_ADJUSTED_QC'][i_prof]
                 good_count = np.isin(doxy_qc_en_cours, good_flags).sum()
@@ -719,13 +727,15 @@ def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients):
                     else:
                         data_file2['PROFILE_DOXY_QC'][i_prof] = b' '  # b'F' ?
 
+            data_file2["DATE_UPDATE"][:] = stringtochar(np.array([date_str], dtype=f"S{date_strlen}"))
+
             data_file2.close()  # This generate the final file
             data_file.close()
             # Remove the input file and rename the output file with argo convetion.
             Path(res_file).unlink()
             dirname = Path(res_file2).parent
             basename = Path(res_file2).name
-            newname = Path(dirname) / ("BD" + basename[2:].replace("_new2.nc",
-                                                                   ".nc"))  # os.path.join(dirname,"BD" + basename[2:].replace("_new2.nc", ".nc"))
+            newname = Path(dirname).joinpath(("BD" + basename[2:].replace("_new2.nc",
+                                                                   ".nc"))) # os.path.join(dirname,"BD" + basename[2:].replace("_new2.nc", ".nc"))
             Path(res_file2).rename(newname)  # os.rename(res_file2,newname)
             print(f"File {newname} created")

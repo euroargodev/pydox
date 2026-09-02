@@ -279,7 +279,7 @@ class PydoxFigure:
     config_uid: str = None
     caller: Callable | str = None
     pickle: Path = None
-    # axes: mpl.axes._axes.Axes | list[mpl.axes._axes.Axes] = None
+    legend: str = None
 
     def __post_init__(self):
         # Validate/set

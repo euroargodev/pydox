@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Any, Optional
+import argopy as ar
 
 import pydox as do
 from pydox._config.utils import dict_to_string
@@ -149,12 +150,19 @@ class Method(Workflow, ABC):
 
         return "\n".join(summary)
 
-    def to_report(self, a_float, file_name: Optional[str] = None, **kwargs):
+    def to_report(
+        self, a_float: ar.ArgoFloat, file_name: Optional[str] = None, **kwargs
+    ):
         """Create calibration report"""
         if do.get_params("reports.save.format", config=self._cfg) != "html":
             raise UnsupportedSetting(
-                f"Only 'html' report format is supported at this time."
+                f"Only 'html' report format is supported at this time, '{do.get_params('reports.save.format', config=self._cfg)}'."
             )
-        self._reporter = CalibrationHTMLReport(self, a_float)
 
+        if self._fitted_float["WMO"] != a_float.WMO:
+            raise ValueError(
+                f"Reporting must be done with the same float as the fit ! {a_float.WMO} vs {self._fitted_float['WMO']}"
+            )
+
+        self._reporter = CalibrationHTMLReport(self, a_float)
         return self._reporter.publish(file_name=file_name, **kwargs)

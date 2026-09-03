@@ -142,7 +142,10 @@ class Workflow(ABC):
             d.pop("method")
             if not self.get_params("pydox.verbose.configs"):
                 d.pop("src")
-            summary += [f"  {ii}: method='{method}' {d}"]
+            if self.best_fit is not None and self.best_fit == ii:
+                summary += [f"⭐️{ii}: method='{method}' {d}"]
+            else:
+                summary += [f"  {ii}: method='{method}' {d}"]
 
         return summary
 
@@ -184,7 +187,10 @@ class Workflow(ABC):
         """
         summary = []
         for ic in range(self.n_configs):
-            summary += [f"  {ic}: {str(self.coefs[ic])}"]
+            if self.best_fit is not None and self.best_fit == ic:
+                summary += [f"⭐️{ic}: {str(self.coefs[ic])}"]
+            else:
+                summary += [f"  {ic}: {str(self.coefs[ic])}"]
         return summary
 
     def __repr__(self):

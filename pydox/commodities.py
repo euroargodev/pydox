@@ -392,7 +392,7 @@ class _DoFigures:
         watermark: Optional[str] = None,
         config_uid: Optional[str] = None,
         dest: Optional[Path] = None,
-    ):
+    ) -> PydoxFigure:
         """Commit a named :mpl:`Figure` object to the global registry of figures
 
         This function is to be called from anywhere in the library.
@@ -498,6 +498,8 @@ class _DoFigures:
         # Close figure upon commit:
         # Showing is controlled by higher-level methods, such as Calibration.plot()
         mpl.pyplot.close(fig)
+
+        return this_f
 
     @property
     def orpheans(self) -> list[PydoxFigure]:

@@ -133,6 +133,12 @@ def fit(params: ParamsInAir, data=Any) -> FitResult:
         f, xdata, ydata, p0=p0, nan_policy="omit", full_output=True
     )
 
+    # Compute R2:
+    residuals = ydata - f(xdata, *fit_results)
+    ss_res = np.sum(residuals**2)
+    ss_tot = np.sum((ydata - np.mean(ydata)) ** 2)
+    r_squared = 1.0 - (ss_res / ss_tot)
+
     # And fill in results for output:
     c = {}
     c["gain"] = Data(fit_results[0], np.sqrt(np.diag(covariance))[0])
@@ -156,7 +162,7 @@ def fit(params: ParamsInAir, data=Any) -> FitResult:
     # coefs = CoefficientsInAir(gain=Data(12., 3.), carryover=...)
 
     fit_data: dict[str, Any] = {
-        "R2": None,
+        "R2": r_squared,
         "uid": params.uid,
         "initial gain": params.initial_gain.value,
         "n_cycles": len(PPOX1),

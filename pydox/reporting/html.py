@@ -5,7 +5,7 @@ from copy import deepcopy
 import argopy as ar
 import importlib
 import pandas as pd
-from typing import Dict, Any, Optional
+from typing import Dict, Optional, TypeAlias
 
 import pydox as do
 from pydox.commodities import PydoxFigure
@@ -19,10 +19,13 @@ _path2static = Path(
 
 slug = lambda name: re.sub(r"[/\\?%*:|\"<>\x7F\x00-\x1F]", "-", name)
 
+TemplateFigure: TypeAlias = Dict[str, str]
+"""A type to describe what is sent to the template to represent one figure, typically based on a PydoxFigure instance"""
+
 
 def remove_duplicate(
-    figlist: list[PydoxFigure],
-) -> list[PydoxFigure]:
+    figlist: list[TemplateFigure],
+) -> list[TemplateFigure]:
     """Remove duplicates based on title and 2nd part of uid"""
     seen = set()
     new_l = []
@@ -83,12 +86,15 @@ html_default_comment = """
 """
 
 
-class PathMaker:
+class FloatPathMaker:
     def __init__(self, fitted_c):
+        if not fitted_c.fitted:
+            raise ValueError("A PathMaker requires a fitted Calibration instance")
+
         self._cfg = fitted_c._cfg
         self.WMO = fitted_c._fitted_float["WMO"]
 
-        # Define standard folders for this float:
+        # Define and create standard folders for this float:
 
         # <output.root>/<WMO>
         root = Path(do.get_params("output.root", config=self._cfg)).joinpath(
@@ -147,13 +153,22 @@ class PathMaker:
 
 
 class CalibrationHTMLReport:
-    """HTML report generator for Calibration instances"""
+    """HTML report generator for fitted Calibration instances"""
 
-    def __init__(self, c, a_float):
+    def __init__(self, c: "Calibration", a_float: ar.ArgoFloat):
+        if not c.fitted:
+            raise ValueError(
+                "A CalibrationHTMLReport requires a fitted Calibration instance"
+            )
+        if c._fitted_float["WMO"] != a_float.WMO:
+            raise ValueError(
+                f"Cannot create a HTML report for this float ({a_float.WMO}) because it is not the same used to fit this calibration ({c._fitted_float['WMO']})"
+            )
+
         self.c = c
-        self.af = a_float
         self._cfg = c._cfg
-        self.pm = PathMaker(c)
+        self.af = a_float
+        self.pm = FloatPathMaker(c)
 
     def plot_float_traj(self):
         fig, ax, ptch = self.af.plot.trajectory(cbar=False)
@@ -162,7 +177,7 @@ class CalibrationHTMLReport:
         )
 
     def _save_figure(self, f):
-        if self.fpath(f.name).exists():
+        if self.pm.fpath(f.name).exists():
             log.warning(f"Saving Figure '{f.name}' (⚠️ overwrite)")
         else:
             log.info(f"Saving Figure '{f.name}'")
@@ -195,7 +210,8 @@ class CalibrationHTMLReport:
             for f in self.c.configs_figures[icfg]:
                 self._save_figure(f)
 
-    def pydoxfig2templatefig(self, f: PydoxFigure) -> Dict[str, Any]:
+    def pydoxfig2templatefig(self, f: PydoxFigure) -> TemplateFigure:
+        """Transform PydoxFigure instance into a dictionary usable within the Jinja2 template file"""
         return {
             "title": f.name,
             "category": f.category,
@@ -205,22 +221,28 @@ class CalibrationHTMLReport:
             # 'src': str(self.pm.fpath(f.name)), # Absolute paths
         }
 
-    def retrieve_figlist(self, sort_by: str = "category") -> Dict[str, Dict[str, Any]]:
-        """Get all :class:`PydoxFigure` objects to include in the appendix figure sections"""
+    def retrieve_appendix_figs(
+        self, sort_by: str = "category"
+    ) -> Dict[str, list[TemplateFigure]]:
+        """Get all TemplateFigure instances to include in the appendix figure sections"""
+
+        # Get all possible values for the sort_by key:
         sort_values = set([getattr(f, sort_by) for f in self.c.figures])
-        s2 = set(
+        sort_values_cfg = set(
             [
                 getattr(f, sort_by)
                 for icfg in range(self.c.n_configs)
                 for f in self.c.configs_figures[icfg]
             ]
         )
-        sort_values.update(s2)
+        sort_values.update(sort_values_cfg)
 
+        # Init the dict output:
         sorted_content = {}
         for val in sort_values:
-            sorted_content[val]: list[PydoxFigure] = []
+            sorted_content[val]: list[TemplateFigure] = []
 
+        # Fill in the list of TemplateFigure for each figure in each sort_by key:
         for f in self.c.figures:
             fobj = self.pydoxfig2templatefig(f)
             sorted_content[getattr(f, sort_by)].append(fobj)
@@ -235,15 +257,17 @@ class CalibrationHTMLReport:
     def publish(self, file_name: Optional[str] = None, **kwargs) -> Path:
         """Publish an HTML report file based on the template defined in settings
 
-        Customizable fields to be provided with kwargs:
+        Customizable fields can be provided with kwargs. These are:
         - 'summary'
         - 'introduction'
         - 'comment'
 
+        They must contain strings, possibly with HTML code.
+
         Returns
         -------
         :class:`pathlib.Path`
-            Following the convention: `<output.root>/<WMO>/<reports.save.path>/<reports.save.prefix>{report_name}.<reports.save.format>`
+            Path to published report, following the convention: `<output.root>/<WMO>/<reports.save.path>/<reports.save.prefix>{report_name}.<reports.save.format>`
         """
 
         #############
@@ -251,14 +275,14 @@ class CalibrationHTMLReport:
         #############
         self.save_figures()
 
-        # Get PydoxFigure for: Float trajectory
-        f_traj = next(
+        # Get TemplateFigure for: Float trajectory
+        f_traj: PydoxFigure = next(
             f for f in do.figures if f.config_uid == f"{self.af.WMO}_trajectory_map"
         )  # save_figures() ensured this plot to exist
-        f_traj = self.pydoxfig2templatefig(f_traj)
+        f_traj: TemplateFigure = self.pydoxfig2templatefig(f_traj)
 
         # Get PydoxFigure(s) for: Best fit result (selected by user)
-        f_plot_result = None
+        f_plot_result: PydoxFigure | TemplateFigure | None = None
         target = (
             f"Calibration results [configs_layout='figure', iset='{self.c.best_fit}']"
         )
@@ -274,7 +298,9 @@ class CalibrationHTMLReport:
             raise ValueError(f"Can't find the best fit result figure named: '{target}'")
 
         # Get all PydoxFigure objects to include in the appendix figure sections:
-        sorted_content = self.retrieve_figlist(sort_by="category")
+        sorted_content: Dict[str, list[TemplateFigure]] = self.retrieve_appendix_figs(
+            sort_by="category"
+        )
 
         # Some figures are generated with a 2nd uid component based on input parameters (eg: get_argo_data_for_in_air_method)
         # This allows to identify figures generated with similar low-level data even from different high level object.
@@ -292,19 +318,20 @@ class CalibrationHTMLReport:
         )
 
         if template_name == "pydox":
-            # Make file path absolute for internal Pydox templates:
+            # `reports.templates.pydox.html` setting has only the file name, not the path (to hide to users)
+            # So we need to make the file path absolute for internal Pydox templates
+            # Template files are located under the pydox install folder / static / templates / folder.
             html_template_file = _path2static.joinpath("templates").joinpath(
                 html_template_file
             )
 
-        # loader = FileSystemLoader(Path().cwd()) # from a relative file path
         loader = FileSystemLoader(
             str(html_template_file.parent)
         )  # from an absolute file path
         template = Environment(loader=loader).get_template(html_template_file.name)
 
-        # Define template data, because they depend on the template model:
-        # (ie needs to be adapted to the template file)
+        # Define template data
+        # Because they depend on the template, this may need to be adapted to the template file
         template_kwargs = {
             "operator": do.get_params("operator", config=self._cfg),
             "af": self.af,
@@ -346,9 +373,11 @@ class CalibrationHTMLReport:
         if "colors" not in template_kwargs:
             template_kwargs["colors"] = do.reporting.COLORS.SCHEME
 
-        template_kwargs["icon_orcid"] = _path2static.joinpath("img/orcid_icon.png")
-        template_kwargs["logo_pydox"] = _path2static.joinpath(
-            "img/pydox-logo-long-800.png"
+        template_kwargs["icon_orcid"] = _path2static.joinpath("img").joinpath(
+            "orcid_icon.png"
+        )
+        template_kwargs["logo_pydox"] = _path2static.joinpath("img").joinpath(
+            "pydox-logo-long-800.png"
         )
 
         #############
@@ -360,9 +389,9 @@ class CalibrationHTMLReport:
             if file_name is None
             else file_name.removesuffix(".html")
         )
-        report_file = self.rpath(file_name)
+        report_file = self.pm.rpath(file_name)
         if report_file.exists():
-            log.info(f"Saving HTML report to: {report_file} (⚠️ overwrite)")
+            log.warning(f"Saving HTML report to: {report_file} (⚠️ overwrite)")
         else:
             log.info(f"Saving HTML report to: {report_file}")
 

@@ -142,13 +142,15 @@ adjustment:
 
 # ============================================= Plotting
 plots:
-  dpi: 100 # The resolution of figures, in dots-per-inch
+  dpi: 120 # The resolution of figures, in dots-per-inch
   level: 0 # Minimal plot category level (>=0: debug plots, >=10: input data plots, >=20: fit results or high-level APIs).
   # Set this to the lowest value 0 to ensure the generation of all possible plots.
   watermark:
     show: True # Display or not by default
-    default: '(dev. version)' # Text that will always be displayed on figures.
-  configs_layout: ['hue', 'subplot'] # Generate these layout when plotting data from more than one configuration at a time
+    default: 'Pydox' # Text that will always be displayed on figures. Set 'show' attribute to False to disable, not an empty string here
+    fontsize: 24
+    color: MEDIUM # Use a string value from the 'reports.template' setting color scheme: DARKEST, DARK, MEDIUM_DARK, MEDIUM, LIGHT_MEDIUM, LIGHT, LIGHTEST
+  configs_layout: ['hue', 'subplot'] # Generate all these layout when plotting data from more than one configuration at a time.
   save:
     format: png
     path: docs/img
@@ -159,12 +161,18 @@ plots:
       max: 500.
       step: 500.
   extend_lon_lat: 1  # Extend longitude/latitude for position plots
+  mplstyle: # Use this setting to apply a custom MPL stylesheet file, e.g. : ${HOME}/PYDOX/CUSTOM_TEMPLATES/custom.mplstyle
+    # Pydox stylesheet is used by default.
+    # See also: https://matplotlib.org/stable/users/explain/customizing.html#defining-your-own-style
 
 # ============================================= Reporting
 reports:
-  template: lops
-  template_list:
-    - lops
+  template:
+    name: pydox # Name of the template
+    colors: ['#0a2463', '#023978', '#0c9eb3', '#14b1b7', '#7bcacc', '#bae3e2', '#f8fbf8']
+      # Must be 7 HEX colors, from dark to light
+      # https://coolors.co/0a2463-023978-0c9eb3-14b1b7-7bcacc-bae3e2-f8fbf8
+
   save:
     format: pdf
     prefix: null # loaded as None, no prefix
@@ -196,7 +204,7 @@ pydox:
   logging_level: 'DEBUG' # Standard logging library value, https://docs.python.org/3/library/logging.html#logging-levels
   screen: # About printing feedbacks to user on screen (stdout)
     log: True # print or not ?
-    min_context_level: 0 # Set the minimal APIs context level to print messages from,
+    min_context_level: 10 # Set the minimal APIs context level to print messages from,
                          # i.e. messages from APIs with a higher context level will be printed on screen.
                          # (>=0: low-level APIs, >=10: intermediate-level APIs, >=20: high-level APIs)
   verbose:

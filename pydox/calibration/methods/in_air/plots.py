@@ -40,7 +40,7 @@ def plot_fit_results_hue(
     input_data: Dict[int, Any],
     coefs: CoefsDict,
     ppar: Optional[TPlotParams] = None,
-    figsize=(10, 5),
+    figsize=(10, 4),
 ) -> None:
     """Plot in-air fit results, each config superimposed on a single plot
 
@@ -125,7 +125,7 @@ def plot_fit_results_hue(
             label=f"Adjusted (config {iset})",
         )
 
-    ax.grid()
+    ax.grid(True)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.legend()
@@ -144,7 +144,7 @@ def plot_fit_results_subplot(
     input_data: Dict[int, Any],
     coefs: CoefsDict,
     ppar: Optional[TPlotParams] = None,
-    figsize=(10, 5),
+    figsize=(10, 4),
 ) -> None:
     """Plot in-air fit results, one subplot for each config result (n_configs rows, 1 column)"""
     this_plot_level = 20
@@ -192,7 +192,7 @@ def plot_fit_results_subplot(
             label=f"Adjusted (config {iset})",
         )
 
-        ax[iset].grid()
+        ax[iset].grid(True)
         ax[iset].set_xlabel(xlabel)
         ax[iset].set_ylabel(ylabel)
         ax[iset].legend()

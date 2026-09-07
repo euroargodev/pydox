@@ -152,12 +152,28 @@ def get_argo_data_for_in_air_method(
             nrows=len(v2plot), ncols=1, figsize=(10, 10), dpi=ppar.dpi, sharex=True
         )
         ax = ax.flatten()
+        ylim_before_grouping = {}
         for ii, v in enumerate(v2plot):
-            Rtraj_inair[v].plot.line("s-", linewidth=0.5, label="In-Air", ax=ax[ii])
-            Rtraj_inwater[v].plot.line(".-", linewidth=0.5, label="In-Water", ax=ax[ii])
+            ax[ii].plot(
+                Rtraj_inair["N_MEASUREMENT"],
+                Rtraj_inair[v],
+                "s-",
+                linewidth=0.5,
+                label="Rtraj: In-Air",
+            )
+            ax[ii].plot(
+                Rtraj_inwater["N_MEASUREMENT"],
+                Rtraj_inwater[v],
+                ".-",
+                linewidth=0.5,
+                label="Rtraj: In-Water",
+            )
             ax[ii].legend()
-            ax[ii].grid()
-            ax[ii].set_title(f"{v}")
+            ax[ii].grid(True)
+            ax[ii].set_title(f"{Rtraj_inair[v].attrs['long_name']}")
+            ax[ii].set_ylabel(f"{v} [{Rtraj_inair[v].attrs['units']}]")
+            ylim_before_grouping[v] = ax[ii].get_ylim()
+        ax[ii].set_xlabel("N_MEASUREMENT")
         plt.suptitle(suptitle)
         plt.tight_layout()
         do.figures.commit(
@@ -191,11 +207,28 @@ def get_argo_data_for_in_air_method(
         )
         ax = ax.flatten()
         for ii, v in enumerate(v2plot):
-            Rtraj_inair[v].plot.line("s-", linewidth=0.5, label="In Air", ax=ax[ii])
-            Rtraj_inwater[v].plot.line(".-", linewidth=0.5, label="In Water", ax=ax[ii])
+            ax[ii].plot(
+                Rtraj_inair["CYCLE_NUMBER"],
+                Rtraj_inair[v],
+                "s-",
+                linewidth=0.5,
+                label="Rtraj: In-Air",
+            )
+            ax[ii].plot(
+                Rtraj_inwater["CYCLE_NUMBER"],
+                Rtraj_inwater[v],
+                ".-",
+                linewidth=0.5,
+                label="Rtraj: In-Water",
+            )
             ax[ii].legend()
-            ax[ii].grid()
-            ax[ii].set_title(f"{v}")
+            ax[ii].grid(True)
+            ax[ii].set_title(f"{Rtraj_inair[v].attrs['long_name']}")
+            ax[ii].set_ylabel(f"{v} [{Rtraj_inair[v].attrs['units']}]")
+            if v in ylim_before_grouping:
+                ax[ii].set_ylim(ylim_before_grouping[v])
+
+        ax[ii].set_xlabel("CYCLE_NUMBER")
         plt.suptitle(suptitle)
         plt.tight_layout()
         do.figures.commit(
@@ -205,43 +238,89 @@ def get_argo_data_for_in_air_method(
             category="debug",
             config_uid=ppar.uid,
         )
+    if (this_plot_level := 0) >= ppar.level:
+        suptitle = "Sprof vs Rtraj In-Air and In-Water Oxygen data"
+
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 5), dpi=ppar.dpi)
+        ax.plot(
+            Rtraj_inair["CYCLE_NUMBER"],
+            Rtraj_inair["PPOX_DOXY"],
+            "*-",
+            linewidth=1,
+            label="Rtraj: In Air",
+        )
+        ax.plot(
+            Rtraj_inwater["CYCLE_NUMBER"],
+            Rtraj_inwater["PPOX_DOXY"],
+            ".-",
+            linewidth=1,
+            label="Rtraj: In Water",
+        )
+
+        ax.legend()
+        ax.grid(True)
+        ax.set_ylabel(f"PPOX_DOXY [{Rtraj_inair['PPOX_DOXY'].attrs['units']}]")
+        ax.set_title(f"{Rtraj_inair['PPOX_DOXY'].attrs['long_name']}")
+        ax.set_xlabel("CYCLE_NUMBER")
+        plt.suptitle(suptitle)
+        plt.tight_layout()
+
+        do.figures.commit(
+            fig,
+            name=suptitle,
+            watermark=ppar.watermark,
+            category="debug",
+            config_uid=ppar.uid,
+        )
 
     if (this_plot_level := 0) >= ppar.level:
-        # Super-impose Sprof data:
-        suptitle = "Sprof vs Rtraj In-Air and In-Water data"
-        v2plot = ["PSAL", "TEMP", "PPOX_DOXY"]
+        suptitle = "Sprof vs Rtraj In-Air and In-Water T/S data"
+        v2plot = ["PSAL", "TEMP"]
+        ylim_before_substitution: dict = (
+            {}
+        )  # So that the same plot but "after substitution" can use similar y lims
+
         fig, ax = plt.subplots(
             nrows=len(v2plot), ncols=1, figsize=(10, 10), dpi=ppar.dpi, sharex=True
         )
         ax = ax.flatten()
         for ii, v in enumerate(v2plot):
+            pname, plabel = None, None
             if v == "PSAL":
-                # ax[ii].plot(spsal['CYCLE_NUMBER'], spsal.values, 's-', linewidth=0.5, label='Sprof')
-                # ax[ii].plot(spsal_adj['CYCLE_NUMBER'], spsal.values, 's-', linewidth=0.5, label='Sprof: adj')
+                pname, plabel = "psal_merged", "Sprof: merged"
+            elif v == "TEMP":
+                pname, plabel = "temp", "Sprof"
+            if pname is not None:
                 ax[ii].plot(
-                    sprof_near_surf["psal_merged"]["CYCLE_NUMBER"],
-                    sprof_near_surf["psal_merged"].values,
+                    sprof_near_surf[pname]["CYCLE_NUMBER"],
+                    sprof_near_surf[pname],
                     "s-",
                     linewidth=0.5,
-                    label="Sprof: merged",
+                    label=plabel,
                 )
-            if v == "TEMP":
-                ax[ii].plot(
-                    sprof_near_surf["temp"]["CYCLE_NUMBER"],
-                    sprof_near_surf["temp"].values,
-                    "s-",
-                    linewidth=0.5,
-                    label="Sprof",
-                )
-            Rtraj_inair[v].plot.line(
-                "*-", linewidth=1, label="Rtraj: In Air", ax=ax[ii]
+
+            ax[ii].plot(
+                Rtraj_inair["CYCLE_NUMBER"],
+                Rtraj_inair[v],
+                "*-",
+                linewidth=1,
+                label="Rtraj: In Air",
             )
-            Rtraj_inwater[v].plot.line(
-                ".-", linewidth=1, label="Rtraj: In Water", ax=ax[ii]
+            ax[ii].plot(
+                Rtraj_inwater["CYCLE_NUMBER"],
+                Rtraj_inair[v],
+                ".-",
+                linewidth=1,
+                label="Rtraj: In Water",
             )
+
             ax[ii].legend()
-            ax[ii].grid()
-            ax[ii].set_title(f"{v}")
+            ax[ii].grid(True)
+            ax[ii].set_ylabel(f"{v} [{Rtraj_inair[v].attrs['units']}]")
+            ax[ii].set_title(f"{Rtraj_inair[v].attrs['long_name']}")
+            ylim_before_substitution[v] = ax[ii].get_ylim()
+
+        ax[ii].set_xlabel("CYCLE_NUMBER")
         plt.suptitle(suptitle)
         plt.tight_layout()
         do.figures.commit(
@@ -279,36 +358,52 @@ def get_argo_data_for_in_air_method(
         )
 
     if (this_plot_level := 0) >= ppar.level:
-        suptitle = "Sprof vs Rtraj In-Air and In-Water data - after substitution"
+        suptitle = (
+            "Sprof vs Rtraj In-Air and In-Water T/S data - after salinity substitution"
+        )
         v2plot = ["PSAL", "TEMP"]
         fig, ax = plt.subplots(
             nrows=len(v2plot), ncols=1, figsize=(10, 10), dpi=ppar.dpi, sharex=True
         )
         ax = ax.flatten()
         for ii, v in enumerate(v2plot):
+            pname, plabel = None, None
             if v == "PSAL":
-                # ax[ii].plot(spsal['CYCLE_NUMBER'], spsal.values, 's-', linewidth=0.5, label='Sprof')
-                # ax[ii].plot(spsal_adj['CYCLE_NUMBER'], spsal.values, 's-', linewidth=0.5, label='Sprof: adj')
+                pname, plabel = "psal_merged", "Sprof: merged"
+            elif v == "TEMP":
+                pname, plabel = "temp", "Sprof"
+            if pname is not None:
                 ax[ii].plot(
-                    sprof_near_surf["psal_merged"]["CYCLE_NUMBER"],
-                    sprof_near_surf["psal_merged"].values,
+                    sprof_near_surf[pname]["CYCLE_NUMBER"],
+                    sprof_near_surf[pname],
                     "s-",
                     linewidth=0.5,
-                    label="Sprof: merged",
+                    label=plabel,
                 )
-            if v == "TEMP":
-                ax[ii].plot(
-                    sprof_near_surf["temp"]["CYCLE_NUMBER"],
-                    sprof_near_surf["temp"].values,
-                    "s-",
-                    linewidth=0.5,
-                    label="Sprof",
-                )
-            ds_inair[v].plot.line("*-", linewidth=1, label="In Air", ax=ax[ii])
-            ds_inwater[v].plot.line(".-", linewidth=1, label="In Water", ax=ax[ii])
+
+            ax[ii].plot(
+                ds_inair["CYCLE_NUMBER"],
+                ds_inair[v],
+                "*-",
+                linewidth=1,
+                label="Rtraj⊕Sprof: In Air",
+            )
+            ax[ii].plot(
+                ds_inwater["CYCLE_NUMBER"],
+                ds_inwater[v],
+                ".-",
+                linewidth=1,
+                label="Rtraj⊕Sprof: In Water",
+            )
+
             ax[ii].legend()
-            ax[ii].grid()
-            ax[ii].set_title(f"{v}")
+            ax[ii].grid(True)
+            ax[ii].set_ylabel(f"{v} [{ds_inair[v].attrs['units']}]")
+            ax[ii].set_title(f"{ds_inair[v].attrs['long_name']}")
+            if v in ylim_before_substitution:
+                ax[ii].set_ylim(ylim_before_substitution[v])
+
+        ax[ii].set_xlabel("CYCLE_NUMBER")
         plt.suptitle(suptitle)
         plt.tight_layout()
         do.figures.commit(

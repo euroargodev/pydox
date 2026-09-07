@@ -1,9 +1,12 @@
 import logging
 import datetime
+import time
 from pathlib import Path
 import sys
 
 import pydox as do
+
+logging.Formatter.converter = time.gmtime
 
 logger = logging.getLogger("pydox")
 logger.setLevel(logging.DEBUG)
@@ -22,10 +25,11 @@ fh.setFormatter(
         datefmt="%H:%M:%S",
     )
 )
+
 logger.addHandler(fh)
 
 
-# Create another file handler just with messages (no thread, logger or file name, nore line number)
+# Create another file handler just with messages (no print of thread, logger or file name, nore line number)
 
 logfile = logfolder.joinpath(
     f"{do.tmp_root().name}-small.log"
@@ -138,7 +142,7 @@ class getLogger:
 
     def print(self, msg: str, levelno: int):
         if self.filtered:
-            datefmt = "%Hh%M:%S"
+            datefmt = "%H:%M:%S"
             asctime = datetime.datetime.now(datetime.timezone.utc).strftime(datefmt)
             msg = self.FORMATS.get(levelno).format(
                 message=msg, asctime=asctime, level=self.LEVEL[levelno]

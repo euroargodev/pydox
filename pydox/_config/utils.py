@@ -9,10 +9,30 @@ import datetime
 
 import pydox as do
 from pydox._config import _read_only_dotted_params
+from pydox.errors import MissingSetting
 
 _path2static = Path(
     importlib.util.find_spec("pydox.static").submodule_search_locations[0]
 )
+
+initial_missing = object()
+
+
+def reduce(function, iterable, /, initial=initial_missing):
+    it = iter(iterable)
+    if initial is initial_missing:
+        value = next(it)
+    else:
+        value = initial
+    for element in it:
+        dotted_str = iterable[0 : iterable.index(element)]
+        dotted_str.append(element)
+        missing = f"The '{'.'.join(dotted_str)}' setting appears to be missing in this configuration object"
+        if value is None or element not in value:
+            raise MissingSetting(missing)
+        else:
+            value = function(value, element)
+    return value
 
 
 def uid(obj: Any):

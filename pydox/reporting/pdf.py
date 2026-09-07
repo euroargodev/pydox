@@ -11,17 +11,6 @@ from fpdf.outline import TableOfContents
 
 from pydox.commodities import PydoxFigure
 
-if do.get_params("reports.template") is not None:
-    if do.get_params("reports.template").lower() == "lops":
-        from pydox.reporting.lops import COLORS
-    else:
-        raise ValueError(
-            f"Invalid template '{do.get_params('reports.template')}'. Valid values are: {do.get_params('reports.template_list')}"
-        )
-else:
-    # Load default LOPS template
-    from pydox.reporting.lops import COLORS
-
 
 class FpdfBoundingBox(TypedDict):
     x: float
@@ -75,6 +64,10 @@ def registry_report(
     **kwargs,
 ):
     outputfile = Path(outputfile)
+
+    # (re)Load COLORS from the current template:
+    do.reporting.facade.load_template()
+    COLORS = do.reporting.COLORS
 
     class PDF(FPDF):
         def reset_font(self):
@@ -166,7 +159,8 @@ def registry_report(
             self.reset_font()
 
     pdf = PDF(orientation="portrait", format="A4")
-    pdf.oversized_images = "WARN"
+    # pdf.oversized_images = "WARN"
+    pdf.oversized_images = "DOWNSCALE"
     pdf.set_margin(10)
     pdf.set_auto_page_break(auto=True)
     pdf.set_lang("en-US")

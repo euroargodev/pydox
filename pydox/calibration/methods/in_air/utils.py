@@ -188,21 +188,21 @@ def get_data_for_one_parameterset_for_in_air_method(
             sharex=True,
         )
         ax.plot(
-            this_argo.in_air["CYCLE_NUMBER"], data["PPOX1"], ".-r", label="Float In-Air"
+            this_argo.in_air["CYCLE_NUMBER"],
+            data["REF_PPOX"],
+            ".-",
+            label=f"Ref: {refname}",
+        )
+        ax.plot(
+            this_argo.in_air["CYCLE_NUMBER"], data["PPOX1"], ".-", label="Float: In-Air"
         )
         ax.plot(
             this_argo.in_water["CYCLE_NUMBER"],
             data["PPOX2"],
-            ".-b",
-            label="Float In-Water",
+            ".-",
+            label="Float: In-Water",
         )
-        ax.plot(
-            this_argo.in_air["CYCLE_NUMBER"],
-            data["REF_PPOX"],
-            ".-k",
-            label=f"Ref-{refname}",
-        )
-        ax.grid()
+        ax.grid(True)
         ax.set_xlabel("Float cycle number of the measurement")
         ax.set_ylabel("[mb]")
         ax.set_title(title)
@@ -218,7 +218,7 @@ def get_data_for_one_parameterset_for_in_air_method(
 
     if (this_plot_level := 10) >= ppar.level:
         refname = do.get_params("calibration_methods.in_air.dataset", config=config)
-        title = f"Ratio of 'Ref-{refname}' vs 'In-Air' partial pressure of oxygen"
+        title = f"Ratio of 'Ref: {refname}' vs 'In-Air' partial pressure of oxygen"
 
         fig, ax = plt.subplots(
             nrows=1,
@@ -227,11 +227,10 @@ def get_data_for_one_parameterset_for_in_air_method(
             dpi=ppar.dpi,
             sharex=True,
         )
-        ax.plot(data["Delta_T_REF"], data["REF_PPOX"] / data["PPOX1"], ".-")
+        ax.plot(
+            data["Delta_T_REF"], data["REF_PPOX"] / data["PPOX1"], ".-", label="Ratio"
+        )
 
-        ax.set_xlabel("Delta Time [Days]")
-        ax.set_ylabel("[no unit]")
-        ax.grid()
         mask = np.isfinite(data["REF_PPOX"]) & np.isfinite(data["PPOX1"])
         poly_data = np.polyfit(
             data["Delta_T_REF"][mask], data["REF_PPOX"][mask] / data["PPOX1"][mask], 1
@@ -239,9 +238,14 @@ def get_data_for_one_parameterset_for_in_air_method(
         ax.plot(
             data["Delta_T_REF"],
             np.polyval(poly_data, data["Delta_T_REF"]),
-            "-r",
+            "-",
             label="Linear fit",
         )
+
+        ax.set_xlabel("Delta Time [Days]")
+        ax.set_ylabel("[no unit]")
+        ax.grid(True)
+        ax.legend()
         ax.set_title(title)
         do.figures.commit(
             fig,

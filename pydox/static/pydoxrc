@@ -16,9 +16,7 @@ operator:
   affiliation:
 
 # ============================================= Root path for output
-# Root path to save all pydox output: calibration/adjustment data, figures and reports
-# Any file saved by pydox will be under "<output.root>/<WMO>"
-# where <WMO> will be filled automatically by pydox
+# Root path to save all pydox output: calibration/adjustment data, figures, reports, logs
 output:
   root: # e.g. : ${HOME}/ARGO/DMQC/OXYGEN/PYDOX. If this parameter is None at runtime, Pydox will automatically set it to: ${CWD}/pydox
 
@@ -145,7 +143,7 @@ adjustment:
 # ============================================= Plotting
 plots:
   dpi: 100 # The resolution of figures, in dots-per-inch
-  level: 0 # Minimal plot generation level (>=0: debug, >=10: input data, >=20: fit results).
+  level: 0 # Minimal plot category level (>=0: debug plots, >=10: input data plots, >=20: fit results or high-level APIs).
   # Set this to the lowest value 0 to ensure the generation of all possible plots.
   watermark:
     show: True # Display or not by default
@@ -195,6 +193,12 @@ pressure_coefficients:
 
 # ============================================= Pydox user interface
 pydox:
+  logging_level: 'DEBUG' # Standard logging library value, https://docs.python.org/3/library/logging.html#logging-levels
+  screen: # About printing feedbacks to user on screen (stdout)
+    log: True # print or not ?
+    min_context_level: 0 # Set the minimal APIs context level to print messages from,
+                         # i.e. messages from APIs with a higher context level will be printed on screen.
+                         # (>=0: low-level APIs, >=10: intermediate-level APIs, >=20: high-level APIs)
   verbose:
     cell_text: False # Should we force to use text output in notebook cells, even when HTML is available
     configs: False  # Should we print ALL parameters of a configuration set, or omit meta-data like src of the reference dataset

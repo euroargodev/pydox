@@ -427,6 +427,8 @@ class _DoFigures:
         """
         import pydox as do  # Avoid circularity
 
+        log = do.reporting.logs.getLogger("pydox.commodities", context_level=10)
+
         if name.strip() == "" or name is None:
             raise ValueError("A figure must have a name to be commited")
 
@@ -443,8 +445,8 @@ class _DoFigures:
 
         # If not found, commit this:
         if not found:
-            print(
-                f"Commit figure '{this_f.name}' (level {this_f.level} / {this_f.category})"
+            log.info(
+                f"Commit figure '{this_f.name}' - {this_f.category} (level {this_f.level})"
             )
 
             # Print watermark:

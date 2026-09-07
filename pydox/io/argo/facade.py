@@ -22,6 +22,7 @@ from datetime import datetime
 
 import pydox as do
 from pydox._config.config import Config
+from pydox.reporting.logs import getLogger
 from pydox.commodities import ParameterSet, Coefficients, PlotParams, TPlotParams
 from pydox.io.argo.types import MultiProfData, TrajData, CycData, ArgoDataForInAir
 from pydox.io.argo.utils import (
@@ -36,7 +37,7 @@ from pydox.io.argo.utils import (
 )
 
 
-log = logging.getLogger("pydox.io.argo.facade")
+log = getLogger("pydox.io.argo.facade", context_level=0)
 
 
 def get_argo_data_for_in_air_method(
@@ -396,12 +397,14 @@ def semantic_cycle2values(
         The :class:`ar.ArgoFloat` object to read cycle numbers from.
     settings: Config | ParameterSet
         Object to read a `cycles` setting from.
+    group: str, default='calibration_parameters'
+        Name of the configuration group to read cycles from. Can be "calibration_parameters" or "adjustment".
     dsname: str, default='Sprof'
         Name of the :class:`ar.ArgoFloat` dataset to read cycle numbers from.
 
     Returns
     -------
-    list[int]
+    tuple[int]
     """
     ds: xr.Dataset = a_float.dataset(dsname)
     if "CYCLE_NUMBER" not in ds.data_vars:

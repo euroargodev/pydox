@@ -1,17 +1,17 @@
 from typing import Any, Optional
-import logging
 from pathlib import Path
 import hashlib
 
-import pydox as do
 import xarray as xr
 
+import pydox as do
+from pydox.reporting.logs import getLogger
 from pydox.commodities import TPlotParams
 from pydox.io.argo.types import ArgoDataForInAir
 from pydox.io.ncep.utils import compute_NCEP_PPOX, interp_NCEP_on_ARGO
 
+log = getLogger("pydox.io.ncep.facade", context_level=0)
 
-log = logging.getLogger("pydox.io.ncep.facade")
 
 _ds_NCEP: dict[str, xr.Dataset] = {}
 """Global placeholder for NCEP dataset, avoid multiple load"""
@@ -32,7 +32,6 @@ def get_ncep_data_for_in_air_method(
         NCEP nickname to use.
     src: str | Path
         Source of the NCEP dataset. This can be a string or a :class:`Path` object.
-    debug_plot: bool = False
 
     Returns
     -------
@@ -45,10 +44,10 @@ def get_ncep_data_for_in_air_method(
 
     # Load NCEP in memory
     # todo This is very time consuming, consider re-designing when the matchup lib. will be available.
-    print("Load full NCEP dataset")
+    log.info("Load full NCEP dataset")
     ds_ncep = open_ncep()
 
-    print("Interp NCEP on Argo")
+    log.info("Interp NCEP on Argo")
     coord_argo = {
         "lon": argo_data_for_air.in_air["LONGITUDE"],
         "lat": argo_data_for_air.in_air["LATITUDE"],
@@ -56,7 +55,7 @@ def get_ncep_data_for_in_air_method(
     }
     ds_ncep_interp = interp_NCEP_on_ARGO(ds_ncep, coord_argo)
 
-    print("Post-process NCEP PPOX")
+    log.info("Post-process NCEP PPOX")
     data["REF_PPOX"] = compute_NCEP_PPOX(argo_data_for_air, ds_ncep_interp)
 
     return data
@@ -147,7 +146,7 @@ def open_ncep(refresh: bool = False) -> xr.Dataset:
         #
         if ds_ncep["slp"].units == "Pascals":
             # Transform Pascal to HectoPascal/Millibar
-            print(
+            log.info(
                 f"NCEP slp : Conversion Pascals to HectoPascal/Millibar for NCEP PPOX computing"
             )
             ds_ncep["slp"] = ds_ncep["slp"] / 100
@@ -156,7 +155,7 @@ def open_ncep(refresh: bool = False) -> xr.Dataset:
 
         if ds_ncep["air"].units == "degK":
             # Transform Kelvin to Celsius
-            print(f"NCEP air : Conversion Kelvin to Celsius for NCEP PPOX computing")
+            log.info(f"NCEP air : Conversion Kelvin to Celsius for NCEP PPOX computing")
             ds_ncep["air"] = ds_ncep["air"] - 273.15
         else:
             raise ValueError(f"NCEP variable 'air' must be in Kelvin units")

@@ -1,5 +1,4 @@
 from typing import Optional, Literal
-import logging
 from copy import deepcopy
 import hashlib
 
@@ -8,12 +7,13 @@ import xarray as xr
 import matplotlib.pyplot as plt
 
 import pydox as do
+from pydox.reporting.logs import getLogger
 from pydox.commodities import PlotParams
 from pydox.utils.compute import mth_run
 from pydox.utils.xarray import xr_append_history
 from pydox.io.argo.types import MultiProfData, TrajData, CycData
 
-log = logging.getLogger("pydox.io.argo.utils")
+log = getLogger("pydox.io.argo.utils", context_level=0)
 
 
 def xr_logging(
@@ -35,7 +35,6 @@ def xr_logging(
     xr.Dataset | xr.DataArray
         Updated object
     """
-    # log.info(new_entry)
     return xr_append_history(obj, new_entry, attr="pydox_history")
 
 

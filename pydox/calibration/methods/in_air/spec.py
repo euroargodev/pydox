@@ -1,11 +1,9 @@
-from typing import Any, Self
+from typing import Any, Self, Optional
 from collections import OrderedDict
 import logging
+from functools import partial
 
 import argopy as ar
-
-import matplotlib.pyplot as plt
-from twine.utils import input_func
 
 from pydox._config.utils import format_value_txt
 from pydox.utils.casting import to_list
@@ -17,11 +15,17 @@ from pydox.commodities import (
     ParamsInAir,
     CoefficientsInAir,
     FitResults,
+    PlotParams,
+    TPlotParams,
 )
-from pydox.core.in_air import inair_fit
+from pydox.core import in_air
 from pydox.calibration.method import Method
 from pydox.calibration.methods.in_air.utils import (
     get_data_for_one_parameterset_for_in_air_method,
+)
+from pydox.calibration.methods.in_air.plots import (
+    plot_fit_results_hue,
+    plot_fit_results_subplot,
 )
 
 
@@ -73,29 +77,59 @@ class MethodInAir(Method):
                     icfg += 1
         return configs
 
-    def _load_input_data(
-        self, a_float: ar.ArgoFloat, debug_plot: bool = False
-    ) -> dict[int, Any]:
-        """Load input data for the flatten list of configurations"""
+    def load_input_data(
+        self,
+        a_float: ar.ArgoFloat,
+        ppar: Optional[TPlotParams] = None,
+        **kwargs,
+    ) -> Self:
+        """Load input data for the flatten list of configurations
 
-        # We first need to load data that will be used to fit for each configuration
+        This method populates self._input_data
+        """
+        refresh: bool = kwargs.get("refresh", False)
+
+        # Create a parameter generator for plots, to be communicated downstream at lower levels:
+        if ppar is None:
+            ppar = partial(
+                PlotParams,
+                watermark=self.name,
+                dpi=self.get_params("plots.dpi"),
+                level=self.get_params("plots.level"),
+            )
+
+        # We first need to load data that will be used for fit for each configuration
         input_data_for_fit: dict[int, Any] = {}
 
         # todo Collect input data in parallel ?
-        # todo Cache input data for performances ?
         for iset, params in self.configs.items():
-            data = get_data_for_one_parameterset_for_in_air_method(
-                a_float, self._cfg, params, debug_plot=debug_plot
-            )
-            input_data_for_fit[iset] = data
+            if refresh or iset not in self._input_data:
+                print(f"Load input data for config #{iset} ...")
+                this_ppar = partial(
+                    ppar,
+                    watermark=f"{self.name}\nConfig #{iset}",
+                    uid=self.uid(iset),
+                )
+                # Call the appropriate lower-level method to load one set of data for a given configuration.
+                # The `ppar` function is propagated downstream with updated and appropriate configuration ID.
+                # The `uid` argument is also updated to match this specification configuration ID.
+                data = get_data_for_one_parameterset_for_in_air_method(
+                    a_float,
+                    self._cfg,
+                    params,
+                    uid=self.uid(iset),
+                    ppar=this_ppar,
+                )
+                self._input_data[iset] = data
+            else:
+                print(f"Input data for config #{iset} already in memory")
 
-        return input_data_for_fit
+        return self
 
     def fit(
         self,
         a_float: ar.ArgoFloat,
         method: ExecutionMethods = "thread",
-        debug_plot: bool = False,
     ) -> Self:
         """Compute calibration coefficients for all possible configuration set and one Argo float
 
@@ -126,16 +160,25 @@ class MethodInAir(Method):
         possibly required settings from the configuration (eg: argo QC
 
         """
+        # Create a parameter generator for plots, to be communicated downstream at lower levels:
+        ppar = partial(
+            PlotParams,
+            watermark=self.name,
+            dpi=self.get_params("plots.dpi"),
+            level=self.get_params("plots.level"),
+        )
 
-        ############### Load data
-        # We first need to load data that will be used to fit for each configuration
-        input_data_for_fit: dict[int, Any] = self._load_input_data(a_float, debug_plot)
+        ############### Load input data
+        # We first need to load data that will be used in fit
+        print("Start load input data")
+        self.load_input_data(a_float, ppar)
+        print("End load input data")
 
         # Read and store the list of cycle numbers for each configuration
         input_cycs_for_fit = {}
         [
             input_cycs_for_fit.update({iset: data["CYCLE_NUMBER"]})
-            for iset, data in input_data_for_fit.items()
+            for iset, data in self.input_data.items()
         ]
 
         ############### Execute all computations
@@ -149,11 +192,12 @@ class MethodInAir(Method):
         # results: FitResults = compute_fits(items, fct, method=method)
 
         # Now we have as many input_data as unique configuration:
+        print("Compute coefficients")
         items = [
-            (iset, params, input_data_for_fit[iset])
+            (iset, params, self.input_data[iset])
             for iset, params in self.configs.items()
         ]
-        results: FitResults = compute_fits(items, inair_fit, method=method)
+        results: FitResults = compute_fits(items, in_air.fit, method=method)
 
         ############### Finalize
         # Gather more detailed results in dedicated placeholders of the instance:
@@ -170,47 +214,15 @@ class MethodInAir(Method):
         self._fitted_float["WMO"] = a_float.WMO
         self._fitted_float["CYCLE_NUMBER"] = input_cycs_for_fit
 
-        if debug_plot:
-            # cmap = plt.colormaps.get_cmap("jet").resampled(len(input_data_for_fit))
-            fig, ax = plt.subplots(
-                nrows=len(input_data_for_fit),
-                ncols=1,
-                figsize=(10, 4),
-                dpi=90,
-                sharex=True,
-            )
-            for i in range(len(input_data_for_fit)):
-                xdata = input_data_for_fit[i]["CYCLE_NUMBER"]
-                ydata = input_data_for_fit[i]["PPOX1"] * self._coefs[i].gain.value
-                if self._coefs[i].drift is not None:
-                    ydata = ydata * (
-                        1
-                        + self._coefs[i].drift.value
-                        / 100
-                        * input_data_for_fit[i]["Delta_T_REF"]
-                        / 365
-                    )
+        ############### Plot
+        # Create a set of plotting parameters to be used under the scope of this .fit method:
+        this_ppar: PlotParams = PlotParams.get(ppar)
+        this_ppar.uid = self.uid()
 
-                ax = plt.subplot(len(input_data_for_fit), 1, i + 1)
-                plt1 = ax.plot(
-                    xdata, input_data_for_fit[i]["REF_PPOX"], ".-k", label="Ref"
-                )
-                plt1 = ax.plot(
-                    xdata,
-                    input_data_for_fit[i]["PPOX1"],
-                    ".-b",
-                    label="Non-adjusted (in-air)",
-                )
-                plt2 = ax.plot(xdata, ydata, ".-", label="Adjusted")
-                # plt2 = ax.plot(xdata, ydata, ".-", color=cmap(i))
+        if "hue" in self.get_params("plots.configs_layout"):
+            plot_fit_results_hue(self.input_data, self.coefs, ppar=this_ppar)
 
-                ax.grid()
-                ax.set_ylabel("Partial pressure of oxygen [mb]")
-                plt.legend()  # ([plt1[0], plt2[0]], ["Ref", "Adjusted ARGO PPOX"])
-                plt.tight_layout()
-                plt.title(f"Correction : {i}")
-
-            plt.xlabel("Float Cycle number of the measurement")
-            plt.show()
+        if "subplot" in self.get_params("plots.configs_layout"):
+            plot_fit_results_subplot(self.input_data, self.coefs, ppar=this_ppar)
 
         return self

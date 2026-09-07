@@ -1,5 +1,6 @@
 from copy import deepcopy
 
+import pydox as do
 import numpy as np
 import xarray as xr
 from pydox.io.argo.types import ArgoDataForInAir
@@ -21,6 +22,12 @@ def compute_NCEP_PPOX(
     -------
 
     """
+    if argo_data_for_air.optode_height is None:
+        print(
+            f"Set optode_height to configuration value: {do.get_params('argo.optode_height')}"
+        )
+        argo_data_for_air.optode_height = do.get_params("argo.optode_height")
+
     bid = watervapor(
         argo_data_for_air.in_water["TEMP"], argo_data_for_air.in_water["PSAL"]
     )

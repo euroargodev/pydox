@@ -20,7 +20,7 @@ operator:
 # Any file saved by pydox will be under "<output.root>/<WMO>"
 # where <WMO> will be filled automatically by pydox
 output:
-  root: # e.g. : ${HOME}/ARGO/DMQC/OXYGEN/PYDOX
+  root: # e.g. : ${HOME}/ARGO/DMQC/OXYGEN/PYDOX. If this parameter is None at runtime, Pydox will automatically set it to: ${CWD}/pydox
 
 # ============================================= Argo Float data
 argo:
@@ -144,6 +144,13 @@ adjustment:
 
 # ============================================= Plotting
 plots:
+  dpi: 100 # The resolution of figures, in dots-per-inch
+  level: 0 # Minimal plot generation level (>=0: debug, >=10: input data, >=20: fit results).
+  # Set this to the lowest value 0 to ensure the generation of all possible plots.
+  watermark:
+    show: True # Display or not by default
+    default: '(dev. version)' # Text that will always be displayed on figures.
+  configs_layout: ['hue', 'subplot'] # Generate these layout when plotting data from more than one configuration at a time
   save:
     format: png
     path: docs/img
@@ -157,7 +164,8 @@ plots:
 
 # ============================================= Reporting
 reports:
-  template:
+  template: lops
+  template_list:
     - lops
   save:
     format: pdf

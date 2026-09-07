@@ -1,15 +1,17 @@
 from typing import Optional, Literal
 import logging
 from copy import deepcopy
+import hashlib
 
 import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
 
+import pydox as do
+from pydox.commodities import PlotParams
 from pydox.utils.compute import mth_run
 from pydox.utils.xarray import xr_append_history
 from pydox.io.argo.types import MultiProfData, TrajData, CycData
-
 
 log = logging.getLogger("pydox.io.argo.utils")
 
@@ -83,11 +85,11 @@ def preprocess_raw_sprof(ds_sprof: xr.Dataset) -> MultiProfData:
     ds_sprof = ds_sprof.set_coords("CYCLE_NUMBER")  # Also for CYCLE_NUMBER
 
     # We will only work with Ascending profiles:
-    log.info('Keep only Ascending profiles in Sprof')
+    log.info("Keep only Ascending profiles in Sprof")
     ds_sprof = ds_sprof.drop_sel(
         {"N_PROF": ds_sprof["N_PROF"][~ds_sprof["DIRECTION"].isin("A")]}
     )
-    #todo : Update N_PROF values/index : Not work :  ds_sprof["N_PROF"].values = np.arange(0, len(ds_sprof["N_PROF"]))
+    # todo : Update N_PROF values/index : Not work :  ds_sprof["N_PROF"].values = np.arange(0, len(ds_sprof["N_PROF"]))
 
     # Log and return
     xr_logging(ds_sprof, "Pre-process raw Sprof")
@@ -368,7 +370,10 @@ def get_temp_in_pres_range(
 
 
 def get_ts_near_surface(
-    ds_sprof: MultiProfData, min_pres: float, max_pres: float, debug_plot: bool = False
+    ds_sprof: MultiProfData,
+    min_pres: float,
+    max_pres: float,
+    ppar: Optional[PlotParams] = None,
 ) -> dict[str, xr.DataArray]:
     """Load valid salinity and temperature near the surface from a multi-profil Sprof dataset
 
@@ -380,14 +385,17 @@ def get_ts_near_surface(
         The minimum value (db) of the pressure range to consider.
     max_pres: float
         The maximum value (db) of the pressure range to consider.
-    debug_plot: bool, default=False
+    ppar: Callable[[Any], PlotParams] | PlotParams, default=None
+        An object that is able to return plotting parameter
 
     Returns
     -------
     dict[str, xr.DataArray]
     """
-    # Get values for salinity:
+    # Check arguments:
+    ppar: PlotParams = PlotParams.get(ppar)
 
+    # Get values for salinity:
     var_psal = ["PSAL", "PSAL_ADJUSTED"]
     spsal, spsal_adj = None, None
 
@@ -412,28 +420,45 @@ def get_ts_near_surface(
     spsal_merged: xr.DataArray = spsal_adj.copy().rename("PSAL_MERGED")  # (N_PROF, )
     spsal_merged[spsal_adj.isnull()] = spsal[spsal_adj.isnull()]
 
-    if debug_plot:
-        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 4), dpi=90, sharex=True)
+    if (this_plot_level := 0) >= ppar.level:
+
+        title = "Near-surface salinity from Sprof"
+        fig, ax = plt.subplots(
+            nrows=1, ncols=1, figsize=(10, 4), dpi=ppar.dpi, sharex=True
+        )
         markers = ["s", "*", "."]
         for ii, ds in enumerate([spsal, spsal_adj, spsal_merged]):
             ds.plot.line("-", linewidth=0.5, ax=ax, label=ds.name, marker=markers[ii])
-        plt.grid()
-        plt.legend()
-        plt.title("Near-surface salinity from Sprof")
+        ax.grid()
+        ax.legend()
+        ax.set_title(title)
         plt.tight_layout()
-        plt.show()
+        do.figures.commit(
+            fig,
+            name=title,
+            watermark=ppar.watermark,
+            category="debug",
+            config_uid=ppar.uid,
+        )
 
     # Then get values for temperature:
     stemp = get_temp_in_pres_range(ds_sprof, min_pres, max_pres, "TEMP")
 
-    if debug_plot:
+    if (this_plot_level := 0) >= ppar.level:
+        title = "Near-surface temperature from Sprof"
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 4), dpi=90, sharex=True)
         stemp.plot.line("s-", linewidth=0.5, ax=ax, label=stemp.name)
-        plt.grid()
-        plt.legend()
-        plt.title("Near-surface temperature from Sprof")
+        ax.grid()
+        ax.legend()
+        ax.set_title(title)
         plt.tight_layout()
-        plt.show()
+        do.figures.commit(
+            fig,
+            name=title,
+            watermark=ppar.watermark,
+            category="debug",
+            config_uid=ppar.uid,
+        )
 
     return {
         "psal": spsal,
@@ -558,3 +583,29 @@ def psal_rtraj_substitute_sprof(
         f"Replaced salinity data from Rtraj with those from Sprof, for 'CYCLE_NUMBER'= {cyc_txt}",
     )
     return da
+
+
+def get_uid_for_in_air_method_parameters(
+    min_pres: float,
+    max_pres: float,
+    in_air_codes: tuple[int, ...],
+    in_water_codes: tuple[int, ...],
+    which_psal: int,
+    cycles: tuple[int, ...],
+    Sprof: xr.Dataset,
+    Rtraj: xr.Dataset,
+) -> str:
+    """Unique identifier for a set of parameters from the in-air method"""
+    m = hashlib.sha256()
+    for param in [
+        "min_pres",
+        "max_pres",
+        "in_air_codes",
+        "in_water_codes",
+        "which_psal",
+        "cycles",
+    ]:
+        m.update(bytes(str(f"{param}"), "utf-8"))
+    m.update(bytes(str(f"{Sprof.encoding['source']}"), "utf-8"))
+    m.update(bytes(str(f"{Rtraj.encoding['source']}"), "utf-8"))
+    return m.hexdigest()

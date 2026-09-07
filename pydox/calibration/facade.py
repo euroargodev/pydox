@@ -1,10 +1,12 @@
 from copy import deepcopy
-from typing import Any, Self, Optional
+from typing import Self, Optional
 from collections import OrderedDict
 
+import numpy as np
 import pydox as do
 from pydox._config.utils import list_methods
-from pydox.commodities import ConfigsDict
+from pydox.calibration.methods.in_air import plots as in_air_plots
+from pydox.commodities import ConfigsDict, PlotParams
 from pydox.calibration.spec import Workflow
 from pydox.calibration.method import Method
 from pydox.calibration.methods.in_air.spec import MethodInAir
@@ -77,6 +79,19 @@ class CalibrationSet(Workflow):
         self._methods.update({ii: deepcopy(o)})
         return self
 
+    def uid(self, icfg: int = None) -> str:
+        """UID for this CalibrationSet or a specific configuration"""
+        if icfg is None:
+            return self._uid()
+        else:
+            this_icfg: int = 0
+            for im, m in self._methods.items():
+                for idc, dc in m.configs.items():
+                    if this_icfg == icfg:
+                        return m.uid(idc)
+                    this_icfg += 1
+        raise ValueError(f"Invalid configuration id {icfg}")
+
     def _flatten_configs(self) -> ConfigsDict:
         # This method implementation *imposes* how to 'iterate' over methods and their ordered placeholders (eg: coefs, fit_data, ...).
         # To keep any CalibrationSet ordered placeholder consistent, we need to iterate: 1st on method, then on configurations.
@@ -103,7 +118,7 @@ class CalibrationSet(Workflow):
         for im, this_method in self._methods.items():
             if this_method.n_configs != 1:
                 raise ValueError(
-                    "Fit with cumulative gain requires methods to have a single configuration"
+                    "Fit with cumulative gain requires a single configuration for each methods"
                 )
 
         # Return False if methods are not different ?
@@ -112,21 +127,35 @@ class CalibrationSet(Workflow):
 
         return True
 
+    def load_input_data(
+        self,
+        argofloat_obj,
+        *args,
+        **kwargs,
+    ) -> Self:
+        icfg: int = 0
+        for im, this_method in self._methods.items():
+            this_method.load_input_data(argofloat_obj, *args, **kwargs)
+            for iset, data in this_method.input_data.items():
+                self._input_data[icfg] = data
+                icfg += 1
+
     def fit(
         self,
         argofloat_obj,
         cumulative: Optional[bool] = False,
-        debug_plot: bool = False,
+        **kwargs,
     ) -> Self:
         self._fitted_float["WMO"] = argofloat_obj.WMO
 
         if not cumulative:
             icfg: int = 0
             for im, this_method in self._methods.items():
-                this_method.fit(argofloat_obj, debug_plot=debug_plot)
+                this_method.fit(argofloat_obj, **kwargs)
 
                 # Gather detailed results:
                 for idc, dc in this_method.configs.items():
+                    self._input_data[icfg] = this_method.input_data[idc]
                     self._coefs[icfg] = this_method.coefs[idc]
                     self._fit_data[icfg] = this_method._fit_data[idc]
                     self._fitted_float["CYCLE_NUMBER"][icfg] = (
@@ -140,10 +169,11 @@ class CalibrationSet(Workflow):
 
             icfg: int = 0
             for im, this_method in self._methods.items():
-                this_method.fit(argofloat_obj, debug_plot=debug_plot)
+                this_method.fit(argofloat_obj, **kwargs)
                 idc = 0  # We can safely use the 1st value because all methods have a single configuration (see self.is_cumulative()).
 
                 # Gather more detailed results in dedicated placeholders of the instance:
+                self._input_data[icfg] = this_method.input_data[idc]
                 self._coefs[icfg] = this_method.coefs[idc]
                 self._fit_data[icfg] = this_method._fit_data[idc]
                 self._fitted_float["CYCLE_NUMBER"][icfg] = this_method._fitted_float[
@@ -165,5 +195,26 @@ class CalibrationSet(Workflow):
         self._fitted = all(
             [m.fitted for m in self._methods.values()]
         )  # is the set fitted when all methods are fitted, or at least one ?
+
+        ############### Plot
+        # Create a parameter obj for plots
+        ppar = PlotParams(
+            watermark=self.name,
+            dpi=self.get_params("plots.dpi"),
+            level=self.get_params("plots.level"),
+            uid=self.uid(),
+        )
+        if np.all(np.unique([m.rcgroup for m in self._methods.values()]) == "in_air"):
+            # If all methods are in-air, we can safely generate these plots:
+
+            if "hue" in self.get_params("plots.configs_layout"):
+                in_air_plots.plot_fit_results_hue(
+                    self.input_data, self.coefs, ppar=ppar
+                )
+
+            if "subplot" in self.get_params("plots.configs_layout"):
+                in_air_plots.plot_fit_results_subplot(
+                    self.input_data, self.coefs, ppar=ppar
+                )
 
         return self

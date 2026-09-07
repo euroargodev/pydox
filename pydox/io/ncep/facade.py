@@ -6,6 +6,7 @@ import hashlib
 import pydox as do
 import xarray as xr
 
+from pydox.commodities import TPlotParams
 from pydox.io.argo.types import ArgoDataForInAir
 from pydox.io.ncep.utils import compute_NCEP_PPOX, interp_NCEP_on_ARGO
 
@@ -18,9 +19,8 @@ _ds_NCEP: dict[str, xr.Dataset] = {}
 
 def get_ncep_data_for_in_air_method(
     argo_data_for_air: ArgoDataForInAir,
-    # src: str | Path,
-    name: Optional[str] = None,
-    debug_plot: bool = False,
+    uid: Optional[str] = None,
+    ppar: Optional[TPlotParams] = None,
 ) -> dict[str, Any]:
     """
 
@@ -38,20 +38,25 @@ def get_ncep_data_for_in_air_method(
     -------
     dict[str, Any]
     """
-    name: str = "NCEP" if name is None else name
+    # name: str = "NCEP" if name is None else name
 
     # Init output obj:
     data: dict[str, Any] = {"REF_PPOX": None}
 
     # Load NCEP in memory
     # todo This is very time consuming, consider re-designing when the matchup lib. will be available.
+    print("Load full NCEP dataset")
     ds_ncep = open_ncep()
+
+    print("Interp NCEP on Argo")
     coord_argo = {
         "lon": argo_data_for_air.in_air["LONGITUDE"],
         "lat": argo_data_for_air.in_air["LATITUDE"],
         "time": argo_data_for_air.in_air["JULD"],
     }
     ds_ncep_interp = interp_NCEP_on_ARGO(ds_ncep, coord_argo)
+
+    print("Post-process NCEP PPOX")
     data["REF_PPOX"] = compute_NCEP_PPOX(argo_data_for_air, ds_ncep_interp)
 
     return data

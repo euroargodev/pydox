@@ -1,10 +1,11 @@
 import random
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 import json
 from pathlib import Path
 import importlib
 import re
-
+import warnings
+import datetime
 
 import pydox as do
 from pydox._config import _read_only_dotted_params
@@ -255,3 +256,70 @@ def list_methods() -> list[str]:
         if key != "default":
             methods.append(key)
     return methods
+
+
+def tmp_root(new: bool = False, config: Optional[object] = None) -> Path:
+    """Return a temporary folder
+
+    The temporary folder is named after the exact creation datetime stamp, following the general format:
+
+    <output.root>/tmp/<%Y%m%d%H%M%S%f>
+
+    Eg:
+
+    If ``output.root`` is set to: ``/Users/johndoe/pydox``
+    then the temporary folder is something like: ``/Users/johndoe/pydox/tmp/20260717100903168376``.
+
+    Note that if the ``output.root`` configuration parameter is not set, we fall back on the current working directory.
+
+    Also note that a unique temporary folder is created at runtime, therefore, calling ``do.tmp_root()`` twice will return the same result.
+
+    In order to force create a new temporary folder, use the argument ``new=True``.
+
+    Parameters
+    ----------
+    new: bool, default = False
+        Force create a new temporary folder on each call.
+    config: Config, default = None
+        The configuration object to read the ``output.root`` parameter from.
+        If set to None (default), we use the runtime configuration object.
+
+    Returns
+    -------
+    :class:`Path`
+    """
+    from pydox._config.config import check_config  # Avoid circular import
+
+    config = do.params if config is None else check_config(config)
+
+    try:
+        tmp_name = do.get_params("output._tmp")
+    except:
+        tmp_name = None
+
+    if new or tmp_name is None:
+        # This is the 1st call, we create a new folder:
+
+        root = do.get_params("output.root", config)
+        if root is None:
+            warnings.warn(
+                "The Pydox output root path is not set, fallback on current directory"
+            )
+            root = Path.cwd()
+        root = Path(root)
+
+        # tmp_root = root.joinpath("tmp").joinpath(uuid.uuid4().hex)
+        tmp = root.joinpath("tmp").joinpath(
+            datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d%H%M%S%f")
+        )
+
+        # Register folder in the configuration, as a private parameter
+        do.set_params("output._tmp", str(tmp), config=config)
+
+    # Read the corresponding parameter:
+    tmp = Path(do.get_params("output._tmp", config))
+
+    # Make sure the folder exists even if it was deleted between the creation time and call to this function:
+    tmp.mkdir(parents=True, exist_ok=True)
+
+    return tmp

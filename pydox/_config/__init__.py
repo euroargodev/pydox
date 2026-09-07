@@ -9,4 +9,7 @@ _read_only_dotted_params = [
 
 # List of parameters (group, subgroup, key) that are NOT over-writen when loading the sequence of config. files,
 # (i.e. factory values are read-only):
-_not_overloaded_dotted_params = ["version"]  # use lower-dotted string format
+_not_overloaded_dotted_params = [
+    "version",
+    "output._tmp",
+]  # use lower-dotted string format

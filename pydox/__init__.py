@@ -8,8 +8,8 @@ from pydox._config.config import (
     get_configdir,
 )
 from pydox._config.config import rcParams as params
+from pydox._config.utils import tmp_root
 
-# Import facades for calibrations:
 from pydox.calibration.facade import Calibration, CalibrationSet
 
 #
@@ -21,3 +21,9 @@ except Exception:
     # Local copy or not installed with setuptools.
     # Disable minimum version checks on downstream libraries.
     __version__ = "9999"
+
+# Define global figure registry and manager:
+from pydox.commodities import PydoxFigure, _DoFigures
+
+__figures: list[PydoxFigure] = []  # Internal global registry of figures
+figures = _DoFigures(__figures)  # Facade for the registry manager of figures

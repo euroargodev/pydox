@@ -117,12 +117,10 @@ class Method(Workflow, ABC):
         """
         # summary : list[str] = super().__repr__().split("\n")
 
-        if self.method == self.rcgroup:
-            summary = [f"<pydox.Workflow.Calibration.{self.rcgroup}>"]
-        else:
-            summary = [
-                f"<pydox.Workflow.Calibration.{self.rcgroup}> '{self.method.title()}'"
-            ]
+        summary = [f"<pydox.Workflow.Calibration.{self.rcgroup}> {self.name}"]
+
+        if self.method != self.rcgroup:
+            summary.append(f"Method long name: {self.method.title()}")
 
         [summary.append(line) for line in self._repr_fitted()]
 

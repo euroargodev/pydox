@@ -66,11 +66,6 @@ def interp_NCEP_on_ARGO(
     """
     # We work with a deepcopy to do not modify the original NCEP dataset
     ds_ncep_interp = deepcopy(ds_ncep)
-
-    # Force NCEP lon to be in [-180 180] as the ARGO longitude
-    ds_ncep_interp["lon"] = xr.where(
-        ds_ncep_interp["lon"] > 180, ds_ncep_interp["lon"] - 360, ds_ncep_interp["lon"]
-    )
     ds_ncep_interp = ds_ncep_interp.interp(
         lat=coord_argo["lat"], lon=coord_argo["lon"], time=coord_argo["time"]
     )

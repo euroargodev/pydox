@@ -19,6 +19,7 @@ from pydox.commodities import (
     VALID_FIGURE_CATEGORIES,
 )
 from pydox.utils.casting import is_ctelist, to_list
+from pydox.io.argo.facade import corr_B_files
 
 
 class Workflow(ABC):
@@ -219,6 +220,11 @@ class Workflow(ABC):
     def uid(self, icfg: int = None) -> str:
         """UID for this Workflow or a specific configuration"""
         return self._uid(icfg)
+
+    def create_corrBfile(self, data_float: ar.ArgoFloat, res_to_keep : int) -> None:
+        coef_kept = deepcopy(self.coefs[res_to_keep])
+        corr_B_files(data_float, coef_kept)
+        return None
 
     @property
     def fitted(self) -> bool:

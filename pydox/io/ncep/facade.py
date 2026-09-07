@@ -161,6 +161,11 @@ def open_ncep(refresh: bool = False) -> xr.Dataset:
         else:
             raise ValueError(f"NCEP variable 'air' must be in Kelvin units")
 
+        # Force NCEP lon to be in [-180 180] as the ARGO longitude
+        print(f"NCEP longitude : force to be in [-180 180] like ARGO")
+        ds_ncep["lon"] = xr.where(
+            ds_ncep["lon"] > 180, ds_ncep["lon"] - 360, ds_ncep["lon"]
+        )
         # Register to global placeholder:
         _ds_NCEP[hash] = ds_ncep
 

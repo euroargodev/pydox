@@ -193,6 +193,10 @@ pydox/
 │       ├── facade.py    # Facade functions used by calibration method implementations
 │       └── utils.py     # Utilities for NCEP data manipulation
 │
+├── reporting/            # Everything related to reporting emanating from Pydox (to users, to dev., on screen, to files) 
+│   ├── pdf.py            # Export the figure registry to a single pdf document
+│   └── lops.py           # LOPS color scheme
+│
 ├── utils/                # Non-specific utilities (low-level/limited-scope/autonomous functions)
 │   ├── casting.py        # Enforce object types
 │   ├── chemistry.py      # Chemistry variables computation/manipulation 

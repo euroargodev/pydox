@@ -20,6 +20,7 @@ from pydox.commodities import (
     VALID_FIGURE_CATEGORIES,
 )
 from pydox.utils.casting import is_ctelist, to_list
+from pydox.io.argo.facade import corr_B_files
 from pydox.reporting.logs import getLogger
 
 log = getLogger("pydox.calibration.spec", context_level=20)
@@ -68,7 +69,7 @@ class Workflow(ABC):
             "CYCLE_NUMBER": {},
         }  # Used to register float WMO/CYCLE_NUMBER used for fit
         self._best_fit: int = (
-            None  # Will hold the best user-defined configuration id, Filled by self.set_best_fit(), return by self.best_fit
+            None  # Filled by self.set_best_fit(), return by self.best_fit
         )
 
         # Init private placeholders depending on configuration order and number:
@@ -234,6 +235,11 @@ class Workflow(ABC):
     def uid(self, icfg: int = None) -> str:
         """UID for this Workflow or a specific configuration"""
         return self._uid(icfg)
+
+    def create_corrBfile(self, data_float: ar.ArgoFloat, res_to_keep : int) -> None:
+        coef_kept = deepcopy(self.coefs[res_to_keep])
+        corr_B_files(data_float, coef_kept)
+        return None
 
     @property
     def fitted(self) -> bool:

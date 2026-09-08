@@ -1,5 +1,6 @@
 import re
 from pathlib import Path
+import shutil
 from jinja2 import Environment, FileSystemLoader
 from copy import deepcopy
 import argopy as ar
@@ -56,7 +57,7 @@ html_default_introduction = """
             with regard to the DMQC process for this float.
         </p>
 """
-html_default_comment = """
+html_default_discussion = """
         <p>
             Write comments about any problems with float and decision made on this float including e.g.
             Is the float still active? Where is float located and what is the trajectory over its lifetime? 
@@ -87,7 +88,7 @@ html_default_comment = """
 
 
 class FloatPathMaker:
-    def __init__(self, fitted_c):
+    def __init__(self, fitted_c, include_static: bool = True):
         if not fitted_c.fitted:
             raise ValueError("A PathMaker requires a fitted Calibration instance")
 
@@ -97,22 +98,28 @@ class FloatPathMaker:
         # Define and create standard folders for this float:
 
         # <output.root>/<WMO>
-        root = Path(do.get_params("output.root", config=self._cfg)).joinpath(
+        self.root: Path = Path(do.get_params("output.root", config=self._cfg)).joinpath(
             f"{self.WMO}"
         )
-        root.mkdir(parents=True, exist_ok=True)
+        self.root.mkdir(parents=True, exist_ok=True)
 
         # Folder for figures:
         # <output.root>/<WMO>/<plots.save.path>/
-        froot = root.joinpath(do.get_params("plots.save.path", config=self._cfg))
-        froot.mkdir(parents=True, exist_ok=True)
-        self.froot: Path = froot
+        self.froot: Path = self.root.joinpath(
+            do.get_params("plots.save.path", config=self._cfg)
+        )
+        self.froot.mkdir(parents=True, exist_ok=True)
 
         # Folder for reports:
         # <output.root>/<WMO>/<reports.save.path>/
-        rroot = root.joinpath(do.get_params("reports.save.path", config=self._cfg))
-        rroot.mkdir(parents=True, exist_ok=True)
-        self.rroot: Path = rroot
+        self.rroot: Path = self.root.joinpath(
+            do.get_params("reports.save.path", config=self._cfg)
+        )
+        self.rroot.mkdir(parents=True, exist_ok=True)
+        if include_static:
+            # <output.root>/<WMO>/<reports.save.path>/static/img
+            self.rroot_img = self.rroot.joinpath("static").joinpath("img")
+            self.rroot_img.mkdir(parents=True, exist_ok=True)
 
         # Temporary folder (for anything):
         # (created automatically by pydox)
@@ -155,7 +162,7 @@ class FloatPathMaker:
 class CalibrationHTMLReport:
     """HTML report generator for fitted Calibration instances"""
 
-    def __init__(self, c: "Calibration", a_float: ar.ArgoFloat):
+    def __init__(self, c: "Calibration", a_float: ar.ArgoFloat, **kwargs):
         if not c.fitted:
             raise ValueError(
                 "A CalibrationHTMLReport requires a fitted Calibration instance"
@@ -166,15 +173,30 @@ class CalibrationHTMLReport:
             )
 
         self.c = c
-        self._cfg = c._cfg
+        self._cfg = kwargs.get(
+            "config", c._cfg
+        )  # Possibly overwrite the configuration to use, primarily used for debug
         self.af = a_float
         self.pm = FloatPathMaker(c)
 
     def plot_float_traj(self):
         fig, ax, ptch = self.af.plot.trajectory(cbar=False)
         return do.figures.commit(
-            fig, name="Float trajectory", config_uid=f"{self.af.WMO}_trajectory_map"
+            fig,
+            name="Float trajectory",
+            config_uid=f"{self.af.WMO}_trajectory_map",
+            watermark="Argopy",
         )
+
+    def save_static(self):
+        """Save Pydox template static figures required from the template
+
+        Copying static figures to the report path allows for figures to be inserted with relative paths.
+        """
+        # Copy all static.templates.img/*.png
+        src = _path2static.joinpath("templates").joinpath("img")
+        dst = self.pm.rroot.joinpath("static").joinpath("img")
+        shutil.copytree(src, dst, dirs_exist_ok=True)
 
     def _save_figure(self, f):
         if self.pm.fpath(f.name).exists():
@@ -199,7 +221,9 @@ class CalibrationHTMLReport:
             None,
         )
         if f is None:
-            f = self.plot_float_traj()
+            f = (
+                self.plot_float_traj()
+            )  # Todo this is probably not the most appropriate place to create this figure if it's missing
         self._save_figure(f)
 
         # Save figures from the Calibration instance:
@@ -254,7 +278,9 @@ class CalibrationHTMLReport:
 
         return sorted_content
 
-    def publish(self, file_name: Optional[str] = None, **kwargs) -> Path:
+    def publish(
+        self, file_name: Optional[str] = None, include_static: bool = True, **kwargs
+    ) -> Path:
         """Publish an HTML report file based on the template defined in settings
 
         Customizable fields can be provided with kwargs. These are:
@@ -273,6 +299,8 @@ class CalibrationHTMLReport:
         #############
         # Produce and retrieve data for the report
         #############
+        if include_static:
+            self.save_static()
         self.save_figures()
 
         # Get TemplateFigure for: Float trajectory
@@ -281,7 +309,7 @@ class CalibrationHTMLReport:
         )  # save_figures() ensured this plot to exist
         f_traj: TemplateFigure = self.pydoxfig2templatefig(f_traj)
 
-        # Get PydoxFigure(s) for: Best fit result (selected by user)
+        # Get TemplateFigure(s) for: Best fit result (selected by user)
         f_plot_result: PydoxFigure | TemplateFigure | None = None
         target = (
             f"Calibration results [configs_layout='figure', iset='{self.c.best_fit}']"
@@ -291,7 +319,7 @@ class CalibrationHTMLReport:
             if f.name == target:
                 f_plot_result = deepcopy(f)
                 f_plot_result.legend = f"Calibration results obtained with configuration number {self.c.best_fit} (selected)"
-                f_plot_result = self.pydoxfig2templatefig(f_plot_result)
+                f_plot_result: TemplateFigure = self.pydoxfig2templatefig(f_plot_result)
                 f_plot_result["title"] = f_plot_result["title"].split("[")[0]
                 f_plot_result["title"] = f_plot_result["title"].strip()
         if f_plot_result is None:
@@ -357,8 +385,8 @@ class CalibrationHTMLReport:
         if "introduction" not in template_kwargs:
             template_kwargs["introduction"] = html_default_introduction
 
-        if "comment" not in template_kwargs:
-            template_kwargs["comment"] = html_default_comment
+        if "discussion" not in template_kwargs:
+            template_kwargs["discussion"] = html_default_discussion
 
         if "creation_date" not in template_kwargs:
             template_kwargs["creation_date"] = pd.to_datetime(
@@ -373,12 +401,19 @@ class CalibrationHTMLReport:
         if "colors" not in template_kwargs:
             template_kwargs["colors"] = do.reporting.COLORS.SCHEME
 
-        template_kwargs["icon_orcid"] = _path2static.joinpath("img").joinpath(
+        if "coefs" not in template_kwargs:
+            template_kwargs["coefs"] = self.c.coefs
+
+        if "configs" not in template_kwargs:
+            template_kwargs["configs"] = self.c.configs
+
+        template_kwargs["icon_orcid"] = self.pm.rroot_img.joinpath(
             "orcid_icon.png"
-        )
-        template_kwargs["logo_pydox"] = _path2static.joinpath("img").joinpath(
+        ).relative_to(self.pm.rroot)
+
+        template_kwargs["logo_pydox"] = self.pm.rroot_img.joinpath(
             "pydox-logo-long-800.png"
-        )
+        ).relative_to(self.pm.rroot)
 
         #############
         # Finally render the template

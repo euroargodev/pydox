@@ -1,4 +1,4 @@
-from typing import Optional, Any
+from typing import Optional, Any, Dict
 from pathlib import Path
 import matplotlib
 
@@ -15,7 +15,7 @@ def mpl_style_use(config: Optional[Any] = None) -> None:
 
     If any, load and set Matplotlib to use the stylesheet from the configuration setting: "reports.plots.mplstyle".
 
-    If the stylesheet uses shortnames like "{COLOR.DARK}" or "{COLOR.LIGHTEST}" for colors, they are automatically replaced with real RGBA values based on the "reports.template.colors" configuration setting.
+    If the stylesheet uses shortnames like "{COLOR.DARK}" or "{COLOR.LIGHTEST}" for colors, they are automatically replaced with real RGBA values based on the "reports.templates.<reports.template>.colors" configuration setting.
 
     Parameters
     ----------
@@ -32,7 +32,7 @@ def mpl_style_use(config: Optional[Any] = None) -> None:
     # Load Matplotlib stylesheet and:
     # - remove comments
     # - replace template color shortnames with their real values, eg: "{COLOR.DARK}" is replaced with
-    mplstyle = {}
+    mplstyle: Optional[Dict[str, Any]] = {}
     with open(mplstyle_file, "r") as f:
         lines = f.readlines()
     for line in lines:
@@ -46,6 +46,7 @@ def mpl_style_use(config: Optional[Any] = None) -> None:
                 )
             mplstyle[key] = val.split("#")[0].strip()
 
+    do.reporting.MPLSTYLE = mplstyle
     matplotlib.pyplot.style.use(mplstyle)
 
 
@@ -53,8 +54,8 @@ def load_template(config: Optional[Any] = None) -> None:
     """Load template (color scheme, Matplotlib stylesheet, etc...)
 
     This function does the following:
-    - Set :class:`pydox.reporting.COLORS` with the template color scheme define with the configuration setting: "reports.template.colors".
-    - If any, load and set Matplotlib to use the stylesheet from the configuration setting: "reports.template.mplstyle".
+    - Set :class:`pydox.reporting.COLORS` with the template color scheme define with the configuration setting: "reports.templates.<reports.template>.colors".
+    - If any, load and set Matplotlib to use the stylesheet from the configuration setting: "reports.templates.<reports.template>.mplstyle".
 
     Parameters
     ----------

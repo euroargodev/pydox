@@ -144,7 +144,7 @@ def plot_fit_results_subplot(
     input_data: Dict[int, Any],
     coefs: CoefsDict,
     ppar: Optional[TPlotParams] = None,
-    figsize=(10, 4),
+    # figsize=(10, 4),
 ) -> None:
     """Plot in-air fit results, one subplot for each config result (n_configs rows, 1 column)"""
     this_plot_level = 20
@@ -162,7 +162,7 @@ def plot_fit_results_subplot(
     fig, ax = plt.subplots(
         nrows=len(input_data),
         ncols=1,
-        figsize=figsize,
+        figsize=(10, 4 * len(input_data)),
         dpi=ppar.dpi,
         sharex=True,
     )
@@ -208,3 +208,71 @@ def plot_fit_results_subplot(
         watermark=ppar.watermark,
         config_uid=ppar.uid,
     )
+
+
+def plot_fit_results_figure(
+    input_data: Dict[int, Any],
+    coefs: CoefsDict,
+    ppar: Optional[TPlotParams] = None,
+    figsize=(10, 4),
+) -> None:
+    """Plot in-air fit results, one figure for each config result"""
+    this_plot_level = 20
+
+    ppar = PlotParams.get(ppar)
+    if this_plot_level < ppar.level:
+        print(
+            f"This plot was not generated because plots.level {ppar.level} is higher than this plot level {this_plot_level}"
+        )
+        return None
+
+    suptitle = "Calibration results"
+    ylabel = "Partial pressure of oxygen [mb]"
+
+    for iset in range(len(input_data)):
+        fig, ax = plt.subplots(
+            nrows=1,
+            ncols=1,
+            figsize=figsize,
+            dpi=ppar.dpi,
+        )
+        ax = ax.flatten() if isinstance(ax, np.ndarray) else np.array(ax)[np.newaxis]
+
+        xdata = input_data[iset]["CYCLE_NUMBER"]
+        xlabel = "Float Cycle number of the measurement"
+
+        # Plot the reference:
+        ax[0].plot(xdata, input_data[iset]["REF_PPOX"], ".-", label="Ref")
+
+        # Plot the input non-adjusted value:
+        ax[0].plot(
+            xdata,
+            input_data[iset]["PPOX1"],
+            ".-",
+            label="Non-adjusted (in-air)",
+        )
+
+        # Plot the adjusted value:
+        ydata = predict(coefs[iset], input_data[iset])
+        ax[0].plot(
+            xdata,
+            ydata,
+            ".-",
+            label=f"Adjusted (config {iset})",
+        )
+
+        ax[0].grid(True)
+        ax[0].set_xlabel(xlabel)
+        ax[0].set_ylabel(ylabel)
+        ax[0].legend()
+        ax[0].set_title(f"Calibration results for correction : {iset}")
+
+        # plt.tight_layout()
+
+        do.figures.commit(
+            fig,
+            name=f"{suptitle} [configs_layout='figure', iset='{iset}']",
+            category="fit_results",
+            watermark=ppar.watermark,
+            config_uid=ppar.uid,
+        )

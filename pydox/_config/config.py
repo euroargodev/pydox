@@ -1,4 +1,5 @@
 # ‼️ This is the only module where the global configuration object is to be referred to as ``rcParams`` and not ``do.params``
+# ‼️ This is the only module where the pydox logger cannot be used
 
 import importlib
 from pathlib import Path
@@ -23,6 +24,7 @@ from pydox._config import (
 )
 from pydox._config.utils import reduce, runner, config_repr_txt, config_repr_html
 from pydox._config.yaml import load_config_from_file
+from pydox.errors import MissingSetting
 
 # from pydox.reporting.logs import getLogger # Impossible without circularity, _config is only module where we cant use getLogger
 
@@ -203,6 +205,7 @@ def overload_config(x, y) -> Config:
     z = deepcopy(x)
     for key in flatten_config_keys(y):
         if key.lower() not in _not_overloaded_dotted_params:
+            # log.debug(f"Overloading {key}")
             set_by_path(z, key, get_by_path(y, key))
     return z
 
@@ -293,8 +296,23 @@ def set_by_path(config: Dict | List, key: str, value: Any) -> Dict | List:
         raise ValueError(f"Parameter '{key}' is read-only !")
     key = key.split(".")
     if len(key) > 1:
+
+        # Make sure that all subgroups exist (even empty)
+        # This allows to apply a setting even if the parent subgroup do not exist before.
+        # Eg:
+        # to set `reports.templates.new_template.name`,
+        # requires ``reports.templates.new_template` subgroup to exist
+        for ik in range(1, len(key)):
+            try:
+                get_by_path(config, ".".join(key[:ik]))
+            except MissingSetting:
+                group = get_by_path(config, ".".join(key[: ik - 1]))
+                group[key[ik - 1]] = {}
+
+        #
         group = get_by_path(config, ".".join(key[:-1]))
-        group[key[-1]] = value
+        group[key[-1]] = value  # This modifies group in config in place
+
     else:
         config[key[0]] = value
     return config
@@ -436,12 +454,13 @@ def set_params(param_or_grp: str, value: Any | Dict = None, **kwargs) -> None:
     if value is None:
 
         if isinstance(param_or_grp, dict):
-            # DOES NOT Handle use case like set_params({string-dotted: value})
-            # do.set_params({'argo.qcflags.psal': [1, 2, 8]})
+            # DOES NOT Handle use case like: set_params({string-dotted: value})
+            # eg: do.set_params({'argo.qcflags.psal': [1, 2, 8]})
             raise ValueError("set_params does not support dictionaries")
 
         else:
-            # Handle use case like set_params(string-dotted, key=val, key=val, key=val):
+            # Handle use case like: set_params(string-dotted, key=val, key=val, key=val)
+            # eg:
             # do.set_params('argo.qcflags', psal=[1, 2, 8])
             # do.set_params('argo', qcflags={'psal': [1, 2, 8], 'temp': [1, 2, 8]})
             # do.set_params('argo.qcflags', psal=[1, 2, 8], temp=[1, 2, 8])
@@ -463,6 +482,18 @@ def set_params(param_or_grp: str, value: Any | Dict = None, **kwargs) -> None:
     # Apply new values:
     for key, value in dotted_params.items():
         set_by_path(config, key, value)
+
+    # Possibly trigger specific actions when a given setting is modified:
+    if next(
+        (value for key, values in dotted_params.items() if key == "reports.template"),
+        None,
+    ):
+        log.debug(
+            f"Setting 'reports.template' is updated to '{value}': re-loading templates..."
+        )
+        import pydox as do
+
+        do.reporting.facade.load_template()
 
 
 def reset_params(

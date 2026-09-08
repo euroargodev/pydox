@@ -70,7 +70,7 @@ class CalibrationSet(Workflow):
 
     def __repr__(self):
         summary: list[str] = super().__repr__().split("\n")
-        summary[0] = "<pydox.Workflow.CalibrationSet>"
+        summary[0] = f"<pydox.Workflow.CalibrationSet> {self.name}"
         return "\n".join(summary)
 
     def commit(self, o: MethodInAir | MethodClimatology) -> Self:
@@ -136,8 +136,8 @@ class CalibrationSet(Workflow):
         icfg: int = 0
         for im, this_method in self._methods.items():
             this_method.load_input_data(argofloat_obj, *args, **kwargs)
-            for iset, data in this_method.input_data.items():
-                self._input_data[icfg] = data
+            for idc, dc in this_method.configs.items():
+                self._input_data[icfg] = this_method.input_data[idc]
                 icfg += 1
 
     def fit(
@@ -175,7 +175,7 @@ class CalibrationSet(Workflow):
                 # Gather more detailed results in dedicated placeholders of the instance:
                 self._input_data[icfg] = this_method.input_data[idc]
                 self._coefs[icfg] = this_method.coefs[idc]
-                self._fit_data[icfg] = this_method._fit_data[idc]
+                self._fit_data[icfg] = this_method.fit_data[idc]
                 self._fitted_float["CYCLE_NUMBER"][icfg] = this_method._fitted_float[
                     "CYCLE_NUMBER"
                 ][idc]
@@ -214,6 +214,11 @@ class CalibrationSet(Workflow):
 
             if "subplot" in self.get_params("plots.configs_layout"):
                 in_air_plots.plot_fit_results_subplot(
+                    self.input_data, self.coefs, ppar=ppar
+                )
+
+            if "figure" in self.get_params("plots.configs_layout"):
+                in_air_plots.plot_fit_results_figure(
                     self.input_data, self.coefs, ppar=ppar
                 )
 

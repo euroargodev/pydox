@@ -26,6 +26,7 @@ from pydox.calibration.methods.in_air.utils import (
 from pydox.calibration.methods.in_air.plots import (
     plot_fit_results_hue,
     plot_fit_results_subplot,
+    plot_fit_results_figure,
 )
 
 log = getLogger("pydox.calibration.methods.in_air.spec", context_level=20)
@@ -223,5 +224,8 @@ class MethodInAir(Method):
 
         if "subplot" in self.get_params("plots.configs_layout"):
             plot_fit_results_subplot(self.input_data, self.coefs, ppar=this_ppar)
+
+        if "figure" in self.get_params("plots.configs_layout"):
+            plot_fit_results_figure(self.input_data, self.coefs, ppar=this_ppar)
 
         return self

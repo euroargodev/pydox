@@ -70,7 +70,7 @@ class CalibrationSet(Workflow):
 
     def __repr__(self):
         summary: list[str] = super().__repr__().split("\n")
-        summary[0] = "<pydox.Workflow.CalibrationSet>"
+        summary[0] = f"<pydox.Workflow.CalibrationSet> {self.name}"
         return "\n".join(summary)
 
     def commit(self, o: MethodInAir | MethodClimatology) -> Self:
@@ -214,6 +214,11 @@ class CalibrationSet(Workflow):
 
             if "subplot" in self.get_params("plots.configs_layout"):
                 in_air_plots.plot_fit_results_subplot(
+                    self.input_data, self.coefs, ppar=ppar
+                )
+
+            if "figure" in self.get_params("plots.configs_layout"):
+                in_air_plots.plot_fit_results_figure(
                     self.input_data, self.coefs, ppar=ppar
                 )
 

@@ -29,10 +29,11 @@ a_float = ar.ArgoFloat(6902882, cache=True)
 print(a_float)
 
 # Setup a calibration:
-c = do.Calibration('in_air')
+c = do.Calibration('in_air', name='Demo')
 # Set generic parameters:
 c.set_params('calibration_parameters', cycles=[1, 100])
 # c.set_params('calibration_parameters', fit_drift=[False, True])
+
 # Set in-air method specific parameters:
 c.set_params('calibration_methods.in_air', carryover=[False, True])
 
@@ -60,6 +61,25 @@ c.plot(0, categories='debug') # Show debugging figures for configuration #0
 c.plot(1, categories='input_data') # Show figures from input data for configuration #1
 c.plot(categories='fit_results') # Show figures from fit results with default layout ('hue')
 c.plot(categories='fit_results', configs_layout='subplot') # Show figures from fit results with a specific layout
+```
+
+**Selecting best fit**
+Once you selected the configuration id giving the best fit, you can commit this information to the Calibration instance like this:
+
+```python
+c.set_best_fit(0)
+```
+
+**Reporting**
+You can automatically generate a HTML report with:
+```python
+c.to_report(a_float, 'preliminary_report')
+```
+
+**BD file creation**
+And finally generate the BD files with the adjusted values with:
+```python
+c.create_corrBfile(a_float)
 ```
 
 ### Tips
@@ -194,8 +214,11 @@ pydox/
 │       └── utils.py     # Utilities for NCEP data manipulation
 │
 ├── reporting/            # Everything related to reporting emanating from Pydox (to users, to dev., on screen, to files) 
-│   ├── pdf.py            # Export the figure registry to a single pdf document
-│   └── lops.py           # LOPS color scheme
+│   ├── colors.py         # Color scheme handling
+│   ├── facade.py         # 
+│   ├── html.py           # HTML report creation
+│   ├── logs.py           # Logging system for users and dev.
+│   └── pdf.py            # Export the figure registry to a single pdf document
 │
 ├── utils/                # Non-specific utilities (low-level/limited-scope/autonomous functions)
 │   ├── casting.py        # Enforce object types
@@ -204,14 +227,20 @@ pydox/
 │   └── xarray.py         # Utilities for xarray objects, specific to Pydox 
 │
 ├── static/               # Static data files required internally
-│   ├── style.css         # A CSS stylesheet to be used in HTML rendering of pydox object
+│   ├── templates/        # Jinja2 Template files
+│   │   ├── default.html  # HTML template
+│   │   └── img/          # Image files for templates
+│   ├── mplstyle          # Matplotlib style sheet
+│   ├── style.css         # A CSS stylesheet to be used in HTML rendering of pydox object in notebooks
 │   └── pydoxrc           # Factory configuration file
 │
-└── tests/                # Unit and integration tests
-    ├── test_config.py    # Tests for pydox._config module
-    ├── test_io_ncep.py   # Tests for io.ncep module
-    ├── conftest.py       # Pytest configuration
-    └── pytest.ini        # Pytest parameters
+├── tests/                # Unit and integration tests
+│   ├── test_config.py    # Tests for pydox._config module
+│   ├── test_io_ncep.py   # Tests for io.ncep module
+│   ├── conftest.py       # Pytest configuration
+│   └── pytest.ini        # Pytest parameters
+│
+└── errors.py             # Custom Pydox error messages
 ```
 
 #### Structure by design

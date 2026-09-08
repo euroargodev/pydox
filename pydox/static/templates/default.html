@@ -40,17 +40,17 @@
             margin-top: 5px;
         }
         h1 {
-            font-size: 24px;
+            font-size: 28px;
             margin-bottom: 10px;
         }
         h2 {
-            font-size: 20px;
+            font-size: 24px;
             border-bottom: 1px solid {{colors[3]}};
             padding-bottom: 5px;
             /*margin-top: 30px;*/
         }
         h3 {
-            font-size: 18px;
+            font-size: 20px;
             /*margin-top: 25px;*/
         }
         h4 {
@@ -68,13 +68,17 @@
         th, td {
             border: 1px solid #ddd;
             padding: 8px;
-            text-align: left;
+            text-align: center;
         }
         th {
             background-color: #f2f2f2;
         }
         tr:nth-child(even) {
             background-color: #f9f9f9;
+        }
+        tr.best-fit{
+            font-weight: bold;
+            background-color: {{colors[5]}};
         }
         .author-info {
             font-style: italic;
@@ -95,6 +99,16 @@
             font-style: italic;
             margin-top: 10px;
             text-align: center;
+        }
+        a.top {
+            font-style: normal;
+            font-size: small;
+            margin-top: 10px;
+            margin-left: 10px;
+            text-align: center;
+            display: inline-block;
+            float:right;
+            text-decoration: none;
         }
         a.back {
             font-style: normal;
@@ -194,19 +208,26 @@
         <ul>
             <li><a href="#introduction">Introduction</a>
                 <ul>
-                    <li><a href="#intro-tech">Technical Information</a></li>
+                    <li><a href="#intro-configs">Configuration space</a></li>
+                    <li><a href="#intro-tech">Float Technical Information</a></li>
                 </ul>
             </li>
-            <li><a href="#figures">Figures</a>
+            <li><a href="#results">Results</a>
                 <ul>
-                    <li><a href="#fig-results">Fit results</a></li>
                     <li><a href="#fig-input">Input data</a></li>
+                    <li><a href="#bestfit-results">Best fit results</a></li>
+                    <ul>
+                        <li><a href="#fig-results">Plot</a></li>
+                        <li><a href="#config-results">Configuration</a></li>
+                        <li><a href="#coef-results">Coefficients</a></li>
+                    </ul>
                 </ul>
             </li>
-            <li><a href="#comment">Comment</a></li>
+            <li><a href="#discussion">Discussion</a></li>
             <li><a href="#appendix">Appendix</a>
                 <ul>
-                    <li><a href="#app-fisc-fig">Misc figures</a></li>
+                    <li><a href="#app-fisc-fig">Figures</a></li>
+                    <li><a href="#app-coefs">Coefficients</a></li>
                 </ul>
             </li>
             <li><a href="#references">References</a></li>
@@ -215,11 +236,65 @@
 
     <section id="introduction">
         {% if introduction is not none %}
-        <h2 id="intro-text">Introduction</h2>
+        <h2 id="intro-text">Introduction<a href="#top-toc" class="top"><i class="bi bi-arrow-up-circle"></i> Top</a></h2>
         {{introduction}}
         {% endif %}
 
-        <h3 id="intro-tech">Technical Information</h3>
+        <h3 id="intro-configs">Configuration space<a href="#top-toc" class="top"><i class="bi bi-arrow-up-circle"></i> Top</a></h3>
+        <table>
+            <caption>Details of all the explored configurations</caption>
+            <thead>
+                <tr>
+                    <th>Configuration ID</th>
+                    <th>Fit a drift</th>
+                    <th>Cycles range</th>
+                    <th>Method</th>
+                    <th>Carryover</th>
+                    <th colspan="3">Initial values</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for icfg, params in configs.items() %}
+                {% if icfg == iselected %}
+                <tr class="best-fit">
+                {% else %}
+                <tr>
+                {% endif %}
+                    {% if icfg == iselected %}
+                    <td>⭐️ {{icfg}}</td>
+                    {% else %}
+                    <td>&nbsp&nbsp{{icfg}}</td>
+                    {% endif %}
+
+                    <td>{{params.fit_drift}}</td>
+                    <td>{{params.cycles}}</td>
+                    <td>{{params.method}}</td>
+
+                    {% if params.method == 'in_air' %}
+                    <td>{{params.carryover}}</td>
+                    {% else %}
+                    <td>∅</td>
+                    {% endif %}
+
+                    <td>Gain: {{params.initial_gain.value}} ± {{params.initial_gain.error}}</td>
+
+                    {% if params.fit_drift %}
+                    <td>Drift: {{params.initial_drift.value}} ± {{params.initial_drift.error}}</td>
+                    {% else %}
+                    <td>∅</td>
+                    {% endif %}
+
+                    {% if params.method == 'in_air' and params.carryover %}
+                    <td>Carryover: {{params.initial_carryover.value}} ± {{params.initial_carryover.error}}</td>
+                    {% else %}
+                    <td>∅</td>
+                    {% endif %}
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
+        <h3 id="intro-tech">Float Technical Information<a href="#top-toc" class="top"><i class="bi bi-arrow-up-circle"></i> Top</a></h3>
         <table>
             <caption>Technical information about float <a href="{{fleetmonitoring_url}}" target="_blank">{{ WMO }}&nbsp<i class="bi bi-box-arrow-up-right"></i></a></caption>
             <thead>
@@ -248,32 +323,94 @@
 <!--                <tr><td>Grey list</td><td>PSAL</td></tr>-->
             </tbody>
         </table>
+
     </section>
 
-    <section id="figures">
-        <h2>Figures</h2>
+    <section id="results">
+        <h2>Results<a href="#top-toc" class="top"><i class="bi bi-arrow-up-circle"></i> Top</a></h2>
 
-            <h3 id="fig-results">Fit results</h3>
-
-                <figure>
-                    <a href="{{plot_result.src}}" target="_blank"><img src="{{plot_result.src}}" alt="{{ plot_result.title }}"></a>
-                    <figcaption>{{ plot_result.legend }} <a href="#figures" class="back"><i class="bi bi-arrow-up-circle"></i> Back</a></figcaption>
-                </figure>
-
-            <h3 id="fig-input">Input data</h3>
+            <h3 id="fig-input">Input data<a href="#top-toc" class="top"><i class="bi bi-arrow-up-circle"></i> Top</a></h3>
 
             {% for fig in figures['input_data'] %}
                 <figure>
                     <a href="{{fig.src}}" target="_blank"><img src="{{fig.src}}" alt="{{ fig.title }}"></a>
-                    <figcaption>{{ fig.legend }} <a href="#figures" class="back"><i class="bi bi-arrow-up-circle"></i> Back</a></figcaption>
+                    <figcaption>{{ fig.legend }} <a href="#results" class="back"><i class="bi bi-arrow-up-circle"></i> Back</a></figcaption>
                 </figure>
             {% endfor %}
 
+            <h3 id="bestfit-results">Fit results<a href="#top-toc" class="top"><i class="bi bi-arrow-up-circle"></i> Top</a></h3>
+
+                <figure id="fig-results">
+                    <a href="{{plot_result.src}}" target="_blank"><img src="{{plot_result.src}}" alt="{{ plot_result.title }}"></a>
+                    <figcaption>{{ plot_result.legend }}</figcaption>
+                </figure>
+
+                <table id="config-results">
+                    <caption>Details of all the best configuration</caption>
+                    <thead>
+                        <tr>
+                            <th>Configuration ID</th>
+                            <th>Fit a drift</th>
+                            <th>Cycles range</th>
+                            <th>Method</th>
+                            <th>Carryover</th>
+                            <th colspan="3">Initial values</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="best-fit">
+                            <td>{{iselected}}</td>
+                            <td>{{configs[iselected].fit_drift}}</td>
+                            <td>{{configs[iselected].cycles}}</td>
+                            <td>{{configs[iselected].method}}</td>
+                            {% if configs[iselected].method == 'in_air' %}
+                            <td>{{configs[iselected].carryover}}</td>
+                            {% else %}
+                            <td>-</td>
+                            {% endif %}
+                            <td>Gain: {{configs[iselected].initial_gain.value}} ± {{configs[iselected].initial_gain.error}}</td>
+                            {% if configs[iselected].fit_drift %}
+                            <td>Drift: {{configs[iselected].initial_drift.value}} ± {{configs[iselected].initial_drift.error}}</td>
+                            {% endif %}
+                            {% if configs[iselected].method == 'in_air' and configs[iselected].carryover %}
+                            <td>Carryover: {{configs[iselected].initial_carryover.value}} ± {{configs[iselected].initial_carryover.error}}</td>
+                            {% endif %}
+                        </tr>
+                    </tbody>
+                </table>
+
+                <table id="coef-results">
+                    <caption>Details of the best fit coefficients</caption>
+                    <thead>
+                        <tr>
+                            <th>Configuration ID</th>
+                            <th>Gain</th>
+                            <th>Drift</th>
+                            <th>Carryover</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    <tr class="best-fit">
+                        <td>{{iselected}}</td>
+                        <td>{{'%0.6f' % coefs[iselected].gain.value}} ± {{'%0.6f' % coefs[iselected].gain.error}}</td>
+                        {% if configs[iselected].fit_drift %}
+                        <td>{{'%0.6f' % coefs[iselected].drift.value}} ± {{'%0.6f' % coefs[iselected].drift.error}}</td>
+                        {% else %}
+                        <td>-</td>
+                        {% endif %}
+                        {% if configs[iselected].method == 'in_air' and configs[iselected].carryover %}
+                        <td>{{'%0.6f' % coefs[iselected].carryover.value}} ± {{'%0.6f' % coefs[iselected].carryover.error}}</td>
+                        {% else %}
+                        <td>-</td>
+                        {% endif %}
+                    </tr>
+                    </tbody>
+                </table>
     </section>
 
-    <section id="comment">
-        <h2>Comment</h2>
-        {% if comment is none %}
+    <section id="discussion">
+        <h2>Discussion<a href="#top-toc" class="top"><i class="bi bi-arrow-up-circle"></i> Top</a></h2>
+        {% if discussion is none %}
         <p>
             Write comments about any problems with float and decision made on this float including e.g.
             Is the float still active? Where is float located and what is the trajectory over its lifetime? 
@@ -301,21 +438,30 @@
             This float is still active and further monitoring is still required."
         </p>
         {% else %}
-        <p>{{comment}}</p>
+        <p>{{discussion}}</p>
         {% endif %}
     </section>
 
     <section id="appendix">
-        <h2>Appendix</h2>
+        <h2>Appendix<a href="#top-toc" class="top"><i class="bi bi-arrow-up-circle"></i> Top</a></h2>
 <!--        <p>In this section we can add any additional supporting graphs.</p>-->
 
-        <h3 id="app-misc-fig">Misc figures</h3>
+        <h3 id="app-misc-fig">Figures<a href="#top-toc" class="top"><i class="bi bi-arrow-up-circle"></i> Top</a></h3>
             <div class="toc" id="misc-fig-toc">
-                <h4>List of misc figures</h4>
+                <b>Fit results:</b>
                 <ul>
                     {% for fig in figures['fit_results'] %}
                     <li><a href="#{{fig.src}}">{{ fig.title }}</a></li>
                     {% endfor %}
+                </ul>
+<!--                <b>Input data:</b>-->
+<!--                <ul>-->
+<!--                    {% for fig in figures['input_data'] %}-->
+<!--                    <li><a href="#{{fig.src}}">{{ fig.title }}</a></li>-->
+<!--                    {% endfor %}-->
+<!--                </ul>-->
+                <b>Debug:</b>
+                <ul>
                     {% for fig in figures['debug'] %}
                     <li><a href="#{{fig.src}}">{{ fig.title }}</a></li>
                     {% endfor %}
@@ -330,6 +476,14 @@
                 </figure>
             {% endfor %}
 
+<!--            <h4>Input data</h4>-->
+<!--            {% for fig in figures['input_data'] %}-->
+<!--                <figure id="{{fig.src}}">-->
+<!--                    <a href="{{fig.src}}" target="_blank"><img src="{{fig.src}}" alt="{{ fig.title }}"></a>-->
+<!--                    <figcaption>{{ fig.legend }} <a href="#misc-fig-toc" class="back"><i class="bi bi-arrow-up-circle"></i> Back to list</a></figcaption>-->
+<!--                </figure>-->
+<!--            {% endfor %}-->
+
             <h4>Debug plots</h4>
             {% for fig in figures['debug'] %}
                 <figure id="{{fig.src}}">
@@ -338,10 +492,52 @@
                 </figure>
             {% endfor %}
 
+        <h3 id="app-coefs">Coefficient results<a href="#top-toc" class="top"><i class="bi bi-arrow-up-circle"></i> Top</a></h3>
+            <table>
+                <caption>Details of all fit coefficients</caption>
+                <thead>
+                    <tr>
+                        <th>Configuration ID</th>
+                        <th>Gain</th>
+                        <th>Drift</th>
+                        <th>Carryover</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for icfg, params in configs.items() %}
+                    {% if icfg == iselected %}
+                    <tr class="best-fit">
+                    {% else %}
+                    <tr>
+                    {% endif %}
+                        {% if icfg == iselected %}
+                        <td>⭐️ {{icfg}}</td>
+                        {% else %}
+                        <td>&nbsp&nbsp{{icfg}}</td>
+                        {% endif %}
+
+                        <td>Gain: {{'%0.6f' % coefs[icfg].gain.value}} ± {{'%0.6f' % coefs[icfg].gain.error}}</td>
+
+                        {% if configs[icfg].fit_drift %}
+                        <td>{{'%0.6f' % coefs[icfg].drift.value}} ± {{'%0.6f' % coefs[icfg].drift.error}}</td>
+                        {% else %}
+                        <td>∅</td>
+                        {% endif %}
+
+                        {% if configs[icfg].method == 'in_air' and configs[icfg].carryover %}
+                        <td>{{'%0.6f' % coefs[icfg].carryover.value}} ± {{'%0.6f' % coefs[icfg].carryover.error}}</td>
+                        {% else %}
+                        <td>∅</td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+                </tbody>
+
+            </table>
     </section>
 
     <section id="references">
-        <h2>References</h2>
+        <h2>References<a href="#top-toc" class="top"><i class="bi bi-arrow-up-circle"></i> Top</a></h2>
         <div class="reference">
             <p>
                 Cabanes, C., Thierry, V., &amp; Lagadec, C. (2016). 

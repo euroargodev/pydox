@@ -16,9 +16,12 @@ from pydox.commodities import (
     ParameterSet,
     ConfigsDict,
     CoefsDict,
+    Coefficients,
+    CoefficientsInAir,
     PydoxFigure,
     VALID_FIGURE_CATEGORIES,
 )
+from pydox.errors import UnFitted, UnSelected
 from pydox.utils.casting import is_ctelist, to_list
 from pydox.io.argo.facade import corr_B_files
 from pydox.reporting.logs import getLogger
@@ -236,11 +239,6 @@ class Workflow(ABC):
         """UID for this Workflow or a specific configuration"""
         return self._uid(icfg)
 
-    def create_corrBfile(self, data_float: ar.ArgoFloat, res_to_keep: int) -> None:
-        coef_kept = deepcopy(self.coefs[res_to_keep])
-        corr_B_files(data_float, coef_kept)
-        return None
-
     @property
     def fitted(self) -> bool:
         """Was the instance fitted at least once ?"""
@@ -328,7 +326,7 @@ class Workflow(ABC):
         if self.fitted:
             return self._coefs  # Populated by `self.fit()`
         else:
-            raise ValueError(f"No coefficients computed")
+            raise UnFitted("No coefficients computed")
 
     @property
     def fit_data(self) -> Dict[int, Any]:
@@ -336,7 +334,7 @@ class Workflow(ABC):
         if self.fitted:
             return self._fit_data  # Populated by `self.fit()`
         else:
-            raise ValueError(f"No coefficients data computed")
+            raise UnFitted("No coefficients data computed")
 
     @property
     def configs_figures(self) -> OrderedDict[int, List[PydoxFigure]]:
@@ -472,7 +470,7 @@ class Workflow(ABC):
             if icfg in range(self.n_configs):
                 if self.best_fit is not None and self.best_fit != icfg:
                     log.warning(
-                        f"This instance best_fit is already set to {self.best_fit}, you're about to overwrite it with {icfg}."
+                        f"This instance 'best_fit' is already set to {self.best_fit}, you're about to overwrite it with {icfg}."
                     )
                 self._best_fit = icfg
             else:
@@ -480,6 +478,36 @@ class Workflow(ABC):
                     f"Configuration id {icfg} is not valid, must be one in: {np.arange(self.n_configs)}"
                 )
         else:
-            raise ValueError(
+            raise UnFitted(
                 "Cannot select the best configuration before fitting on one Argo float data !"
             )
+
+    def create_corrBfile(
+        self, a_float: ar.ArgoFloat, icfg: Optional[int] = None
+    ) -> None:
+        # todo Add docstring
+        if not self.fitted:
+            raise UnFitted("Cannot create BD files without a fit, use 'fit()'")
+        else:
+            if icfg is None and self.best_fit is None:
+                raise UnSelected(
+                    "Cannot create BD files without a best fit, use 'set_best_fit()'"
+                )
+            elif self._fitted_float["WMO"] != a_float.WMO:
+                raise ValueError(
+                    f"BD files creation/update must be done with the same float as the fit ! {a_float.WMO} vs {self._fitted_float['WMO']}"
+                )
+            else:
+                icfg = self.best_fit if icfg is None else icfg
+
+            if icfg not in range(self.n_configs):
+                raise ValueError(
+                    f"Invalid configuration id={icfg}, must be in {np.arange(self.n_configs)}"
+                )
+
+            if icfg != self.best_fit:
+                log.warning(
+                    f"Create BD files with a configuration id={icfg} that is not the selected best fit {self.best_fit}"
+                )
+        coef: Coefficients | CoefficientsInAir = deepcopy(self.coefs[icfg])
+        return corr_B_files(a_float, coef)

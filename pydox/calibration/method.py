@@ -4,7 +4,7 @@ import argopy as ar
 
 import pydox as do
 from pydox._config.utils import dict_to_string
-from pydox.errors import UnsupportedSetting
+from pydox.errors import UnsupportedSetting, UnFitted, UnSelected
 from pydox.utils.casting import to_list
 from pydox.calibration.spec import Workflow
 from pydox.reporting.html import CalibrationHTMLReport
@@ -159,7 +159,13 @@ class Method(Workflow, ABC):
                 f"Only 'html' report format is supported at this time, '{do.get_params('reports.save.format', config=self._cfg)}'."
             )
 
-        if self._fitted_float["WMO"] != a_float.WMO:
+        if not self.fitted:
+            raise UnFitted("Cannot create a report without a fit, use 'fit()'")
+        elif self.best_fit is None:
+            raise UnSelected(
+                "Cannot create a report without a best fit, use 'set_best_fit()'"
+            )
+        elif self._fitted_float["WMO"] != a_float.WMO:
             raise ValueError(
                 f"Reporting must be done with the same float as the fit ! {a_float.WMO} vs {self._fitted_float['WMO']}"
             )

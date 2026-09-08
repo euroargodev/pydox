@@ -8,9 +8,10 @@ This may need to be more finely refactored in the future.
 
 """
 
-from typing import Optional
+from typing import Optional, Dict, Any
 from pydox.reporting import colors
 from pydox.reporting import logs
 from pydox.reporting import pdf
 
 COLORS: Optional[colors.ColorScheme] = None
+MPLSTYLE: Optional[Dict[str, Any]] = None

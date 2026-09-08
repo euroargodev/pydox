@@ -1,4 +1,4 @@
-from typing import Optional, Any
+from typing import Optional, Any, Dict
 from pathlib import Path
 import matplotlib
 
@@ -32,7 +32,7 @@ def mpl_style_use(config: Optional[Any] = None) -> None:
     # Load Matplotlib stylesheet and:
     # - remove comments
     # - replace template color shortnames with their real values, eg: "{COLOR.DARK}" is replaced with
-    mplstyle = {}
+    mplstyle: Optional[Dict[str, Any]] = {}
     with open(mplstyle_file, "r") as f:
         lines = f.readlines()
     for line in lines:
@@ -46,6 +46,7 @@ def mpl_style_use(config: Optional[Any] = None) -> None:
                 )
             mplstyle[key] = val.split("#")[0].strip()
 
+    do.reporting.MPLSTYLE = mplstyle
     matplotlib.pyplot.style.use(mplstyle)
 
 

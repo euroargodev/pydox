@@ -17,6 +17,8 @@
 
 This is the current state of the **pydox** API and expected use case:
 
+### Load float and set-up a Calibration
+
 ```python
 import pydox as do
 import argopy as ar
@@ -40,6 +42,7 @@ c.set_params('calibration_methods.in_air', carryover=[False, True])
 print(c)
 ```
 
+### Fit calibration coefficients for all configurations
 ```python
 # Compute calibrations coefficients for all possible configurations:
 c.fit(a_float)
@@ -52,7 +55,8 @@ c.coefs # Fit results coefficients
 c.fit_data # Fit auxiliary data
 ```
 
-**Figures**
+### Check out figures
+
 In order to display figures associated with this Calibration instance, you can use the `plot` method:
 
 ```python
@@ -63,20 +67,23 @@ c.plot(categories='fit_results') # Show figures from fit results with default la
 c.plot(categories='fit_results', configs_layout='subplot') # Show figures from fit results with a specific layout
 ```
 
-**Selecting best fit**
+### Selecting best fit
+
 Once you selected the configuration id giving the best fit, you can commit this information to the Calibration instance like this:
 
 ```python
 c.set_best_fit(0)
 ```
 
-**Reporting**
+### HTML report
+
 You can automatically generate a HTML report with:
 ```python
 c.to_report(a_float, 'preliminary_report')
 ```
 
-**BD file creation**
+### BD files creation
+
 And finally generate the BD files with the adjusted values with:
 ```python
 c.create_corrBfile(a_float)
@@ -84,7 +91,7 @@ c.create_corrBfile(a_float)
 
 ### Tips
 
-Trigger load and access input data:
+Only trigger load without fit and access input data:
 ```python
 # Trigger input data loading
 c.load_input_data(a_float)  

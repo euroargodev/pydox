@@ -175,7 +175,6 @@ reports:
       # Must be 7 HEX colors, from dark to light
       # https://coolors.co/0a2463-023978-0c9eb3-14b1b7-7bcacc-bae3e2-f8fbf8
       html: default.html
-#      latex:
 
   save:
     format: html

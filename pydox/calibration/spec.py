@@ -144,7 +144,7 @@ class Workflow(ABC):
             if not self.get_params("pydox.verbose.configs"):
                 d.pop("src")
             if self.best_fit is not None and self.best_fit == ii:
-                summary += [f"⭐️{ii}: method='{method}' {d}"]
+                summary += [f"🏆{ii}: method='{method}' {d}"]
             else:
                 summary += [f"  {ii}: method='{method}' {d}"]
 
@@ -189,7 +189,7 @@ class Workflow(ABC):
         summary = []
         for ic in range(self.n_configs):
             if self.best_fit is not None and self.best_fit == ic:
-                summary += [f"⭐️{ic}: {str(self.coefs[ic])}"]
+                summary += [f"🏆{ic}: {str(self.coefs[ic])}"]
             else:
                 summary += [f"  {ic}: {str(self.coefs[ic])}"]
         return summary
@@ -236,7 +236,7 @@ class Workflow(ABC):
         """UID for this Workflow or a specific configuration"""
         return self._uid(icfg)
 
-    def create_corrBfile(self, data_float: ar.ArgoFloat, res_to_keep : int) -> None:
+    def create_corrBfile(self, data_float: ar.ArgoFloat, res_to_keep: int) -> None:
         coef_kept = deepcopy(self.coefs[res_to_keep])
         corr_B_files(data_float, coef_kept)
         return None

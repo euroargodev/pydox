@@ -40,21 +40,25 @@ def remove_duplicate(
 
 
 html_default_summary = """
-                <p>
-                    In this section, write a brief description of all decisions made in DMQC analysis. 
-                    You may include information about sea surface pressure corrections with applied QC flags and errors (if applicable), 
-                    cell thermal mass corrections (if applicable), a decision made on salinity data including QC flags and corrections applied to salinity data (if needed).
-                </p>
-                <p class="example">
-                    For Example:<br>
-                    "The sea surface pressure in Apex float was adjusted in d-mode. For cycles 1-155, the QC=1 and error 2.4 dbar was assigned to pressure data. 
-                    Cell thermal mass correction was applied. For cycles 1-155, the salty offset was detected. Correction of -0.0125 offset was applied, QC=1, error=0.005."
-                </p>
+        <p>
+            In this section, write a brief description of all decisions made in DMQC analysis. 
+            You may include information about sea surface pressure corrections with applied QC flags and errors (if applicable), 
+            cell thermal mass corrections (if applicable), a decision made on salinity data including QC flags and corrections applied to salinity data (if needed).
+        </p>
+        <p class="example">
+            For Example:<br>
+            "The sea surface pressure in Apex float was adjusted in d-mode. For cycles 1-155, the QC=1 and error 2.4 dbar was assigned to pressure data. 
+            Cell thermal mass correction was applied. For cycles 1-155, the salty offset was detected. Correction of -0.0125 offset was applied, QC=1, error=0.005."
+        </p>
 """
 html_default_introduction = """
         <p>
             This would be an introduction to the report. You may include information about the float deployment context, sensor history or whatever relevant information
             with regard to the DMQC process for this float.
+        </p>
+        <p class="example">
+            For example:<br>            
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
         </p>
 """
 html_default_discussion = """

@@ -78,7 +78,9 @@
         }
         tr.best-fit{
             font-weight: bold;
-            background-color: {{colors[5]}};
+            /*background-color: {{colors[5]}};*/
+            color: {{colors[6]}};
+            background-color: {{colors[2]}};
         }
         .author-info {
             font-style: italic;
@@ -261,7 +263,7 @@
                 <tr>
                 {% endif %}
                     {% if icfg == iselected %}
-                    <td>⭐️ {{icfg}}</td>
+                    <td>🏆 {{icfg}}</td>
                     {% else %}
                     <td>&nbsp&nbsp{{icfg}}</td>
                     {% endif %}
@@ -511,7 +513,7 @@
                     <tr>
                     {% endif %}
                         {% if icfg == iselected %}
-                        <td>⭐️ {{icfg}}</td>
+                        <td>🏆️ {{icfg}}</td>
                         {% else %}
                         <td>&nbsp&nbsp{{icfg}}</td>
                         {% endif %}

@@ -144,7 +144,7 @@ def plot_fit_results_subplot(
     input_data: Dict[int, Any],
     coefs: CoefsDict,
     ppar: Optional[TPlotParams] = None,
-    figsize=(10, 4),
+    # figsize=(10, 4),
 ) -> None:
     """Plot in-air fit results, one subplot for each config result (n_configs rows, 1 column)"""
     this_plot_level = 20
@@ -162,7 +162,7 @@ def plot_fit_results_subplot(
     fig, ax = plt.subplots(
         nrows=len(input_data),
         ncols=1,
-        figsize=figsize,
+        figsize=(10, 4 * len(input_data)),
         dpi=ppar.dpi,
         sharex=True,
     )

@@ -72,7 +72,7 @@ c.plot(categories='fit_results', configs_layout='subplot') # Show figures from f
 Once you selected the configuration id giving the best fit, you can commit this information to the Calibration instance like this:
 
 ```python
-c.set_best_fit(0)
+c.set_best_fit(0) # 0 is the configuration id of the user-selected best fit
 ```
 
 ### HTML report

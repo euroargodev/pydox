@@ -437,7 +437,7 @@ class Workflow(ABC):
                     if fig.category == category:
                         if "configs_layout" in fig.name:
                             for layout in configs_layout:
-                                if f"[configs_layout='{layout}']" in fig.name:
+                                if f"[configs_layout='{layout}'" in fig.name:
                                     pfig_list.append(fig)
                         else:
                             pfig_list.append(fig)

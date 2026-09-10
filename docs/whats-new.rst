@@ -9,6 +9,14 @@ Coming up next (unreleased)
 Features and front-end API
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- **BD files generation**
+
+- **HTML report**
+
+- **Logging** for users and developers
+
+- **Matplotlib stylesheet**
+
 - **Calibration framework** to expose a simple API to users while keeping the internal codebase clear and evolutive, by |gmaze|.
 
 - **Configuration Manager** to read any of the possible configuration parameters, from default distribution values to user-defined configuration files or method settings, (:pr:`2`) by |gmaze|.

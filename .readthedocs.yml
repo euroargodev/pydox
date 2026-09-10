@@ -1,0 +1,28 @@
+# .readthedocs.yml
+# Read the Docs configuration file
+# See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
+
+# Required
+version: 2
+
+# Build PDF & ePub
+formats:
+  - pdf
+  - epub
+
+build:
+    os: "ubuntu-22.04"
+    tools:
+        python: "mambaforge-22.9"
+
+conda:
+    environment: ci/requirements/py3.11-all-pinned.yml
+
+python:
+   install:
+   - method: pip
+     path: .  # This will install argopy from the branch we're building the documentation from
+
+# Build documentation in the docs/ directory with Sphinx
+sphinx:
+  configuration: docs/conf.py

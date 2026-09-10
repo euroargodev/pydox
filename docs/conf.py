@@ -87,6 +87,7 @@ extensions = [
     "sphinx_copybutton",
     "sphinx_design",
     "sphinx_llms_txt",
+    "matplotlib.sphinxext.roles",
 ]
 
 # sphinx_gallery_conf = {

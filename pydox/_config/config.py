@@ -110,9 +110,10 @@ def get_configdir() -> str:
 
 
 def config_files() -> list[Path]:
-    """Get the list of all available configuration files to build a _default_ configuration
+    """Get the list of all available configuration files to build a *default* configuration
 
     List of all possible files:
+
     - From factory, ie where pydox is installed, eg:
         - ``${HOME}/bin/yes/envs/pydox-dev/lib/python3.11/site-packages/pydox/static/pydoxrc``
     - From the user configuration folder, eg:
@@ -130,11 +131,11 @@ def config_files() -> list[Path]:
     -------
     list[Path]
         A list of absolute paths toward default configuration files.
-        The first file is always the _factory_ configuration file.
+        The first file is always the *factory* configuration file.
 
     See Also
     --------
-    :function:`load_configs`
+    :func:`pydox._config.config.load_configs`
     """
 
     def gen_candidates() -> Generator[Path, None, None]:
@@ -221,16 +222,15 @@ def load_factory_config() -> Config:
 
     See Also
     --------
-    :function:`reset_params`
+    :func:`pydox.reset_params`
     """
     file_list = config_files()
-    return load_config_from_file(
-        file_list[0]
-    )  # _factory_ config is always the first one
+    C = load_config_from_file(file_list[0])  # _factory_ config is always the first one
+    return C
 
 
 def load_configs() -> Config:
-    """Load the _default_ configuration from the sequence of all possible configuration files
+    """Load the *default* configuration from the sequence of all possible configuration files
 
     Returns
     -------
@@ -239,7 +239,7 @@ def load_configs() -> Config:
 
     See Also
     --------
-    :function:`config_files`
+    :func:`pydox.config_files`
     """
     file_list = config_files()
     C = load_config_from_file(file_list[0])
@@ -253,6 +253,10 @@ def load_configs() -> Config:
             )
     # Sort dict key alphabetically:
     C = dict(sorted(C.items()))
+
+    # Possibly set default value for specific parameters:
+    if get_by_path(C, "output.root") is None:
+        C = set_by_path(C, "output.root", Path().cwd().joinpath("pydox_output"))
 
     return C
 
@@ -358,18 +362,17 @@ def get_params(param: str, config: Any = None) -> Any | Dict:
 
     See Also
     --------
-    :function:`set_params`, :function:`reset_params`
+    :func:`pydox.set_params`, :func:`pydox.reset_params`
     """
     # Which configuration to work with:
     config = rcParams if config is None else config
-
     return get_by_path(config, param)
 
 
 def set_params(param_or_grp: str, value: Any | Dict = None, **kwargs) -> None:
     """Set the value of a configuration parameter or (sub)group of parameters
 
-    Parameter or (sub)groups of parameters are modified _in place_.
+    Parameter or (sub)groups of parameters are modified *in place*.
 
     Parameters
     ----------
@@ -394,34 +397,39 @@ def set_params(param_or_grp: str, value: Any | Dict = None, **kwargs) -> None:
 
     See Also
     --------
-    :function:`get_params`, :function:`reset_params`
+    :func:`pydox.get_params`, :func:`pydox.reset_params`
 
     Examples
     --------
-    ..code-block: python
+    .. code-block:: python
         :caption: Set one parameter value
 
         # Directly:
         do.set_params('argo.qcflags.psal', [1, 2, 8])
+
         # or at the subgroup level:
         do.set_params('argo.qcflags', psal=[1, 2, 8])
+
         # or at the group level:
         do.set_params('argo', qcflags={'psal': [1, 2, 8]})
 
-    ..code-block: python
-        :caption: Set a (sub)group of parameter values
+    .. code-block:: python
+        :caption: Set a (sub)group of parameter values at the group level
 
-        # At the subgroup level:
-        # with keywords:
-        do.set_params('argo.qcflags', psal=[1, 2, 8], temp=[1, 2, 8])
-        # or a dictionary:
-        do.set_params('argo.qcflags', {'psal': [1, 2, 8], 'temp': [1, 2, 8]})
-
-        # At the group level:
         # with keywords:
         do.set_params('argo', qcflags={'psal': [1, 2, 8], 'temp': [1, 2, 8]})
+
         # or a nested dictionary:
         do.set_params('argo', {'qcflags': {'psal': [1, 2, 8], 'temp': [1, 2, 8]}})
+
+    .. code-block:: python
+        :caption: Set a (sub)group of parameter values at the subgroup level
+
+        # with keywords:
+        do.set_params('argo.qcflags', psal=[1, 2, 8], temp=[1, 2, 8])
+
+        # or a dictionary:
+        do.set_params('argo.qcflags', {'psal': [1, 2, 8], 'temp': [1, 2, 8]})
     """
 
     # Which configuration to work with:
@@ -501,9 +509,9 @@ def reset_params(
 ) -> None:
     """Reset a configuration parameter to default values
 
-    _Default_ values are those from the sequential loading of all available configuration files.
+    *Default* values are those obtained at the end of the sequential loading of all available configuration files.
 
-    Parameter or (sub)groups of parameters are modified _in place_.
+    Parameter or (sub)groups of parameters are modified *in place*.
 
     Parameters
     ----------
@@ -518,12 +526,12 @@ def reset_params(
         The configuration object to reset parameters from.
         By default, use the global configuration object :class:`pydox.params`.
     factory: bool, default=False
-        Set this argument to True in order to reset with _factory_ values instead of _default_ values. Factory values ignore user specific configuration files and is solely based on the Pydox internal static file.
+        Set this argument to True in order to reset with *factory* values instead of *default* values. Factory values ignore user specific configuration files and is solely based on the Pydox internal configuration.
 
     Other Parameters
     ----------------
     reference: Config
-        The configuration object to use as a reference if different from the _default_ or _factory_ objects. This argument is primarily for internal use only.
+        The configuration object to use as a reference if different from the *default* or *factory* objects. This argument is primarily for internal use only.
 
     Returns
     -------
@@ -531,11 +539,11 @@ def reset_params(
 
     See Also
     --------
-    :function:`get_params`, :function:`set_params`
+    :func:`pydox.get_params`, :func:`pydox.set_params`
 
     Warnings
     --------
-    If for some reason the current configuration has lost some parameters compared to the _default_ configuration, this
+    If for some reason the current configuration has lost some parameters compared to the *default* configuration, this
     reset method cannot restore them, it only applies to parameters currently in the configuration.
     """
 
@@ -608,7 +616,7 @@ def check_config(obj: Any) -> Config:
 def is_config(obj: Any) -> bool:
     """Check if an object is a valid configuration
 
-    This method won't raise an error if the object is not a valid configuration. To raise an error, use :function:`check_config`
+    This method won't raise an error if the object is not a valid configuration. To raise an error, use :func:`check_config`
 
     Returns
     -------
@@ -617,7 +625,7 @@ def is_config(obj: Any) -> bool:
 
     See Also
     --------
-    :function:`check_config`
+    :func:`pydox.check_config`
     """
     try:
         check_config(obj)
@@ -629,6 +637,7 @@ def is_config(obj: Any) -> bool:
 # Load the default configuration to be used globally as `do.params`:
 # (because we load pydox._config.config.rcParams as params from pydox.__init__)
 rcParams = load_configs()
+"""Pydox configuration object"""
 
 # Also update Argopy options accordingly:
 ar.set_options(gdac=get_params("argo.src"))

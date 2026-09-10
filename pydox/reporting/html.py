@@ -21,7 +21,7 @@ _path2static = Path(
 slug = lambda name: re.sub(r"[/\\?%*:|\"<>\x7F\x00-\x1F]", "-", name)
 
 TemplateFigure: TypeAlias = Dict[str, str]
-"""A type to describe what is sent to the template to represent one figure, typically based on a PydoxFigure instance"""
+"""A type to describe what is sent to the template to represent one figure, typically based on a :class:`pydox.commodities.PydoxFigure` instance"""
 
 
 def remove_duplicate(
@@ -184,6 +184,10 @@ class CalibrationHTMLReport:
         self.pm = FloatPathMaker(c)
 
     def plot_float_traj(self):
+        """Plot the float trajectory
+
+        Based on :meth:`argopy.ArgoFloat.plot.trajectory`
+        """
         fig, ax, ptch = self.af.plot.trajectory(cbar=False)
         return do.figures.commit(
             fig,
@@ -193,7 +197,7 @@ class CalibrationHTMLReport:
         )
 
     def save_static(self):
-        """Save Pydox template static figures required from the template
+        """Save template static figures to the report path
 
         Copying static figures to the report path allows for figures to be inserted with relative paths.
         """
@@ -239,7 +243,7 @@ class CalibrationHTMLReport:
                 self._save_figure(f)
 
     def pydoxfig2templatefig(self, f: PydoxFigure) -> TemplateFigure:
-        """Transform PydoxFigure instance into a dictionary usable within the Jinja2 template file"""
+        """Transform :class:`pydox.commodities.PydoxFigure` instance into a dictionary usable with the Jinja2 template file"""
         return {
             "title": f.name,
             "category": f.category,
@@ -252,7 +256,7 @@ class CalibrationHTMLReport:
     def retrieve_appendix_figs(
         self, sort_by: str = "category"
     ) -> Dict[str, list[TemplateFigure]]:
-        """Get all TemplateFigure instances to include in the appendix figure sections"""
+        """Get all :class:`pydox.reporting.html.TemplateFigure` instances to include in the appendix figure sections"""
 
         # Get all possible values for the sort_by key:
         sort_values = set([getattr(f, sort_by) for f in self.c.figures])

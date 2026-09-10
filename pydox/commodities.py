@@ -40,12 +40,17 @@ import pickle
 
 @dataclass(frozen=1)
 class Data:
-    """A placeholder for a numerical item: store a value and an error, as float32"""
+    """A placeholder for a frozen numerical item: store a value and an error, as float32
+
+    The error is to 0 by default.
+    """
 
     # todo Consider using Decimal: https://docs.python.org/3/library/decimal.html
 
     value: Union[float, int, np.number]
+    """The value for this data"""
     error: Union[float, int, np.number] = field(default_factory=lambda: 0.0)
+    """The error for this data"""
 
     def __post_init__(self):
         # Re-enforce data types
@@ -63,17 +68,23 @@ class ParameterSet(Protocol):
 
     Notes
     -----
-    - This protocol allows to define types wherever instances of Params, ParamsInAir, ParamsClimatology are expected
-    - We set in here what is expected from any implementation, on our case, this will be the Params class and its children ParamsInAir, ParamsClimatology.
+    - This protocol allows to define types wherever instances of :class:`pydox.commodities.Params`, :class:`pydox.commodities.ParamsInAir`, :class:`pydox.commodities.ParamsClimatology` are expected
+    - We set in here what is expected from any implementation, on our case, this will be the :class:`pydox.commodities.Params` class and its children :class:`pydox.commodities.ParamsInAir`, :class:`pydox.commodities.ParamsClimatology.
     """
 
     fit_drift: bool
+    """A boolean to set if a drift is to be computed or not"""
     initial_gain: Data
+    """Initial value/error of the gain"""
     initial_drift: Data
+    """Initial value/error of the drift"""
     cycles: Any  # not sure what to use exactly here
+    """Argo float cycle numbers to be used"""
 
     @property
-    def uid(self) -> str: ...
+    def uid(self) -> str:
+        """A unique identifier for this set of parameters"""
+        ...
 
 
 ConfigsDict: TypeAlias = OrderedDict[int, ParameterSet]
@@ -84,26 +95,31 @@ ConfigsDict: TypeAlias = OrderedDict[int, ParameterSet]
 class Params:
     """A dataclass to hold a unique parameter set for one computation
 
-    This class produces instances that type as `ParameterSet`.
+    This class produces instances that type as :class:`pydox.commodities.ParameterSet`.
 
     Notes
     -----
     - These parameters are from any group of the configuration, but shared by ALL methods
     - Each parameter has a unique value, even if a list is supplied in the configuration
-    - Instance of `Params` are expected to be produced by Workflow._flatten_configs() and to fill values of a `ConfigsDict` type.
+    - Instance of :class:`pydox.commodities.Params` are expected to be produced by Workflow._flatten_configs() and to fill values of a `ConfigsDict` type.
     - There is no reason to do not have parameters from outside the configuration
     - Create children to be specific about one method parameters
     """
 
     fit_drift: bool
+    """A boolean to set if a drift is to be computed or not"""
     initial_gain: Data
+    """Initial value/error of the gain"""
     initial_drift: Data
+    """Initial value/error of the drift"""
     cycles: Any  # not sure what to use exactly here
+    """Argo float cycle numbers to be used"""
+
     dummy: int  # For dev. only #todo Don't forget to remove this in v1
 
     @property
     def uid(self) -> str:
-        """Return a unique string to identify this set of parameters"""
+        """Return a unique identifier string for this set of parameters"""
         return f"{int(self.fit_drift)}-{id(self.initial_gain)}-{id(self.initial_drift)}"
 
 
@@ -113,12 +129,13 @@ class ParamsInAir(Params):
 
     Notes
     -----
-    - These parameters are from the 'calibration_methods.in_air' subgroup of the configuration
+    - These parameters are from the `calibration_methods.in_air` subgroup of the configuration
     - There is no reason to expect all parameters from this subgroup to be attributes of this class
     - Each parameter has a unique value, even if a list is supplied in the configuration
     """
 
     carryover: bool
+    """A boolean to set if a carryover is to be computed or not"""
     dataset: str
     src: str
     initial_carryover: Data = field(default_factory=lambda: Data(0.0, 0.0))
@@ -126,7 +143,6 @@ class ParamsInAir(Params):
 
     @property
     def uid(self) -> str:
-        """Return a unique string to identify this set of parameters"""
         return f"{super().uid}-{self.method}-{int(self.carryover)}-{self.dataset}"
 
 
@@ -274,12 +290,19 @@ VALID_FIGURE_CATEGORIES = tuple(["debug", "input_data", "fit_results"])
 class PydoxFigure:
 
     fig: mpl.figure.Figure
+    """:class:`matplotlib.figure.Figure` instance"""
     name: str
+    """Name of the figure"""
     category: str = None
+    """Category of the figure among :class:`pydox.commodities.VALID_FIGURE_CATEGORIES`"""
     config_uid: str = None
+    """The configuration UID this figure is emanating from"""
     caller: Callable | str = None
+    """The function calling this instance"""
     pickle: Path = None
+    """:class:`pathlib.Path` to the pickle file where :class:`matplotlib.figure.Figure` was saved by :meth:`pydox.figures.commit`"""
     legend: str = None
+    """A string providing a legend for this figure"""
 
     def __post_init__(self):
         # Validate/set
@@ -393,22 +416,23 @@ class _DoFigures:
         config_uid: Optional[str] = None,
         dest: Optional[Path] = None,
     ) -> PydoxFigure:
-        """Commit a named :mpl:`Figure` object to the global registry of figures
+        """Commit a named :class:`matplotlib.figure.Figure` object to the global registry of figures
 
         This function is to be called from anywhere in the library.
 
         A commit is the following set of operations:
-        - create a new :class:`do.PydoxFigure` instance and append it to the global registry if not already there,
-        - print a watermark on each axes of the figure (if `plots.watermark.show` is set to True),
-        - save the :mpl:`Figure` object on a temporary pickle file,
-        - close the :mpl:`Figure` object (show or save is managed elsewhere using the global registry).
+
+        - create a new :class:`pydox.commodities.PydoxFigure` instance and append it to the global registry if not already there,
+        - print a watermark on each axes of the figure (if setting `plots.watermark.show` is set to True),
+        - save the :class:`matplotlib.figure.Figure` object on a temporary pickle file,
+        - close the :class:`matplotlib.figure.Figure` object (show or save is managed elsewhere using the global registry).
 
         Use the registry to report/show figures matching some criteria based on meta-data filtering.
 
         Parameters
         ----------
-        fig: :class:`mpl.figure.Figure`
-            The :class:`mpl.figure.Figure` instance to commit.
+        fig: :class:`matplotlib.figure.Figure`
+            The :class:`matplotlib.figure.Figure` instance to commit.
         name: str
             The string name given to the figure.
 
@@ -416,16 +440,16 @@ class _DoFigures:
         ----------------
         category: str, default=None
             The figure category to assign to this figure.
-            Possible values are given in :obj:`do.commodities.VALID_FIGURE_CATEGORIES`.
+            Possible values are given in :class:`pydox.commodities.VALID_FIGURE_CATEGORIES`.
         watermark: str, default = None
             If the `plots.watermark.show` setting is True, print this watermark on the figure.
             Note that the default watermark (from `plots.watermark.default` setting) is always added, even if this argument is None.
         config_uid: str, default=None
-            The unique ID to associate this figure with.
-            This is typically a configuration UID, as return by :meth:`Calibration.uid`.
-        dest: Path, default=do.tmp_root()
-            Destination folder of the figure pickle file.
-            This is not the report output and this folder is likely temporary.
+            The unique configuration ID to associate this figure with.
+            This is typically a configuration UID, as return by :meth:`pydox.calibration.spec.Workflow.uid`.
+        dest: Optional[Path]
+            Destination folder of the figure pickle file. Default path is given by :meth:`pydox.tmp_root`.
+            Note that this is not the report output path, this path is likely temporary.
         """
         import pydox as do  # Avoid circularity
 
@@ -551,11 +575,11 @@ class _DoFigures:
 
 @runtime_checkable
 class TPlotParams(Protocol):
-    """A type for anything able to return a PlotParams class instance
+    """A type for anything able to return a :class:`pydox.commodities.PlotParams` instance
 
-    This is used by functions with an argument that is either a partial of PlotParams or a PlotParams
+    This is used by functions with an argument that is either a :class:`functools.partial` of :class:`pydox.commodities.PlotParams` or a :class:`pydox.commodities.PlotParams`
 
-    We could also use a type like: Callable[[Any], PlotParams]
+    We could also use a type like: ``Callable[[Any], PlotParams]``
 
     But a protocol will ensure the function will be able to use the argument as expected.
 
@@ -588,9 +612,9 @@ class PlotParams:
     This provides a mechanism to define the minimal level of figures to be generated in the configuration.
     It can be seen as a `logging level <https://docs.python.org/3/library/logging.html#logging-levels>`_, but for plots.
 
-    Example: If a function defines its own plot as a level 2, the plot should be generated only if the PlotParams.level is higher or equal to 2.
+    Example: If a function defines its own plot as a level 2, the plot should be generated only if ``PlotParams.level`` is higher or equal to 2.
 
-    The default value is from the configuration parameter `plots.level`.
+    The default value is from the configuration parameter ``plots.level``.
 
     Expected list of possible values for `level`:
 
@@ -631,29 +655,28 @@ class PlotParams:
     def get(
         cls, obj: Optional[Callable | TPlotParams] = None, **kwargs
     ) -> "PlotParams":
-        """Return a :class:``PlotParams`` instance from an object
+        """Return a :class:`pydox.commodities.PlotParams` instance from an object
 
         Behavior:
 
-        - If object is None, return a default :class:``PlotParams`` instance with **kwargs.
-        - If object is a partial of :class:``PlotParams``, return the called partial.
-        - If object is an instance of :class:``PlotParams``, return it unchanged.
+        - If object is None, return a default :class:`pydox.commodities.PlotParams` instance with `**kwargs`.
+        - If object is a :class:`functools.partial` of :class:`pydox.commodities.PlotParams`, return the called :class:`functools.partial`.
+        - If object is an instance of :class:`pydox.commodities.PlotParams`, return it unchanged.
 
         In any other case, a :class:`ValueError` is raised.
 
-        This class method can thus be used as an object validator, that will return an instance of :class:`PlotParams` or fails.
+        This class method can thus be used as an object validator, that will return an instance of :class:`pydox.commodities.PlotParams` or fails.
 
         Parameters
         ----------
-        obj: None | partial(:class:``PlotParams``) | :class:``PlotParams``
+        obj: None | :class:`functools.partial`(:class:`pydox.commodities.PlotParams`) | :class:`pydox.commodities.PlotParams`
 
         **kwargs:
-            Passed to :class:``PlotParams`` if obj is None. Ignored otherwise.
+            Passed to :class:`pydox.commodities.PlotParams` if obj is None. Ignored otherwise.
 
         Returns
         -------
-        :class:`PlotParams`
-            An instance of :class:`PlotParams`
+        :class:`pydox.commodities.PlotParams`
 
         Raises
         ------

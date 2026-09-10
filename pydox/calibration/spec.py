@@ -21,17 +21,18 @@ from pydox.commodities import (
     PydoxFigure,
     VALID_FIGURE_CATEGORIES,
 )
-from pydox.errors import UnFitted, UnSelected
+from pydox.errors import UnFitted, UnSelected, UnsupportedSetting
 from pydox.utils.casting import is_ctelist, to_list
 from pydox.io.argo.facade import corr_B_files
 from pydox.reporting.logs import getLogger
+from pydox.reporting.html import CalibrationHTMLReport
 
 log = getLogger("pydox.calibration.spec", context_level=20)
 
 
 class Workflow(ABC):
     """
-    Base class for one or more calibrations
+    Base class for one or more calibrations:
     - Support more than one configuration set
     - Support more than one method
     - Support ordered vs sequential vs parallel gain computation
@@ -44,8 +45,8 @@ class Workflow(ABC):
 
     We shall review and fix this.
 
-    Notes
-    -----
+    Warnings
+    --------
     A 'Workflow' instance (deep)copies the global configuration object internally and will work only with this copy afterward.
 
     Therefore, any changes to the global configuration made after the creation of an instance, won't have any impact
@@ -53,6 +54,16 @@ class Workflow(ABC):
     """
 
     def __init__(self, *args, **kwargs):
+        """
+        Parameters
+        ----------
+        name: Optional[str] = None
+
+        Other Parameters
+        ----------------
+        config: Config
+            A specific configuration object to use instead of the current one from :attr:`pydox.params`
+        """
         config: Config = kwargs.get("config", do.params)
         self.name: str = kwargs.get("name", "")
 
@@ -83,19 +94,6 @@ class Workflow(ABC):
             OrderedDict()
         )  # Filled by self.fit(), return by self.coefs
         self._fit_data = OrderedDict()  # Filled by self.fit(), return by self.fit_data
-
-    @classmethod
-    def from_config(cls, config, *args, **kwargs) -> "Workflow":
-        """
-
-        I'm not sure yet what is the best way to implement this:
-
-        - Should the config argument _overload_ the default configuration (do.params)
-        - Or should the config argument be a full configuration, ie _overwrite_ the default configuration (do.params)
-
-        """
-        # return cls(config=config, *args, **kwargs)
-        raise NotImplementedError
 
     def _repr_params_shared(self) -> list[str]:
         """Return a description of parameters shared by all methods
@@ -235,8 +233,22 @@ class Workflow(ABC):
             m.update(bytes(str(self.configs[c]), "utf-8"))
         return m.hexdigest()
 
-    def uid(self, icfg: int = None) -> str:
-        """UID for this Workflow or a specific configuration"""
+    def uid(self, icfg: Optional[int] = None) -> str:
+        """Unique identifier string for this instance
+
+        Parameters
+        ----------
+        icfg: Optional[int], default=None
+            Possibly return a unique identifier for a specific configuration number.
+
+        Returns
+        -------
+        str
+
+        Notes
+        -----
+        The UID is based on the instance name and configuration attributes.
+        """
         return self._uid(icfg)
 
     @property
@@ -245,18 +257,28 @@ class Workflow(ABC):
         return self._fitted  # Set by self.fit()
 
     def get_params(self, *args, **kwargs):
-        """Get configuration parameter(s) for this instance only"""
+        """Get configuration parameter(s) for this instance only
+
+        This is a shortcut of :meth:`pydox.get_params` with this instance configuration object.
+        """
         return do.get_params(*args, **kwargs, config=self._cfg)
 
     def set_params(self, *args, **kwargs) -> Self:
-        """Set configuration parameter(s) for this instance only"""
+        """Set configuration parameter(s) for this instance only
+
+        This is a shortcut of :meth:`pydox.set_params` with this instance configuration object.
+        """
         do.set_params(*args, **kwargs, config=self._cfg)
         return self
 
     def reset_params(self, *args, **kwargs) -> Self:
         """Reset configuration parameter(s) to instantiation initial value(s)
 
-        ‼️ This method does not reset parameters to current _default_ or _factory_ values, but to values at instantiation time.
+        This is a shortcut of :meth:`pydox.reset_params` with this instance configuration object.
+
+        Warnings
+        --------
+        ‼️ This method does not reset parameters to *default* or *factory* values, but to values set at instantiation time.
         """
         do.reset_params(*args, **kwargs, config=self._cfg)
         return self
@@ -282,12 +304,12 @@ class Workflow(ABC):
     def flatten_configs(self) -> ConfigsDict:
         """Return a dictionary with all possible configurations
 
-        Dictionary keys are integers, values are commodity dataclasses with all required parameters for the coefs computation.
+        Dictionary keys are integers, values are :class:`pydox.commodities.Params` dataclasses with all required parameters for the coefficients computation.
 
         Notes
         -----
         This is a method that "translates" information from the user-level API configuration
-        into commodity dataclasses to be consumed by low-level computational functions.
+        into :class:`pydox.commodities.Params` dataclasses to be consumed by low-level computational functions.
         """
         return self._flatten_configs()
 
@@ -315,7 +337,7 @@ class Workflow(ABC):
 
     @abstractmethod
     def load_input_data(self, data: Any) -> Dict[int, Any]:
-        """Input data for fit"""
+        """Load input data for the flatten list of configurations"""
         # Must populate the internal placeholder `self._input_data`
         raise NotImplementedError
 
@@ -383,24 +405,26 @@ class Workflow(ABC):
         self,
         icfg: Optional[int] = None,
         categories: str | list[str] = "fit_results",
-        configs_layout: str | list[str] = ["hue"],
-    ) -> list[mpl.figure.Figure]:
-        """Show figures
+        configs_layout: str | list[str] = "hue",
+    ) -> List[mpl.figure.Figure]:
+        """Show figures from this instance
 
         Parameters
         ----------
         icfg: int, optional, default = None
            Select plots for a specific configuration number.
            If set to None (default), show only plots shared by all configurations (eg: fit results).
-        categories: str | list[str], default = "fit_results"
-            Select one or a list of plot categories to show (eg: "debug", "input_data", "fit_results").
+
+        categories: str | list[str], default = ``fit_results``
+            Select one or a list of plot categories to show (eg: ``debug``, ``input_data``, ``fit_results``).
             Valid values are in :class:`pydox.commodities.VALID_FIGURE_CATEGORIES`.
-        configs_layout: str | list[str], default = "hue"
-            Select One or more possible layout for plots with more than one configuration.
+
+        configs_layout: str | list[str], default = ``hue``
+            Select one or more possible layout for plots with more than one configuration (eg: ``hue``, ``subplot``, ``figure``).
 
         Returns
         -------
-        list[mpl.figure.Figure]
+        List[:class:`matplotlib.figure.Figure`]
         """
         ###### Validate arguments
         cfg_list: list[int] = []
@@ -462,10 +486,21 @@ class Workflow(ABC):
         return [f.fig for f in pfig_list]
 
     @property
-    def best_fit(self):
+    def best_fit(self) -> int:
+        """ID of the configuration selected as the best fit
+
+        This is an integer in the range: 0 < `n_configs`
+        """
         return self._best_fit
 
-    def set_best_fit(self, icfg: int):
+    def set_best_fit(self, icfg: int) -> Self:
+        """Set the configuration ID for the best fit
+
+        Parameters
+        ----------
+        icfg: int
+            Configuration ID, must be an integer in the range: 0 < `n_configs`
+        """
         if self.fitted:
             if icfg in range(self.n_configs):
                 if self.best_fit is not None and self.best_fit != icfg:
@@ -481,6 +516,7 @@ class Workflow(ABC):
             raise UnFitted(
                 "Cannot select the best configuration before fitting on one Argo float data !"
             )
+        return self
 
     def create_corrBfile(
         self, a_float: ar.ArgoFloat, icfg: Optional[int] = None
@@ -511,3 +547,50 @@ class Workflow(ABC):
                 )
         coef: Coefficients | CoefficientsInAir = deepcopy(self.coefs[icfg])
         return corr_B_files(a_float, coef)
+
+    def to_report(
+        self, a_float: ar.ArgoFloat, file_name: Optional[str] = None, **kwargs
+    ):
+        """Create a calibration report
+
+        Parameters
+        ----------
+        a_float: :class:`argopy.ArgoFloat`
+            The Argo float to use for the report, must be the same used to fit this instance.
+        file_name: str
+            The file name of the report to write.
+
+        Returns
+        -------
+        :class:`pathlib.Path`
+
+        Notes
+        -----
+        - The best fit ID must be selected with :meth:`set_best_fit`
+        - Only HTML format are supported at this point
+        - The report is based on the template defined in settings
+
+        See Also
+        --------
+        :class:`pydox.reporting.CalibrationHTMLReport`
+            Path to published report, using settings along the convention: `<output.root>/<WMO>/<reports.save.path>/<reports.save.prefix>{report_name}.<reports.save.format>`
+
+        """
+        if do.get_params("reports.save.format", config=self._cfg) != "html":
+            raise UnsupportedSetting(
+                f"Only 'html' report format is supported at this time, '{do.get_params('reports.save.format', config=self._cfg)}'."
+            )
+
+        if not self.fitted:
+            raise UnFitted("Cannot create a report without a fit, use 'fit()'")
+        elif self.best_fit is None:
+            raise UnSelected(
+                "Cannot create a report without a best fit, use 'set_best_fit()'"
+            )
+        elif self._fitted_float["WMO"] != a_float.WMO:
+            raise ValueError(
+                f"Reporting must be done with the same float as the fit ! {a_float.WMO} vs {self._fitted_float['WMO']}"
+            )
+
+        self._reporter = CalibrationHTMLReport(self, a_float)
+        return self._reporter.publish(file_name=file_name, **kwargs)

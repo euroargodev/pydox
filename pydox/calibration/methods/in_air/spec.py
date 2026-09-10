@@ -33,6 +33,8 @@ log = getLogger("pydox.calibration.methods.in_air.spec", context_level=20)
 
 
 class MethodInAir(Method):
+    """Implementation of the In-Air calibration method"""
+
     rcgroup = "in_air"
 
     def __init__(self, *args, **kwargs):
@@ -81,14 +83,23 @@ class MethodInAir(Method):
         self,
         a_float: ar.ArgoFloat,
         ppar: Optional[TPlotParams] = None,
-        **kwargs,
+        refresh: bool = False,
     ) -> Self:
         """Load input data for the flatten list of configurations
 
-        This method populates self._input_data
-        """
-        refresh: bool = kwargs.get("refresh", False)
+        Parameters
+        ----------
+        a_float: :class:`argopy.ArgoFloat`
+            The Argo float to load data from.
+        ppar: Optional[:class:`pydox.commodities.PlotParams`]
+            If set to None, create a partial of :class:`pydox.commodities.PlotParams`  with this instance attribute :attr:`name` and configuration parameters `plots.dpi` and `plots.level`.
+        refresh: bool, default=False
+            Determine if input data must be reloaded if they are already in the internal cache
 
+        Returns
+        -------
+        Self
+        """
         # Create a parameter generator for plots, to be communicated downstream at lower levels:
         if ppar is None:
             ppar = partial(
@@ -131,33 +142,33 @@ class MethodInAir(Method):
         a_float: ar.ArgoFloat,
         method: ExecutionMethods = "thread",
     ) -> Self:
-        """Compute calibration coefficients for all possible configuration set and one Argo float
+        """Compute calibration coefficients for all possible configurations and one Argo float
 
-        According to this instance configurations (self.configs), this method is in charge of:
+        According to this instance configurations, this method is in charge of:
+
         - Loading/preprocessing Argo Float data,
-        - Loading/preprocessing Reference data (eg: from NCEP),
+        - Loading/preprocessing Atmospheric Reference data (eg: from NCEP),
         - Executing all possible computations, sequentially or in parallel
-        - Fill in internal placeholder for coeffcients and fit data
+        - Fill in internal placeholders for coefficients and fit data
+        - Generate appropriate figures
 
-        All of these steps are delegated to external functions taking `argofloat_obj` and a :class:`ParameterSet` (ie one value from `self.configs`) as input.
+        All of these steps are delegated to external functions taking the :class:`argopy.ArgoFloat` and a :class:`pydox.commodities.Params` (ie one value from `self.configs`) as input.
 
         Parameters
         ----------
-        a_float
-            An object that will be able to return Argo float data
-            #Todo: define clearly what we expect here
-
-        method: ExecutionMethods
+        a_float: :class:`argopy.ArgoFloat`
+            An :class:`argopy.ArgoFloat` instance to load data from and fit coefficients on.
+        method: str, default=`thread`
+            The execution method of all possible configuration(s): "sequential", "thread" or "process".
 
         Returns
         -------
         Self
 
-        Comments
-        --------
+        Notes
+        -----
         In order to load data that will be used by each fit, we need settings from the list of configurations:
-        But the list of configurations (self.configs) is a list of ParameterSet that does not contain ALL
-        possibly required settings from the configuration (eg: argo QC
+        But the list of configurations (`self.configs`) is a list of :class:`pydox.commodities.Params` that does not contain ALL possibly required settings from the configuration (eg: argo QC).
 
         """
         # Create a parameter generator for plots, to be communicated downstream at lower levels:

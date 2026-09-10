@@ -279,22 +279,9 @@ def list_methods() -> list[str]:
 
 
 def tmp_root(new: bool = False, config: Optional[object] = None) -> Path:
-    """Return a temporary folder
+    """Return a temporary folder path
 
-    The temporary folder is named after the exact creation datetime stamp, following the general format:
 
-    <output.root>/tmp/<%Y%m%d%H%M%S%f>
-
-    Eg:
-
-    If ``output.root`` is set to: ``/Users/johndoe/pydox``
-    then the temporary folder is something like: ``/Users/johndoe/pydox/tmp/20260717100903168376``.
-
-    Note that if the ``output.root`` configuration parameter is not set, we fall back on the current working directory.
-
-    Also note that a unique temporary folder is created at runtime, therefore, calling ``do.tmp_root()`` twice will return the same result.
-
-    In order to force create a new temporary folder, use the argument ``new=True``.
 
     Parameters
     ----------
@@ -306,7 +293,23 @@ def tmp_root(new: bool = False, config: Optional[object] = None) -> Path:
 
     Returns
     -------
-    :class:`Path`
+    :class:`pathlib.Path`
+
+    Notes
+    -----
+    The temporary folder is named after the exact creation datetime stamp, following the general format:
+
+    ``<output.root>/tmp/<%Y%m%d%H%M%S%f>``
+
+    Eg: If ``output.root`` is set to: ``/Users/johndoe/pydox``
+    then the temporary folder is something like: ``/Users/johndoe/pydox/tmp/20260717100903168376``.
+
+    Note that if the ``output.root`` configuration parameter is not set, we fall back on the current working directory.
+
+    Also note that a unique temporary folder is created at runtime, therefore, calling ``do.tmp_root()`` twice will return the same result.
+
+    In order to force create a new temporary folder, use the argument ``new=True``.
+
     """
     from pydox._config.config import check_config  # Avoid circular import
 

@@ -1,13 +1,9 @@
 from abc import ABC, abstractmethod
 from typing import Any, Optional
-import argopy as ar
 
-import pydox as do
 from pydox._config.utils import dict_to_string
-from pydox.errors import UnsupportedSetting, UnFitted, UnSelected
 from pydox.utils.casting import to_list
 from pydox.calibration.spec import Workflow
-from pydox.reporting.html import CalibrationHTMLReport
 
 
 class Method(Workflow, ABC):
@@ -149,26 +145,3 @@ class Method(Workflow, ABC):
             [summary.append(line) for line in self._repr_coefs()]
 
         return "\n".join(summary)
-
-    def to_report(
-        self, a_float: ar.ArgoFloat, file_name: Optional[str] = None, **kwargs
-    ):
-        """Create calibration report"""
-        if do.get_params("reports.save.format", config=self._cfg) != "html":
-            raise UnsupportedSetting(
-                f"Only 'html' report format is supported at this time, '{do.get_params('reports.save.format', config=self._cfg)}'."
-            )
-
-        if not self.fitted:
-            raise UnFitted("Cannot create a report without a fit, use 'fit()'")
-        elif self.best_fit is None:
-            raise UnSelected(
-                "Cannot create a report without a best fit, use 'set_best_fit()'"
-            )
-        elif self._fitted_float["WMO"] != a_float.WMO:
-            raise ValueError(
-                f"Reporting must be done with the same float as the fit ! {a_float.WMO} vs {self._fitted_float['WMO']}"
-            )
-
-        self._reporter = CalibrationHTMLReport(self, a_float)
-        return self._reporter.publish(file_name=file_name, **kwargs)

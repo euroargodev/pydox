@@ -8,7 +8,12 @@ from pydox.calibration.method import Method
 
 
 class MethodClimatology(Method):
-    """Quick and dirty implementation for dev purposes"""
+    """Quick and dirty implementation for dev purposes
+
+    Warnings
+    --------
+    This is a dummy implementation
+    """
 
     rcgroup = "climatology"
 

@@ -12,6 +12,7 @@ from typing import Optional, Dict, Any
 from pydox.reporting import colors
 from pydox.reporting import logs
 from pydox.reporting import pdf
+from pydox.reporting.html import CalibrationHTMLReport
 
 COLORS: Optional[colors.ColorScheme] = None
 MPLSTYLE: Optional[Dict[str, Any]] = None

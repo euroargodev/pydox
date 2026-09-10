@@ -18,7 +18,7 @@ operator:
 # ============================================= Root path for output
 # Root path to save all pydox output: calibration/adjustment data, figures, reports, logs
 output:
-  root: # e.g. : ${HOME}/ARGO/DMQC/OXYGEN/PYDOX. If this parameter is None at runtime, Pydox will automatically set it to: ${CWD}/pydox
+  root: # e.g. : ${HOME}/ARGO/DMQC/OXYGEN/PYDOX. If this parameter is None at runtime, Pydox will automatically set it to: ${CWD}/pydox_output
 
 # ============================================= Argo Float data
 argo:
@@ -175,6 +175,7 @@ reports:
       # Must be 7 HEX colors, from dark to light
       # https://coolors.co/0a2463-023978-0c9eb3-14b1b7-7bcacc-bae3e2-f8fbf8
       html: default.html
+      tex: default.tex
 
   save:
     format: html

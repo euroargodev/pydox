@@ -16,7 +16,19 @@ from pydox.calibration.methods.climatology import MethodClimatology
 def Calibration(
     method: Optional[str] = None, *args, **kwargs
 ) -> MethodInAir | MethodClimatology:
-    """Facade to create a single methodology calibration workflow
+    """Create a single methodology calibration
+
+    Parameters
+    ----------
+    method: Optional[str]
+
+        Name of the method implementation to create.
+
+        By default, creates a method defined with the ``calibration_methods.default`` setting.
+
+    Returns
+    -------
+    :class:`pydox.calibration.MethodInAir`, :class:`pydox.calibration.MethodClimatology`
 
     Notes
     -----
@@ -37,16 +49,16 @@ def Calibration(
 
 
 class CalibrationSet(Workflow):
-    """Facade to handle a collection of methodology implementations
+    """Collection of methodology implementations
 
     Notes
     -----
-    - Support more than one configuration
+    - Support more than one calibration method
     - Handle sequential or parallel execution of configuration sets
 
     Examples
     --------
-    ..code-block::python
+    .. code-block:: python
 
         from pydox import Calibration, CalibrationSet
 
@@ -57,9 +69,14 @@ class CalibrationSet(Workflow):
         s.n_configs
         s.configs
 
+        s.fit(a_float)
+
         s.fitted
         s.coefs
+        s.set_best_fit
+        s.best_fit
 
+        s.plot
     """
 
     def __init__(self, *args, **kwargs):

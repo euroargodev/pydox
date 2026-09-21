@@ -613,13 +613,18 @@ def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients):
 
     relative_error = do.get_params("adjustment.relative_error")
 
-    print("Correction used :")
-    print(f"gain : {coef_kept.gain}")
+    #print("Correction used :")
+    #print(f"gain : {coef_kept.gain}")
 
-    if coef_kept.drift is None:
-        print("No drift applied")
+   # if coef_kept.drift is None:
+   #     print("No drift applied")
+   # else:
+   #     print(f"drift : {coef_kept.drift}")
+
+    if coef_kept.drift is None :
+        log.info(f"Correction used : gain = {coef_kept.gain} / No drift applied")
     else:
-        print(f"drift : {coef_kept.drift}")
+        log.info(f"Correction used : gain = {coef_kept.gain} / drift = {coef_kept.drift}")
 
     # For each B file
     for i_fic in range(0, len(list_Bfiles)):
@@ -934,4 +939,4 @@ def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients):
                 ("BD" + basename[2:].replace("_new2.nc", ".nc"))
             )
             Path(file_adj).rename(newname)
-            print(f"File {newname} created")
+            log.info(f"File {newname} created")

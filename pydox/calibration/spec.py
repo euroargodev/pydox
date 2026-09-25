@@ -7,6 +7,7 @@ import hashlib
 from collections import OrderedDict
 from dataclasses import asdict
 
+from functools import partial
 import numpy as np
 import matplotlib as mpl
 import argopy as ar
@@ -20,6 +21,7 @@ from pydox.commodities import (
     CoefficientsInAir,
     PydoxFigure,
     VALID_FIGURE_CATEGORIES,
+    PlotParams,
 )
 from pydox.errors import UnFitted, UnSelected, UnsupportedSetting
 from pydox.utils.casting import is_ctelist, to_list
@@ -546,7 +548,18 @@ class Workflow(ABC):
                     f"Create BD files with a configuration id={icfg} that is not the selected best fit {self.best_fit}"
                 )
         coef: Coefficients | CoefficientsInAir = deepcopy(self.coefs[icfg])
-        return corr_B_files(a_float, coef)
+
+        ppar = partial(
+            PlotParams,
+            watermark=self.name,
+            dpi=self.get_params("plots.dpi"),
+            level=self.get_params("plots.level"),
+        )
+
+        this_ppar: PlotParams = PlotParams.get(ppar)
+        this_ppar.uid = self.uid()
+
+        return corr_B_files(a_float, coef, icfg, ppar = this_ppar)
 
     def to_report(
         self, a_float: ar.ArgoFloat, file_name: Optional[str] = None, **kwargs

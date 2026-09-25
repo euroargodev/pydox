@@ -568,7 +568,7 @@ def string_var(data_src, name, txt, strlen=None):
         return stringtochar(str_array)[0]
 
 
-def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients):
+def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients, icfg : int, ppar: Optional[TPlotParams] = None, figsize=(10,4)):
     """Function to read B files associated to the ArgoFloat, correct the DOXY_ADJUSTED using coef_kept, update the associated QC, SCIENTIFIC_CALIB*, ...
     and generate the corrected B files (BD files).
     DOXY_ADJUSTED = (coef_kept.gain * (1 + coef_kept.drift/100* (juld_day - juld_day_launch)/365) * DOXY.
@@ -581,6 +581,8 @@ def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients):
         The :class:`ar.ArgoFloat` object to read cycle numbers from.
     coef_kept : Coefficients
         contains the final gain/drift to apply to correct the DOXY data
+    icfg : calibration config
+    ppar: Optional[TPlotParams]
 
     Returns
     -------
@@ -588,6 +590,17 @@ def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients):
         The function generates BD files with corrected DOXY in DOXY_ADJUSTED. Variables depending of N_CALIB and N_HISTORY are updated, as the update_date.
 
     """
+
+    this_plot_level = 20
+
+    ppar = PlotParams.get(ppar)
+
+    fig, ax = plt.subplots(
+        nrows=1,
+        ncols=1,
+        figsize=figsize,
+        dpi=ppar.dpi,
+    )
 
     cycles_to_write = semantic_cycle2values(
         data_float, settings=None, group="adjustment"
@@ -613,13 +626,18 @@ def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients):
 
     relative_error = do.get_params("adjustment.relative_error")
 
-    print("Correction used :")
-    print(f"gain : {coef_kept.gain}")
+    #print("Correction used :")
+    #print(f"gain : {coef_kept.gain}")
 
-    if coef_kept.drift is None:
-        print("No drift applied")
+   # if coef_kept.drift is None:
+   #     print("No drift applied")
+   # else:
+   #     print(f"drift : {coef_kept.drift}")
+
+    if coef_kept.drift is None :
+        log.info(f"Correction used : gain = {coef_kept.gain} / No drift applied")
     else:
-        print(f"drift : {coef_kept.drift}")
+        log.info(f"Correction used : gain = {coef_kept.gain} / drift = {coef_kept.drift}")
 
     # For each B file
     for i_fic in range(0, len(list_Bfiles)):
@@ -899,6 +917,9 @@ def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients):
                 data_adj["DOXY_ADJUSTED_ERROR"][:],
             )
 
+            plot1 = ax.plot(data_adj["DOXY_ADJUSTED"],data_adj["PRES"],".-g",label="ADJUSTED")
+            plot2 = ax.plot(data_adj["DOXY"],data_adj["PRES"],".-b",label="RAW")
+
             # Global profile QC
             good_flags = [b"1", b"2", b"5", b"8"]
             bad_flags = [b"3", b"4"]
@@ -934,4 +955,18 @@ def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients):
                 ("BD" + basename[2:].replace("_new2.nc", ".nc"))
             )
             Path(file_adj).rename(newname)
-            print(f"File {newname} created")
+            log.info(f"File {newname} created")
+
+            ax.grid(True)
+            ax.set_xlabel("DOXY")
+            ax.set_ylabel("PRES")
+            ax.legend([plot1[0], plot2[0]],["ADJUSTED", "RAW"])
+            ax.invert_yaxis()
+            suptitle = f"{data_float.WMO}_Doxy_Adjusted/Raw_comparison_config_{icfg}"
+            do.figures.commit(
+                fig,
+                name=f"{suptitle} [configs_layout='figure']",
+                category="fit_results",
+                watermark=ppar.watermark,
+                config_uid=ppar.uid,
+            )

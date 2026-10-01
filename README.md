@@ -12,6 +12,7 @@
 
 📚 The user API design proposal (i.e. how **pydox** shall be used by DMQC operators) is available here: https://archimer-intranet.ifremer.fr/doc/01015/112667
 
+Documentation: https://pydox.readthedocs.io
 
 ## Usage
 
@@ -181,6 +182,8 @@ In short:
   - by users to create BD files (eg: ```.compute()``` and ```.to_netcdf()``` methods)
 
 The complete user API will be documented progressively, first in docstrings, second in the online documentation.
+
+See here: https://pydox.readthedocs.io/en/latest/api.html
 
 #### Current structure
 

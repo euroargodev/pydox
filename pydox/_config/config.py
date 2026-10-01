@@ -497,11 +497,22 @@ def set_params(param_or_grp: str, value: Any | Dict = None, **kwargs) -> None:
         None,
     ):
         log.debug(
-            f"Setting 'reports.template' is updated to '{value}': re-loading templates..."
+            f"Setting 'reports.template' was updated to '{value}': re-loading templates..."
         )
         import pydox as do
 
         do.reporting.facade.load_template()
+
+    if next(
+        (value for key, values in dotted_params.items() if key == "argo.src"),
+        None,
+    ):
+        log.debug(
+            f"Setting 'argo.src' was updated to '{value}': propagating this value to argopy option 'gdac'..."
+        )
+
+        ar.set_options(gdac=value)
+        log.info(f"Pydox has set the Argopy option 'gdac' to '{value}'")
 
 
 def reset_params(

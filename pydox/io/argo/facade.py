@@ -238,6 +238,7 @@ def get_argo_data_for_in_air_method(
             category="debug",
             config_uid=ppar.uid,
         )
+
     if (this_plot_level := 0) >= ppar.level:
         suptitle = "Sprof vs Rtraj In-Air and In-Water Oxygen data"
 

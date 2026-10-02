@@ -957,16 +957,16 @@ def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients, icfg : int, 
             Path(file_adj).rename(newname)
             log.info(f"File {newname} created")
 
-            ax.grid(True)
-            ax.set_xlabel("DOXY")
-            ax.set_ylabel("PRES")
-            ax.legend([plot1[0], plot2[0]],["ADJUSTED", "RAW"])
-            ax.invert_yaxis()
-            suptitle = f"{data_float.WMO}_Doxy_Adjusted/Raw_comparison_config_{icfg}"
-            do.figures.commit(
-                fig,
-                name=f"{suptitle} [configs_layout='figure']",
-                category="fit_results",
-                watermark=ppar.watermark,
-                config_uid=ppar.uid,
-            )
+    ax.grid(True)
+    ax.set_xlabel("DOXY")
+    ax.set_ylabel("PRES")
+    ax.legend([plot1[0], plot2[0]],["ADJUSTED", "RAW"])
+    ax.invert_yaxis()
+    suptitle = f"{data_float.WMO}_Doxy_Adjusted/Raw_comparison_config_{icfg}"
+    do.figures.commit(
+        fig,
+        name=f"{suptitle} [configs_layout='figure']",
+        category="fit_results",
+        watermark=ppar.watermark,
+        config_uid=ppar.uid,
+    )

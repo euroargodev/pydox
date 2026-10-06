@@ -77,14 +77,18 @@ def fit(params: ParamsInAir, data=Any) -> FitResult:
         raise ValueError("All PPOX data must have the same length")
 
     # Depending on parameters, we select a model and set arguments for curve_fit:
+    fit_possible = 1
     if not params.fit_drift:
         if params.carryover:
-            f = models.Gain_CarryOver
-            xdata = [PPOX1, PPOX2]
-            ydata = REF_PPOX
-            p0: models.Array = np.array(
-                [params.initial_gain.value, params.initial_carryover.value]
-            )  # G/C
+            if np.isnan(PPOX2).all() or np.isnan(PPOX1).all():
+                fit_possible = 0
+            else:
+                f = models.Gain_CarryOver
+                xdata = [PPOX1, PPOX2]
+                ydata = REF_PPOX
+                p0: models.Array = np.array(
+                    [params.initial_gain.value, params.initial_carryover.value]
+                )  # G/C
         else:
             f = models.Gain
             xdata = PPOX1 / PPOX1
@@ -92,16 +96,19 @@ def fit(params: ParamsInAir, data=Any) -> FitResult:
             p0: models.Array = np.array(params.initial_gain.value)  # G
     else:
         if params.carryover:
-            f = models.Gain_Derive_CarryOver
-            xdata = [PPOX1, PPOX2, delta_T_REF]
-            ydata = REF_PPOX
-            p0: models.Array = np.array(
-                [
-                    params.initial_gain.value,
-                    params.initial_carryover.value,
-                    params.initial_drift.value,
-                ]
-            )  # G/C/D
+            if np.isnan(PPOX2).all() or np.isnan(PPOX1).all():
+                fit_possible = 0
+            else:
+                f = models.Gain_Derive_CarryOver
+                xdata = [PPOX1, PPOX2, delta_T_REF]
+                ydata = REF_PPOX
+                p0: models.Array = np.array(
+                    [
+                        params.initial_gain.value,
+                        params.initial_carryover.value,
+                        params.initial_drift.value,
+                    ]
+                )  # G/C/D
         else:
             f = models.Gain_Derive
             xdata = [PPOX1 / PPOX1, delta_T_REF]
@@ -129,44 +136,62 @@ def fit(params: ParamsInAir, data=Any) -> FitResult:
     #     function can be determined using introspection, otherwise a
     #     ValueError is raised).
 
-    fit_results, covariance, info, mesg, ier = curve_fit(
-        f, xdata, ydata, p0=p0, nan_policy="omit", full_output=True
-    )
-
-    # Compute R2:
-    residuals = ydata - f(xdata, *fit_results)
-    ss_res = np.sum(residuals**2)
-    ss_tot = np.sum((ydata - np.mean(ydata)) ** 2)
-    r_squared = 1.0 - (ss_res / ss_tot)
-
-    # And fill in results for output:
     c = {}
-    c["gain"] = Data(fit_results[0], np.sqrt(np.diag(covariance))[0])
-    # c["gain"] = Data(
-    #     fit_results[0], params.dummy
-    # )  # Replace error with dummy var. to track stuff in dev.
-    # c["gain"] = Data(
-    #    1.0 + params.initial_gain.value, params.dummy
-    # )  # Use dummy value to check for cumulative gain feature and replace error with dummy var. to track stuff in dev.
+    if fit_possible == 1:
+        fit_results, covariance, info, mesg, ier = curve_fit(
+            f, xdata, ydata, p0=p0, nan_policy="omit", full_output=True
+        )
 
-    if params.carryover:
-        c["carryover"] = Data(fit_results[1], np.sqrt(np.diag(covariance))[1])
+        # Compute R2:
+        residuals = ydata - f(xdata, *fit_results)
+        ss_res = np.sum(residuals**2)
+        ss_tot = np.sum((ydata - np.mean(ydata)) ** 2)
+        r_squared = 1.0 - (ss_res / ss_tot)
 
-    if params.fit_drift & params.carryover:
-        c["drift"] = Data(fit_results[2], np.sqrt(np.diag(covariance))[2])
+        # And fill in results for output:
+        c["gain"] = Data(fit_results[0], np.sqrt(np.diag(covariance))[0])
+        # c["gain"] = Data(
+        #     fit_results[0], params.dummy
+        # )  # Replace error with dummy var. to track stuff in dev.
+        # c["gain"] = Data(
+        #    1.0 + params.initial_gain.value, params.dummy
+        # )  # Use dummy value to check for cumulative gain feature and replace error with dummy var. to track stuff in dev.
 
-    if params.fit_drift and not params.carryover:
-        c["drift"] = Data(fit_results[1], np.sqrt(np.diag(covariance))[1])
+        if params.carryover:
+            c["carryover"] = Data(fit_results[1], np.sqrt(np.diag(covariance))[1])
 
+        if params.fit_drift & params.carryover:
+            c["drift"] = Data(fit_results[2], np.sqrt(np.diag(covariance))[2])
+
+        if params.fit_drift and not params.carryover:
+            c["drift"] = Data(fit_results[1], np.sqrt(np.diag(covariance))[1])
+
+        coefs = CoefficientsInAir(**c)
+        # coefs = CoefficientsInAir(gain=Data(12., 3.), carryover=...)
+
+        fit_data: dict[str, Any] = {
+            "R2": r_squared,
+            "uid": params.uid,
+            "initial gain": params.initial_gain.value,
+            "n_cycles": len(PPOX1),
+        }
+    else:
+        c["gain"] = Data(np.nan)
+
+        if params.carryover:
+            c["carryover"] = Data(np.nan)
+
+        if params.fit_drift:
+            c["drift"] = Data(np.nan)
+
+        fit_data: dict[str, Any] = {
+            "R2": np.nan,
+            "uid": params.uid,
+            "initial gain": params.initial_gain.value,
+            "n_cycles": len(PPOX1),
+        }
     coefs = CoefficientsInAir(**c)
     # coefs = CoefficientsInAir(gain=Data(12., 3.), carryover=...)
-
-    fit_data: dict[str, Any] = {
-        "R2": r_squared,
-        "uid": params.uid,
-        "initial gain": params.initial_gain.value,
-        "n_cycles": len(PPOX1),
-    }
 
     # Finally gather and return all results into a controlled object:
     return FitResult(coefs=coefs, fit_data=fit_data)

@@ -133,10 +133,20 @@ def get_argo_data_for_in_air_method(
                 )
 
     #############
+    if Rtraj_inair.sizes['N_MEASUREMENT']==0:
+        log.warning(f"No InAir Data for the float {Rtraj_inair['PLATFORM_NUMBER'].item()}. No Inair solution possible")
+    elif Rtraj_inwater.sizes['N_MEASUREMENT']==0: # WMO 7902279 : No InWater data
+        log.warning(f"No Inwater Data for the float {Rtraj_inwater['PLATFORM_NUMBER'].item()}. No Inair with Carryover solution possible")
+        shared_cycles = Rtraj_inair["CYCLE_NUMBER"]
+        Rtraj_inwater = deepcopy(Rtraj_inair)
+        Rtraj_inwater['TEMP'] = ('N_MEASUREMENT', np.full(Rtraj_inwater.sizes['N_MEASUREMENT'], np.nan))
+        Rtraj_inwater['PPOX_DOXY'] = ('N_MEASUREMENT', np.full(Rtraj_inwater.sizes['N_MEASUREMENT'], np.nan))
+    else:
     # Then we sub-select measurements for cycle numbers found in in-air and in-water dataset:
-    shared_cycles = np.intersect1d(
-        Rtraj_inair["CYCLE_NUMBER"], Rtraj_inwater["CYCLE_NUMBER"]
-    ).tolist()
+        shared_cycles = np.intersect1d(
+            Rtraj_inair["CYCLE_NUMBER"], Rtraj_inwater["CYCLE_NUMBER"]
+        ).tolist()
+
     Rtraj_inair: TrajData = cycle_select(Rtraj_inair, shared_cycles)
     Rtraj_inwater: TrajData = cycle_select(Rtraj_inwater, shared_cycles)
 
@@ -436,6 +446,12 @@ def get_argo_data_for_in_air_method(
                 f"Cycle {cyc.item()}: temperature from Rtraj in-water and Sprof differ by more than 0.5 degC ({t_traj - t_sprof:0.2f} degC) !"
             )
 
+        if np.isnan(t_traj):  # WMO 6903091 : All Temperature for InAir and InWater are NaN. We force to near surface temperature
+            ds_inwater["TEMP"] = xr.where(ds_inwater["CYCLE_NUMBER"] == cyc, t_sprof, ds_inwater["TEMP"])
+            log.warning(
+                f"Cycle {cyc.item()} : InWater temperature is NaN. Replace by Sprof Temperature near surface"
+            )
+
     #############
     # Then we affect a correct position to each cycle
     # Because for some ARGOS float (with Iridium Position, not GPS), the position are recalculated.
@@ -673,9 +689,11 @@ def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients, icfg : int, 
             )  # File BD6902882_075.nc. C1PHASE_DOXY=0.71 with C1PHASE_DOXY_QC=1 but C1PHASE_DOXY.valid_min = 10.
             # Without this instruction, 0.71 is replaced by FillValue. So, in the output file, 0.71 is also replaced by FillValue
 
-            # DOXY Indice in PARAMETER
-            params = np.char.strip(chartostring(data_src["PARAMETER"][:]))
-            i_param = np.where(params[0, 0] == "DOXY")[0][0]
+            #  PARAMETERS
+            params = np.char.strip(chartostring(data_src["PARAMETER"][:,0,:,:]))
+            #i_param = np.where(params[0, 0] == "DOXY")[0][0] # WMO 7902279 : DOXY exists only in N_PROF = 3
+
+
 
             # Number of profile and calibration
             nb_prof = data_src.dimensions["N_PROF"].size
@@ -746,6 +764,12 @@ def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients, icfg : int, 
 
                     # For each profiles N_PROF : We complete the new calibration information.
                     for i_prof in range(0, nb_prof):
+                        ind_param_doxy = np.where(params[i_prof] == "DOXY")[0]
+                        if ind_param_doxy.size > 0:
+                            i_param_doxy = ind_param_doxy[0]
+                        else:
+                            i_param_doxy = np.nan
+
                         if "SCIENTIFIC_CALIB" in name or name == "PARAMETER":
                             new_data[i_prof, nb_calib_new - 1, :, :] = new_data[
                                 i_prof, nb_calib_new - 2, :, :
@@ -767,25 +791,25 @@ def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients, icfg : int, 
                         if name == "DATA_MODE":
                             data_adj["DATA_MODE"][i_prof] = b"D"
 
-                        if name == "PARAMETER_DATA_MODE":
-                            data_adj["PARAMETER_DATA_MODE"][i_prof, i_param] = b"D"
+                        if name == "PARAMETER_DATA_MODE" and np.isfinite(i_param_doxy):
+                            data_adj["PARAMETER_DATA_MODE"][i_prof, i_param_doxy] = b"D"
 
                         # Update SCIENTIFIC_CALIB_ variables
-                        if name == "SCIENTIFIC_CALIB_COMMENT":
-                            new_data[i_prof, nb_calib_new - 1, i_param, :] = string_var(
+                        if name == "SCIENTIFIC_CALIB_COMMENT" and np.isfinite(i_param_doxy):
+                            new_data[i_prof, nb_calib_new - 1, i_param_doxy :] = string_var(
                                 data_src, name, "Data Corrected with Pydox"
                             )
 
-                        if name == "SCIENTIFIC_CALIB_EQUATION":
-                            new_data[i_prof, nb_calib_new - 1, i_param, :] = string_var(
+                        if name == "SCIENTIFIC_CALIB_EQUATION" and np.isfinite(i_param_doxy):
+                            new_data[i_prof, nb_calib_new - 1, i_param_doxy, :] = string_var(
                                 data_src,
                                 name,
                                 "Data Corrected with following equation : DOXY_Adjusted = DOXY * gain * (1+drift/100*Delta_T/365))",
                             )
 
-                        if name == "SCIENTIFIC_CALIB_COEFFICIENT":
+                        if name == "SCIENTIFIC_CALIB_COEFFICIENT" and np.isfinite(i_param_doxy):
                             if coef_kept.drift is None:
-                                new_data[i_prof, nb_calib_new - 1, i_param, :] = (
+                                new_data[i_prof, nb_calib_new - 1, i_param_doxy, :] = (
                                     string_var(
                                         data_src,
                                         name,
@@ -793,7 +817,7 @@ def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients, icfg : int, 
                                     )
                                 )
                             else:
-                                new_data[i_prof, nb_calib_new - 1, i_param, :] = (
+                                new_data[i_prof, nb_calib_new - 1, i_param_doxy, :] = (
                                     string_var(
                                         data_src,
                                         name,
@@ -801,8 +825,8 @@ def corr_B_files(data_float: ar.ArgoFloat, coef_kept: Coefficients, icfg : int, 
                                     )
                                 )
 
-                        if name == "SCIENTIFIC_CALIB_DATE":
-                            new_data[i_prof, nb_calib_new - 1, i_param, :] = string_var(
+                        if name == "SCIENTIFIC_CALIB_DATE" and np.isfinite(i_param_doxy) :
+                            new_data[i_prof, nb_calib_new - 1, i_param_doxy, :] = string_var(
                                 data_src, name, date_str, date_strlen
                             )
 

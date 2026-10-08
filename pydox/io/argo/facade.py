@@ -139,7 +139,7 @@ def get_argo_data_for_in_air_method(
         log.warning(f"No Inwater Data for the float {Rtraj_inwater['PLATFORM_NUMBER'].item()}. No Inair with Carryover solution possible")
         shared_cycles = Rtraj_inair["CYCLE_NUMBER"]
         Rtraj_inwater = deepcopy(Rtraj_inair)
-        Rtraj_inwater['TEMP'] = ('N_MEASUREMENT', np.full(Rtraj_inwater.sizes['N_MEASUREMENT'], np.nan))
+        Rtraj_inwater['TEMP'] = ('N_MEASUREMENT', np.full(Rtraj_inwater.sizes['N_MEASUREMENT'], np.nan)) # Force Temperature to nan. Will be replaced by surface temperature from Sprof.
         Rtraj_inwater['PPOX_DOXY'] = ('N_MEASUREMENT', np.full(Rtraj_inwater.sizes['N_MEASUREMENT'], np.nan))
     else:
     # Then we sub-select measurements for cycle numbers found in in-air and in-water dataset:
@@ -318,7 +318,7 @@ def get_argo_data_for_in_air_method(
             )
             ax[ii].plot(
                 Rtraj_inwater["CYCLE_NUMBER"],
-                Rtraj_inair[v],
+                Rtraj_inwater[v],
                 ".-",
                 linewidth=1,
                 label="Rtraj: In Water",

@@ -232,15 +232,16 @@ def get_data_for_one_parameterset_for_in_air_method(
         )
 
         mask = np.isfinite(data["REF_PPOX"]) & np.isfinite(data["PPOX1"])
-        poly_data = np.polyfit(
-            data["Delta_T_REF"][mask], data["REF_PPOX"][mask] / data["PPOX1"][mask], 1
-        )
-        ax.plot(
-            data["Delta_T_REF"],
-            np.polyval(poly_data, data["Delta_T_REF"]),
-            "-",
-            label="Linear fit",
-        )
+        if mask.any():
+            poly_data = np.polyfit(
+                data["Delta_T_REF"][mask], data["REF_PPOX"][mask] / data["PPOX1"][mask], 1
+            )
+            ax.plot(
+                data["Delta_T_REF"],
+                np.polyval(poly_data, data["Delta_T_REF"]),
+                "-",
+                label="Linear fit",
+            )
 
         ax.set_xlabel("Delta Time [Days]")
         ax.set_ylabel("[no unit]")
